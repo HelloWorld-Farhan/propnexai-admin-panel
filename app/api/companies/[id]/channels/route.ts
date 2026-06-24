@@ -6,7 +6,7 @@ import { assignChannelPhone } from "@/src/server/repositories/setup.repository";
 
 const schema = z.object({
   channelId: z.string().min(1),
-  phoneNumberId: z.string().nullable(),
+  phoneNumber: z.string().nullable(),
 });
 
 export async function PUT(
@@ -17,7 +17,7 @@ export async function PUT(
     await requireAdminSession();
     const { id } = await params;
     const body = schema.parse(await request.json());
-    const channel = await assignChannelPhone(id, body.channelId, body.phoneNumberId);
+    const channel = await assignChannelPhone(id, body.channelId, body.phoneNumber);
     return NextResponse.json(channel);
   } catch (error) {
     if (error instanceof z.ZodError) {

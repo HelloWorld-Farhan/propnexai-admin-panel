@@ -7,6 +7,7 @@ import {
   Building2,
   LayoutDashboard,
   LogOut,
+  Radio,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/companies", label: "Companies", icon: Building2 },
+  { href: "/channels", label: "Channels", icon: Radio },
   { href: "/agents", label: "Agent Library", icon: Bot },
 ];
 

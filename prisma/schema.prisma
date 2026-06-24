@@ -579,6 +579,9 @@ model UploadedContact {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   companyId String   @db.ObjectId
   phone     String
+  name      String?
+  email     String?
+  address   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1117,8 +1120,8 @@ model CompanyBillingRates {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   companyId        String   @unique @db.ObjectId
   costPerChannel   Float    @default(650)
-  costPerMinute    Float    @default(0)
   costPerCredit    Float    @default(0.31)
+  pulseTimeSeconds Int      @default(60)
   setupOneTimeCost Float    @default(0)
   currency         String   @default("INR")
   createdAt        DateTime @default(now())

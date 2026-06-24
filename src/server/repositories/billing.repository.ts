@@ -4,8 +4,8 @@ export async function upsertBillingRates(
   companyId: string,
   data: {
     costPerChannel: number;
-    costPerMinute: number;
     costPerCredit: number;
+    pulseTimeSeconds: number;
     setupOneTimeCost: number;
     currency?: string;
   },

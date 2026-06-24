@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { creditsForDuration } from "@/lib/credits";
+import { deriveCostPerMinute } from "@/lib/billing";
 import { formatDate, formatInr } from "@/lib/utils";
 
 type CompanyData = {
@@ -60,8 +61,8 @@ type CompanyData = {
   } | null;
   billingRates: {
     costPerChannel: number;
-    costPerMinute: number;
     costPerCredit: number;
+    pulseTimeSeconds: number;
     setupOneTimeCost: number;
     currency: string;
   } | null;
@@ -118,6 +119,7 @@ export function CompanyDetail({
   libraryEntries: LibraryEntry[];
 }) {
   const router = useRouter();
+  const [liveCompany, setLiveCompany] = useState(company);
   const [contact, setContact] = useState({
     name: company.contact?.name ?? "",
     email: company.contact?.email ?? company.members[0]?.user.email ?? "",
@@ -126,26 +128,109 @@ export function CompanyDetail({
   });
   const [setup, setSetup] = useState({
     totalChannels: company.setupConfig?.totalChannels ?? 0,
-    pulseTimeSeconds: company.setupConfig?.pulseTimeSeconds ?? 60,
     deltaSeconds: company.setupConfig?.deltaSeconds ?? 2,
     agentsAllocated: company.setupConfig?.agentsAllocated ?? 0,
   });
   const [billing, setBilling] = useState({
     costPerChannel: company.billingRates?.costPerChannel ?? 650,
-    costPerMinute: company.billingRates?.costPerMinute ?? 0,
     costPerCredit: company.billingRates?.costPerCredit ?? 0.31,
+    pulseTimeSeconds:
+      company.billingRates?.pulseTimeSeconds ??
+      company.setupConfig?.pulseTimeSeconds ??
+      60,
     setupOneTimeCost: company.billingRates?.setupOneTimeCost ?? 0,
   });
+  const [billingErrors, setBillingErrors] = useState<{
+    costPerCredit?: string;
+    pulseTimeSeconds?: string;
+  }>({});
   const [creditAmount, setCreditAmount] = useState("");
   const [creditDescription, setCreditDescription] = useState("Admin credit top-up");
   const [selectedLibraryId, setSelectedLibraryId] = useState("");
+  const [channelPhones, setChannelPhones] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      company.channels.map((channel) => [
+        channel.id,
+        channel.phoneNumber?.number ?? "",
+      ]),
+    ),
+  );
   const [saving, setSaving] = useState(false);
+
+  const refreshLiveCompany = useCallback(async () => {
+    const res = await fetch(`/api/companies/${company.id}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const data = (await res.json()) as CompanyData;
+    setLiveCompany(data);
+  }, [company.id]);
+
+  useEffect(() => {
+    setLiveCompany(company);
+  }, [company]);
+
+  useEffect(() => {
+    void refreshLiveCompany();
+    const interval = setInterval(() => void refreshLiveCompany(), 15000);
+    const onFocus = () => void refreshLiveCompany();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refreshLiveCompany]);
+
+  useEffect(() => {
+    setChannelPhones((prev) => {
+      const hasChanges = liveCompany.channels.some((channel) => {
+        const saved = (channel.phoneNumber?.number ?? "").trim();
+        const current = (prev[channel.id] ?? "").trim();
+        return current !== saved;
+      });
+      if (hasChanges) return prev;
+      return Object.fromEntries(
+        liveCompany.channels.map((channel) => [
+          channel.id,
+          channel.phoneNumber?.number ?? "",
+        ]),
+      );
+    });
+  }, [liveCompany.channels]);
 
   const previewCredits = creditsForDuration(
     61,
-    setup.pulseTimeSeconds,
+    billing.pulseTimeSeconds,
     setup.deltaSeconds,
   );
+
+  const derivedCostPerMinute = deriveCostPerMinute(
+    billing.costPerCredit,
+    billing.pulseTimeSeconds,
+  );
+
+  function validateBillingFields(values = billing) {
+    const errors: { costPerCredit?: string; pulseTimeSeconds?: string } = {};
+    if (!Number.isFinite(values.costPerCredit) || values.costPerCredit <= 0) {
+      errors.costPerCredit = "Cost per credit must be greater than 0";
+    }
+    if (
+      !Number.isFinite(values.pulseTimeSeconds) ||
+      values.pulseTimeSeconds <= 0 ||
+      !Number.isInteger(values.pulseTimeSeconds)
+    ) {
+      errors.pulseTimeSeconds = "Pulse time must be a whole number greater than 0";
+    }
+    setBillingErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  function updateBillingField<K extends keyof typeof billing>(
+    field: K,
+    value: (typeof billing)[K],
+  ) {
+    const next = { ...billing, [field]: value };
+    setBilling(next);
+    validateBillingFields(next);
+  }
 
   async function saveContact() {
     setSaving(true);
@@ -157,6 +242,7 @@ export function CompanyDetail({
     setSaving(false);
     if (!res.ok) return toast.error("Failed to save contact");
     toast.success("Contact saved");
+    await refreshLiveCompany();
     router.refresh();
   }
 
@@ -170,10 +256,14 @@ export function CompanyDetail({
     setSaving(false);
     if (!res.ok) return toast.error("Failed to save setup");
     toast.success("Setup saved");
+    await refreshLiveCompany();
     router.refresh();
   }
 
   async function saveBilling() {
+    if (!validateBillingFields()) {
+      return toast.error("Fix billing validation errors before saving");
+    }
     setSaving(true);
     const res = await fetch(`/api/companies/${company.id}/billing`, {
       method: "PUT",
@@ -181,8 +271,12 @@ export function CompanyDetail({
       body: JSON.stringify(billing),
     });
     setSaving(false);
-    if (!res.ok) return toast.error("Failed to save billing");
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      return toast.error(data?.error ?? "Failed to save billing");
+    }
     toast.success("Billing rates saved");
+    await refreshLiveCompany();
     router.refresh();
   }
 
@@ -201,21 +295,48 @@ export function CompanyDetail({
     if (!res.ok) return toast.error("Failed to add credits");
     toast.success(`Added ${amount} credits`);
     setCreditAmount("");
+    await refreshLiveCompany();
     router.refresh();
   }
 
-  async function assignPhone(channelId: string, phoneNumberId: string) {
-    const res = await fetch(`/api/companies/${company.id}/channels`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        channelId,
-        phoneNumberId: phoneNumberId === "none" ? null : phoneNumberId,
-      }),
+  const hasChannelPhoneChanges = liveCompany.channels.some((channel) => {
+    const saved = (channel.phoneNumber?.number ?? "").trim();
+    const current = (channelPhones[channel.id] ?? "").trim();
+    return current !== saved;
+  });
+
+  async function saveChannelPhones() {
+    const changes = liveCompany.channels.filter((channel) => {
+      const saved = (channel.phoneNumber?.number ?? "").trim();
+      const current = (channelPhones[channel.id] ?? "").trim();
+      return current !== saved;
     });
-    if (!res.ok) return toast.error("Failed to assign phone number");
-    toast.success("Phone number assigned");
-    router.refresh();
+
+    if (changes.length === 0) return;
+
+    setSaving(true);
+    try {
+      const results = await Promise.all(
+        changes.map((channel) =>
+          fetch(`/api/companies/${company.id}/channels`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              channelId: channel.id,
+              phoneNumber: (channelPhones[channel.id] ?? "").trim() || null,
+            }),
+          }),
+        ),
+      );
+      if (results.some((res) => !res.ok)) {
+        return toast.error("Failed to save channel phone mappings");
+      }
+      toast.success("Channel phone mappings saved");
+      await refreshLiveCompany();
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deployAgent() {
@@ -233,6 +354,7 @@ export function CompanyDetail({
     }
     toast.success("Agent deployed");
     setSelectedLibraryId("");
+    await refreshLiveCompany();
     router.refresh();
   }
 
@@ -240,11 +362,11 @@ export function CompanyDetail({
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{company.name}</h1>
-          <p className="text-sm text-muted-foreground">{company.slug}</p>
+          <h1 className="text-2xl font-semibold">{liveCompany.name}</h1>
+          <p className="text-sm text-muted-foreground">{liveCompany.slug}</p>
         </div>
-        <Badge variant={company.status === "ACTIVE" ? "success" : "secondary"}>
-          {company.status}
+        <Badge variant={liveCompany.status === "ACTIVE" ? "success" : "secondary"}>
+          {liveCompany.status}
         </Badge>
       </div>
 
@@ -317,7 +439,7 @@ export function CompanyDetail({
             <CardHeader>
               <CardTitle>Channel & credit settings</CardTitle>
               <CardDescription>
-                Pulse {setup.pulseTimeSeconds}s, delta {setup.deltaSeconds}s → 61s call uses {previewCredits} credit(s)
+                Pulse {billing.pulseTimeSeconds}s, delta {setup.deltaSeconds}s → 61s call uses {previewCredits} credit(s)
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -340,17 +462,6 @@ export function CompanyDetail({
                   value={setup.agentsAllocated}
                   onChange={(e) =>
                     setSetup({ ...setup, agentsAllocated: Number(e.target.value) })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Pulse time (seconds)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={setup.pulseTimeSeconds}
-                  onChange={(e) =>
-                    setSetup({ ...setup, pulseTimeSeconds: Number(e.target.value) })
                   }
                 />
               </div>
@@ -378,8 +489,8 @@ export function CompanyDetail({
               <div>
                 <CardTitle>Credits</CardTitle>
                 <CardDescription>
-                  {company.creditBalance?.creditsRemaining.toLocaleString() ?? 0} remaining ·{" "}
-                  {company.creditBalance?.creditsUsed.toLocaleString() ?? 0} used
+                  {liveCompany.creditBalance?.creditsRemaining.toLocaleString() ?? 0} remaining ·{" "}
+                  {liveCompany.creditBalance?.creditsUsed.toLocaleString() ?? 0} used
                 </CardDescription>
               </div>
               <Dialog>
@@ -433,42 +544,46 @@ export function CompanyDetail({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {company.channels.length === 0 ? (
+                  {liveCompany.channels.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={2} className="text-muted-foreground">
                         Set total channels and save setup to create channel slots
                       </TableCell>
                     </TableRow>
                   ) : (
-                    company.channels.map((channel) => (
+                    liveCompany.channels.map((channel) => (
                       <TableRow key={channel.id}>
                         <TableCell>
                           {channel.label ?? `Channel ${channel.channelIndex}`}
                         </TableCell>
                         <TableCell>
-                          <Select
-                            value={channel.phoneNumberId ?? "none"}
-                            onValueChange={(value) => assignPhone(channel.id, value)}
-                          >
-                            <SelectTrigger className="max-w-xs">
-                              <SelectValue placeholder="Select number" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Unassigned</SelectItem>
-                              {company.phoneNumbers.map((phone) => (
-                                <SelectItem key={phone.id} value={phone.id}>
-                                  {phone.number}
-                                  {phone.label ? ` (${phone.label})` : ""}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Input
+                            className="max-w-xs"
+                            placeholder="Enter phone number"
+                            value={channelPhones[channel.id] ?? ""}
+                            onChange={(e) =>
+                              setChannelPhones((prev) => ({
+                                ...prev,
+                                [channel.id]: e.target.value,
+                              }))
+                            }
+                          />
                         </TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
+              {liveCompany.channels.length > 0 ? (
+                <div className="mt-4">
+                  <Button
+                    onClick={saveChannelPhones}
+                    disabled={saving || !hasChannelPhoneChanges}
+                  >
+                    Save channel phone mapping
+                  </Button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -477,8 +592,11 @@ export function CompanyDetail({
               <div>
                 <CardTitle>Agents</CardTitle>
                 <CardDescription>
-                  {company.aiAgents.length}
-                  {setup.agentsAllocated > 0 ? ` / ${setup.agentsAllocated}` : ""} deployed
+                  {liveCompany.aiAgents.length}
+                  {(liveCompany.setupConfig?.agentsAllocated ?? 0) > 0
+                    ? ` / ${liveCompany.setupConfig?.agentsAllocated}`
+                    : ""}{" "}
+                  deployed
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -512,14 +630,14 @@ export function CompanyDetail({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {company.aiAgents.length === 0 ? (
+                  {liveCompany.aiAgents.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-muted-foreground">
                         No agents deployed yet
                       </TableCell>
                     </TableRow>
                   ) : (
-                    company.aiAgents.map((agent) => (
+                    liveCompany.aiAgents.map((agent) => (
                       <TableRow key={agent.id}>
                         <TableCell>{agent.name}</TableCell>
                         <TableCell>{agent.type}</TableCell>
@@ -542,7 +660,9 @@ export function CompanyDetail({
           <Card>
             <CardHeader>
               <CardTitle>Billing rates</CardTitle>
-              <CardDescription>Per-company pricing configuration</CardDescription>
+              <CardDescription>
+                Cost per minute is derived from cost per credit and pulse time
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -553,19 +673,7 @@ export function CompanyDetail({
                   step={0.01}
                   value={billing.costPerChannel}
                   onChange={(e) =>
-                    setBilling({ ...billing, costPerChannel: Number(e.target.value) })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cost per minute (INR)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={billing.costPerMinute}
-                  onChange={(e) =>
-                    setBilling({ ...billing, costPerMinute: Number(e.target.value) })
+                    updateBillingField("costPerChannel", Number(e.target.value))
                   }
                 />
               </div>
@@ -577,9 +685,42 @@ export function CompanyDetail({
                   step={0.01}
                   value={billing.costPerCredit}
                   onChange={(e) =>
-                    setBilling({ ...billing, costPerCredit: Number(e.target.value) })
+                    updateBillingField("costPerCredit", Number(e.target.value))
                   }
+                  aria-invalid={Boolean(billingErrors.costPerCredit)}
                 />
+                {billingErrors.costPerCredit ? (
+                  <p className="text-sm text-destructive">{billingErrors.costPerCredit}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label>Pulse time (seconds)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={billing.pulseTimeSeconds}
+                  onChange={(e) =>
+                    updateBillingField("pulseTimeSeconds", Number(e.target.value))
+                  }
+                  aria-invalid={Boolean(billingErrors.pulseTimeSeconds)}
+                />
+                {billingErrors.pulseTimeSeconds ? (
+                  <p className="text-sm text-destructive">{billingErrors.pulseTimeSeconds}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label>Cost per minute (INR)</Label>
+                <Input
+                  type="text"
+                  readOnly
+                  value={derivedCostPerMinute.toFixed(2)}
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  (60 ÷ {billing.pulseTimeSeconds}) × {billing.costPerCredit} = ₹
+                  {derivedCostPerMinute.toFixed(2)}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>One-time setup cost (INR)</Label>
@@ -589,28 +730,34 @@ export function CompanyDetail({
                   step={0.01}
                   value={billing.setupOneTimeCost}
                   onChange={(e) =>
-                    setBilling({ ...billing, setupOneTimeCost: Number(e.target.value) })
+                    updateBillingField("setupOneTimeCost", Number(e.target.value))
                   }
                 />
               </div>
               <div className="sm:col-span-2">
-                <Button onClick={saveBilling} disabled={saving}>
+                <Button
+                  onClick={saveBilling}
+                  disabled={
+                    saving ||
+                    Boolean(billingErrors.costPerCredit || billingErrors.pulseTimeSeconds)
+                  }
+                >
                   Save billing rates
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {company.billingSubscription ? (
+          {liveCompany.billingSubscription ? (
             <Card>
               <CardHeader>
                 <CardTitle>Subscription</CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
-                <p>Plan: {company.billingSubscription.planName}</p>
-                <p>Status: {company.billingSubscription.status}</p>
+                <p>Plan: {liveCompany.billingSubscription.planName}</p>
+                <p>Status: {liveCompany.billingSubscription.status}</p>
                 <p>
-                  Period ends: {formatDate(company.billingSubscription.currentPeriodEnd)}
+                  Period ends: {formatDate(liveCompany.billingSubscription.currentPeriodEnd)}
                 </p>
               </CardContent>
             </Card>
@@ -621,7 +768,7 @@ export function CompanyDetail({
               <CardTitle>Recent invoices</CardTitle>
             </CardHeader>
             <CardContent>
-              {company.billingInvoices.length === 0 ? (
+              {liveCompany.billingInvoices.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No invoices</p>
               ) : (
                 <Table>
@@ -633,7 +780,7 @@ export function CompanyDetail({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {company.billingInvoices.map((invoice) => (
+                    {liveCompany.billingInvoices.map((invoice) => (
                       <TableRow key={invoice.id}>
                         <TableCell>{formatDate(invoice.issuedAt)}</TableCell>
                         <TableCell>{invoice.status}</TableCell>

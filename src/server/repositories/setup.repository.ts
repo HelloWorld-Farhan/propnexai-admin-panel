@@ -15,7 +15,6 @@ export async function upsertSetupConfig(
   companyId: string,
   data: {
     totalChannels: number;
-    pulseTimeSeconds: number;
     deltaSeconds: number;
     agentsAllocated: number;
   },
@@ -58,8 +57,20 @@ export async function upsertSetupConfig(
 export async function assignChannelPhone(
   companyId: string,
   channelId: string,
-  phoneNumberId: string | null,
+  phoneNumber: string | null,
 ) {
+  let phoneNumberId: string | null = null;
+  const trimmed = phoneNumber?.trim() ?? "";
+
+  if (trimmed) {
+    const phone = await prisma.phoneNumber.upsert({
+      where: { companyId_number: { companyId, number: trimmed } },
+      create: { companyId, number: trimmed, provider: "PROPNEX" },
+      update: {},
+    });
+    phoneNumberId = phone.id;
+  }
+
   return prisma.companyChannel.update({
     where: { id: channelId, companyId },
     data: { phoneNumberId },

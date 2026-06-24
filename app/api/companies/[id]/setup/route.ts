@@ -6,7 +6,6 @@ import { upsertSetupConfig } from "@/src/server/repositories/setup.repository";
 
 const schema = z.object({
   totalChannels: z.number().int().min(0),
-  pulseTimeSeconds: z.number().int().min(1),
   deltaSeconds: z.number().int().min(0),
   agentsAllocated: z.number().int().min(0),
 });

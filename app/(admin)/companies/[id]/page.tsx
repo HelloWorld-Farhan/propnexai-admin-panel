@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { CompanyDetail } from "@/components/admin/company-detail";
+
+export const dynamic = "force-dynamic";
 import { getCompanyById } from "@/src/server/repositories/company.repository";
 import { listAgentLibraryEntries } from "@/src/server/repositories/agent-library.repository";
 

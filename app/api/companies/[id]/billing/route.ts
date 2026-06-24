@@ -6,8 +6,11 @@ import { upsertBillingRates } from "@/src/server/repositories/billing.repository
 
 const schema = z.object({
   costPerChannel: z.number().min(0),
-  costPerMinute: z.number().min(0),
-  costPerCredit: z.number().min(0),
+  costPerCredit: z.number().positive("Cost per credit must be greater than 0"),
+  pulseTimeSeconds: z
+    .number()
+    .int()
+    .positive("Pulse time must be greater than 0"),
   setupOneTimeCost: z.number().min(0),
 });
 
@@ -23,7 +26,8 @@ export async function PUT(
     return NextResponse.json(rates);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      const message = error.issues.map((issue) => issue.message).join("; ");
+      return NextResponse.json({ error: message }, { status: 400 });
     }
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
