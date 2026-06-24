@@ -258,6 +258,46 @@ enum SystemEventType {
   BILLING_ALERT
 }
 
+// ─── AI Dialer Enums ─────────────────────────────────────────────────────────
+
+enum CallingQueueStatus {
+  PENDING
+  ASSIGNED
+  IN_CALL
+  COMPLETED
+  FAILED
+}
+
+enum ChannelStatus {
+  AVAILABLE
+  RESERVED
+  BUSY
+  UNAVAILABLE
+}
+
+enum AgentCallStatus {
+  ANSWERED
+  NO_ANSWER
+  BUSY
+  FAILED
+  VOICEMAIL
+}
+
+enum DialerIntegrationType {
+  CRM_UPDATE
+  GOOGLE_SHEET_UPDATE
+  CALENDAR_EVENT
+  WHATSAPP_FOLLOWUP
+  EMAIL_FOLLOWUP
+}
+
+enum DialerIntegrationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  RETRYING
+}
+
 // ─── Core Tenancy & Users ────────────────────────────────────────────────────
 
 model Company {
@@ -299,10 +339,12 @@ model Company {
   roles              Role[]
   knowledgeSources   KnowledgeSource[]
   agentPromptTemplates AgentPromptTemplate[]
-  contact            CompanyContact?
-  setupConfig        CompanySetupConfig?
-  channels           CompanyChannel[]
-  billingRates       CompanyBillingRates?
+  contact              CompanyContact?
+  setupConfig          CompanySetupConfig?
+  channels             CompanyChannel[]
+  billingRates         CompanyBillingRates?
+  dialerChannels       Channel[]
+  dialerCalls          DialerCall[]
 
   @@index([status])
 }
@@ -426,20 +468,27 @@ model Lead {
   score           Int              @default(0)
   customFields    Json             @default("{}")
   tags            String[]         @default([])
-  lastContactedAt DateTime?
-  nextFollowUpAt  DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  lastContactedAt   DateTime?
+  nextFollowUpAt    DateTime?
+  queueStatus       CallingQueueStatus @default(PENDING)
+  assignedAiAgentId String?            @db.ObjectId
+  lockedAt          DateTime?
+  channelId         String?            @db.ObjectId
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
-  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  stage          LeadPipelineStage @relation(fields: [stageId], references: [id])
-  source         LeadSource?       @relation(fields: [sourceId], references: [id])
-  assignedUser   User?             @relation("LeadAssignee", fields: [assignedUserId], references: [id])
-  assignments    LeadAssignment[]
-  notes          LeadNote[]
-  activities     LeadActivity[]
-  callLogs       CallLog[]
+  company         Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stage           LeadPipelineStage @relation(fields: [stageId], references: [id])
+  source          LeadSource?       @relation(fields: [sourceId], references: [id])
+  assignedUser    User?             @relation("LeadAssignee", fields: [assignedUserId], references: [id])
+  assignedAiAgent AiAgent?          @relation("DialerLeadAgent", fields: [assignedAiAgentId], references: [id])
+  dialerChannel   Channel?          @relation(fields: [channelId], references: [id])
+  assignments     LeadAssignment[]
+  notes           LeadNote[]
+  activities      LeadActivity[]
+  callLogs        CallLog[]
   schedulerEvents SchedulerEvent[]
+  dialerCalls     DialerCall[]
 
   @@index([companyId, stageId])
   @@index([companyId, assignedUserId])
@@ -447,6 +496,7 @@ model Lead {
   @@index([companyId, email])
   @@index([companyId, lastContactedAt])
   @@index([companyId, createdAt])
+  @@index([companyId, queueStatus, createdAt])
 }
 
 model LeadAssignment {
@@ -556,6 +606,7 @@ model CallLog {
   sentiment        Json?
   engagement       Json?
   cost             Float?
+  creditsUsed      Int?
   provider         String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
@@ -645,6 +696,9 @@ model AiAgent {
   outboundPhoneNumbers PhoneNumber[]         @relation("OutboundAgent")
   callLogs             CallLog[]
   campaigns            Campaign[]
+  dialerLeads          Lead[]                @relation("DialerLeadAgent")
+  channels             Channel[]
+  dialerCalls          DialerCall[]
 
   @@index([companyId, status])
   @@index([companyId, type])
@@ -1031,14 +1085,14 @@ model CompanyContact {
 }
 
 model CompanySetupConfig {
-  id                String   @id @default(auto()) @map("_id") @db.ObjectId
-  companyId         String   @unique @db.ObjectId
-  totalChannels     Int      @default(0)
-  pulseTimeSeconds  Int      @default(60)
-  deltaSeconds      Int      @default(2)
-  agentsAllocated   Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  companyId        String   @unique @db.ObjectId
+  totalChannels    Int      @default(0)
+  pulseTimeSeconds Int      @default(60)
+  deltaSeconds     Int      @default(2)
+  agentsAllocated  Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
@@ -1071,4 +1125,103 @@ model CompanyBillingRates {
   updatedAt        DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+// ─── AI Dialer ─────────────────────────────────────────────────────────────────
+
+model Channel {
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  companyId          String        @db.ObjectId
+  number             String
+  status             ChannelStatus @default(AVAILABLE)
+  aiAgentId          String?       @db.ObjectId
+  lastStatusChangeAt DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  aiAgent     AiAgent?     @relation(fields: [aiAgentId], references: [id])
+  leads       Lead[]
+  dialerCalls DialerCall[]
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+}
+
+model DialerCall {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  companyId       String          @db.ObjectId
+  leadId          String          @db.ObjectId
+  channelId       String          @db.ObjectId
+  aiAgentId       String          @db.ObjectId
+  callStatus      AgentCallStatus
+  durationSeconds Int             @default(0)
+  assignedNumber  String?
+  customerPhone   String?
+  customerName    String?
+  customerEmail   String?
+  customerAddress String?
+  customerCity    String?
+  customerState   String?
+  customerZip     String?
+  customerCountry String?
+  recordingUrl    String?
+  transcript      String?
+  summary         String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  company          Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead             Lead                   @relation(fields: [leadId], references: [id])
+  channel          Channel                @relation(fields: [channelId], references: [id])
+  aiAgent          AiAgent                @relation(fields: [aiAgentId], references: [id])
+  analysis         CallAnalysis?
+  events           CallEvent[]
+  integrationLogs  DialerIntegrationLog[]
+
+  @@index([companyId, createdAt])
+  @@index([companyId, leadId])
+  @@index([companyId, channelId])
+}
+
+model CallAnalysis {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  dialerCallId     String   @unique @db.ObjectId
+  sentiment        String?
+  intent           String?
+  interested       Boolean  @default(false)
+  followUpRequired Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  dialerCall DialerCall @relation(fields: [dialerCallId], references: [id], onDelete: Cascade)
+}
+
+model CallEvent {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  dialerCallId String   @db.ObjectId
+  event        String
+  timestamp    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  dialerCall DialerCall @relation(fields: [dialerCallId], references: [id], onDelete: Cascade)
+
+  @@index([dialerCallId, timestamp])
+}
+
+model DialerIntegrationLog {
+  id           String                  @id @default(auto()) @map("_id") @db.ObjectId
+  dialerCallId String                  @db.ObjectId
+  type         DialerIntegrationType
+  status       DialerIntegrationStatus @default(PENDING)
+  response     Json                    @default("{}")
+  retryCount   Int                     @default(0)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  dialerCall DialerCall @relation(fields: [dialerCallId], references: [id], onDelete: Cascade)
+
+  @@index([dialerCallId, type])
+  @@index([dialerCallId, createdAt])
 }

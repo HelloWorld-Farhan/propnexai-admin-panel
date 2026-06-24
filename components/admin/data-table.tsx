@@ -27,6 +27,7 @@ type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchKey?: string;
+  searchKeys?: string[];
   searchPlaceholder?: string;
   onRowClick?: (row: TData) => void;
 };
@@ -35,11 +36,14 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
+  searchKeys,
   searchPlaceholder = "Search...",
   onRowClick,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+
+  const filterKeys = searchKeys ?? (searchKey ? [searchKey] : []);
 
   const table = useReactTable({
     data,
@@ -51,19 +55,23 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    globalFilterFn: searchKey
-      ? (row, _columnId, filterValue) => {
-          const value = row.getValue(searchKey);
-          return String(value ?? "")
-            .toLowerCase()
-            .includes(String(filterValue).toLowerCase());
-        }
-      : undefined,
+    globalFilterFn:
+      filterKeys.length > 0
+        ? (row, _columnId, filterValue) => {
+            const needle = String(filterValue).toLowerCase();
+            if (!needle) return true;
+            return filterKeys.some((key) =>
+              String(row.getValue(key) ?? "")
+                .toLowerCase()
+                .includes(needle),
+            );
+          }
+        : undefined,
   });
 
   return (
     <div className="space-y-4">
-      {searchKey ? (
+      {filterKeys.length > 0 ? (
         <Input
           placeholder={searchPlaceholder}
           value={globalFilter}
