@@ -1,4 +1,5 @@
 import { CompaniesTable } from "@/components/admin/companies-table";
+import { CreateCompanyDialog } from "@/components/admin/create-company-dialog";
 import { listCompaniesForAdmin } from "@/src/server/repositories/company.repository";
 
 export default async function CompaniesPage() {
@@ -7,11 +8,14 @@ export default async function CompaniesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Companies</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage tenant companies, credits, and setup
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Companies</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage tenant companies, credits, and setup
+          </p>
+        </div>
+        <CreateCompanyDialog />
       </div>
       <CompaniesTable companies={companies} lowCreditCount={lowCreditCount} />
     </div>

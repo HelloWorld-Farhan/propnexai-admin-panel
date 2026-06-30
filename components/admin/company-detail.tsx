@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -42,6 +44,9 @@ type CompanyData = {
   name: string;
   slug: string;
   status: string;
+  contractId: string;
+  claimedAt: string | null;
+  ownerUserId: string | null;
   createdAt: string;
   creditBalance: {
     creditsRemaining: number;
@@ -156,6 +161,23 @@ export function CompanyDetail({
     ),
   );
   const [saving, setSaving] = useState(false);
+  const [callingEnabled, setCallingEnabled] = useState(false);
+  const [callingLoading, setCallingLoading] = useState(true);
+  const [callingUpdating, setCallingUpdating] = useState(false);
+  const [contractCopied, setContractCopied] = useState(false);
+
+  const isClaimed = liveCompany.ownerUserId != null;
+
+  async function handleCopyContractId() {
+    try {
+      await navigator.clipboard.writeText(liveCompany.contractId);
+      setContractCopied(true);
+      toast.success("Contract ID copied");
+      setTimeout(() => setContractCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy Contract ID");
+    }
+  }
 
   const refreshLiveCompany = useCallback(async () => {
     const res = await fetch(`/api/companies/${company.id}`, { cache: "no-store" });
@@ -178,6 +200,25 @@ export function CompanyDetail({
       window.removeEventListener("focus", onFocus);
     };
   }, [refreshLiveCompany]);
+
+  const refreshCallingStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/companies/${company.id}/calling`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as { enabled: boolean };
+      setCallingEnabled(data.enabled);
+    } finally {
+      setCallingLoading(false);
+    }
+  }, [company.id]);
+
+  useEffect(() => {
+    void refreshCallingStatus();
+    const interval = setInterval(() => void refreshCallingStatus(), 10000);
+    return () => clearInterval(interval);
+  }, [refreshCallingStatus]);
 
   useEffect(() => {
     setChannelPhones((prev) => {
@@ -358,6 +399,31 @@ export function CompanyDetail({
     router.refresh();
   }
 
+  async function toggleCalling(enabled: boolean) {
+    setCallingUpdating(true);
+    try {
+      const res = await fetch(`/api/companies/${company.id}/calling`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      const data = (await res.json().catch(() => null)) as {
+        enabled?: boolean;
+        error?: string;
+        assignedCount?: number;
+      } | null;
+
+      if (!res.ok) {
+        return toast.error(data?.error ?? "Failed to update calling status");
+      }
+
+      setCallingEnabled(data?.enabled ?? enabled);
+      toast.success(enabled ? "Calling started" : "Calling stopped");
+    } finally {
+      setCallingUpdating(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -378,6 +444,85 @@ export function CompanyDetail({
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contract ID</CardTitle>
+              <CardDescription>
+                Share this ID with the client for their initial signup. It cannot
+                be changed after creation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Contract ID</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={liveCompany.contractId}
+                    className="font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopyContractId}
+                    aria-label="Copy Contract ID"
+                  >
+                    {contractCopied ? (
+                      <Check className="size-4" />
+                    ) : (
+                      <Copy className="size-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Claimed status</Label>
+                <div>
+                  <Badge variant={isClaimed ? "success" : "outline"}>
+                    {isClaimed ? "Claimed" : "Unclaimed"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Claimed at</Label>
+                <p className="text-sm">
+                  {liveCompany.claimedAt
+                    ? formatDate(new Date(liveCompany.claimedAt))
+                    : "—"}
+                </p>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Owner user ID</Label>
+                <p className="font-mono text-sm">
+                  {liveCompany.ownerUserId ?? "—"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div>
+                <CardTitle>Start calling</CardTitle>
+                <CardDescription>
+                  Start or stop the AI dialer for this company via the media server
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-3">
+                <Label htmlFor="calling-switch" className="text-sm text-muted-foreground">
+                  {callingEnabled ? "Running" : "Stopped"}
+                </Label>
+                <Switch
+                  id="calling-switch"
+                  checked={callingEnabled}
+                  disabled={callingLoading || callingUpdating}
+                  onCheckedChange={toggleCalling}
+                />
+              </div>
+            </CardHeader>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Point of contact</CardTitle>

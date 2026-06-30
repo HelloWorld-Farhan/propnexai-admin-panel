@@ -303,7 +303,13 @@ enum DialerIntegrationStatus {
 model Company {
   id                  String           @id @default(auto()) @map("_id") @db.ObjectId
   /// Clerk org id (`org_…`) or synthetic `local:{clerkUserId}` when orgs are disabled.
-  clerkOrganizationId String?          @unique
+  clerkOrganizationId String?
+  /// Unique 10-character uppercase alphanumeric activation code for initial signup.
+  /// Unique 10-character uppercase alphanumeric activation code for initial signup.
+  contractId          String           @unique
+  claimedAt           DateTime?
+  /// Clerk user id of the owner who claimed this company via contract ID.
+  ownerUserId         String?
   name                String
   slug                String           @unique
   status              CompanyStatus    @default(ACTIVE)
@@ -347,6 +353,7 @@ model Company {
   dialerCalls          DialerCall[]
 
   @@index([status])
+  @@index([clerkOrganizationId])
 }
 
 model User {

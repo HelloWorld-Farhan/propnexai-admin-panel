@@ -1,5 +1,33 @@
 import { prisma } from "@/lib/prisma";
 import { getLowCreditThreshold } from "@/lib/credits";
+import { companySlugFromName } from "@/src/server/lib/company-slug";
+import { generateUniqueContractId } from "@/src/server/lib/contract-id";
+
+export async function createCompanyForAdmin(input: { name: string }) {
+  const name = input.name.trim();
+  const contractId = await generateUniqueContractId(prisma);
+  const slug = companySlugFromName(name);
+
+  return prisma.$transaction(async (tx) => {
+    const company = await tx.company.create({
+      data: {
+        name,
+        slug,
+        contractId,
+      },
+    });
+
+    await tx.creditBalance.create({
+      data: {
+        companyId: company.id,
+        creditsRemaining: 0,
+        creditsUsed: 0,
+      },
+    });
+
+    return company;
+  });
+}
 
 export async function listCompaniesForAdmin() {
   const threshold = getLowCreditThreshold();
@@ -24,6 +52,8 @@ export async function listCompaniesForAdmin() {
     name: company.name,
     slug: company.slug,
     status: company.status,
+    contractId: company.contractId,
+    claimed: company.ownerUserId != null,
     createdAt: company.createdAt,
     creditsRemaining: company.creditBalance?.creditsRemaining ?? 0,
     creditsUsed: company.creditBalance?.creditsUsed ?? 0,

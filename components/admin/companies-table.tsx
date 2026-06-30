@@ -13,6 +13,8 @@ export type CompanyRow = {
   name: string;
   slug: string;
   status: string;
+  contractId: string;
+  claimed: boolean;
   createdAt: Date;
   creditsRemaining: number;
   totalChannels: number;
@@ -30,6 +32,18 @@ const columns: ColumnDef<CompanyRow>[] = [
       <div>
         <p className="font-medium">{row.original.name}</p>
         <p className="text-xs text-muted-foreground">{row.original.slug}</p>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "contractId",
+    header: "Contract ID",
+    cell: ({ row }) => (
+      <div className="space-y-1">
+        <p className="font-mono text-xs">{row.original.contractId}</p>
+        <Badge variant={row.original.claimed ? "secondary" : "outline"}>
+          {row.original.claimed ? "Claimed" : "Unclaimed"}
+        </Badge>
       </div>
     ),
   },
@@ -112,8 +126,8 @@ export function CompaniesTable({
       <DataTable
         columns={columns}
         data={companies}
-        searchKeys={["name", "slug", "pocEmail"]}
-        searchPlaceholder="Search by name, slug, or POC email..."
+        searchKeys={["name", "slug", "pocEmail", "contractId"]}
+        searchPlaceholder="Search by name, slug, contract ID, or POC email..."
         onRowClick={(row) => router.push(`/companies/${row.id}`)}
       />
     </div>
