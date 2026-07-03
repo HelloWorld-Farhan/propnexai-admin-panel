@@ -14,6 +14,7 @@ export async function createCompanyForAdmin(input: { name: string }) {
         name,
         slug,
         contractId,
+        ownerUserId: null,
       },
     });
 

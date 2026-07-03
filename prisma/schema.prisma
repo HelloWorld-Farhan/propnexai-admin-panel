@@ -18,6 +18,12 @@ enum CompanyStatus {
   ARCHIVED
 }
 
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
 enum PrimaryUseCase {
   LEAD_QUALIFICATION
   CUSTOMER_SUPPORT
@@ -43,12 +49,20 @@ enum UserRole {
   ADMIN
   MANAGER
   AGENT
+  SALES
+  SUPPORT
 }
 
 enum MemberStatus {
   ACTIVE
   INVITED
+  DEACTIVATED
   REMOVED
+}
+
+enum BranchAccessType {
+  ALL
+  SELECTED
 }
 
 enum InvitationStatus {
@@ -351,6 +365,7 @@ model Company {
   billingRates         CompanyBillingRates?
   dialerChannels       Channel[]
   dialerCalls          DialerCall[]
+  branches             Branch[]
 
   @@index([status])
   @@index([clerkOrganizationId])
@@ -385,36 +400,58 @@ model User {
 }
 
 model CompanyMember {
-  id        String       @id @default(auto()) @map("_id") @db.ObjectId
-  companyId String       @db.ObjectId
-  userId    String       @db.ObjectId
-  roleId    String?      @db.ObjectId
-  role      UserRole     @default(AGENT)
-  status    MemberStatus @default(ACTIVE)
-  invitedAt DateTime?
-  joinedAt  DateTime?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  companyId        String           @db.ObjectId
+  userId           String           @db.ObjectId
+  roleId           String?          @db.ObjectId
+  role             UserRole         @default(AGENT)
+  status           MemberStatus     @default(ACTIVE)
+  jobTitle         String?
+  branchAccessType BranchAccessType @default(ALL)
+  invitedAt        DateTime?
+  joinedAt         DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  customRole Role?   @relation(fields: [roleId], references: [id])
+  company      Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customRole   Role?                @relation(fields: [roleId], references: [id])
+  branchAccess MemberBranchAccess[]
 
   @@unique([companyId, userId])
   @@index([companyId, role])
+  @@index([companyId, status])
+}
+
+model MemberBranchAccess {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  memberId  String   @db.ObjectId
+  branchId  String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  member CompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  branch Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, branchId])
+  @@index([memberId])
+  @@index([branchId])
 }
 
 model Invitation {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
-  companyId   String           @db.ObjectId
-  email       String
-  role        UserRole         @default(AGENT)
-  token       String           @unique
-  status      InvitationStatus @default(PENDING)
-  expiresAt   DateTime
-  invitedById String           @db.ObjectId
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  companyId        String           @db.ObjectId
+  email            String
+  role             UserRole         @default(AGENT)
+  roleId           String?          @db.ObjectId
+  jobTitle         String?
+  branchAccessType BranchAccessType @default(ALL)
+  branchIds        String[]         @default([])
+  token            String           @unique
+  status           InvitationStatus @default(PENDING)
+  expiresAt        DateTime
+  invitedById      String           @db.ObjectId
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   invitedBy User    @relation("InvitedBy", fields: [invitedById], references: [id])
@@ -481,6 +518,7 @@ model Lead {
   assignedAiAgentId String?            @db.ObjectId
   lockedAt          DateTime?
   channelId         String?            @db.ObjectId
+  branchId          String?            @db.ObjectId
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
@@ -490,6 +528,7 @@ model Lead {
   assignedUser    User?             @relation("LeadAssignee", fields: [assignedUserId], references: [id])
   assignedAiAgent AiAgent?          @relation("DialerLeadAgent", fields: [assignedAiAgentId], references: [id])
   dialerChannel   Channel?          @relation(fields: [channelId], references: [id])
+  branch          Branch?           @relation(fields: [branchId], references: [id])
   assignments     LeadAssignment[]
   notes           LeadNote[]
   activities      LeadActivity[]
@@ -504,6 +543,7 @@ model Lead {
   @@index([companyId, lastContactedAt])
   @@index([companyId, createdAt])
   @@index([companyId, queueStatus, createdAt])
+  @@index([companyId, branchId])
 }
 
 model LeadAssignment {
@@ -605,6 +645,7 @@ model CallLog {
   phoneNumberId    String?        @db.ObjectId
   aiAgentId        String?        @db.ObjectId
   assignedUserId   String?        @db.ObjectId
+  branchId         String?        @db.ObjectId
   direction        CallDirection
   status           CallStatus
   outcome          CallOutcome?
@@ -626,6 +667,7 @@ model CallLog {
   phoneNumber  PhoneNumber?   @relation(fields: [phoneNumberId], references: [id])
   aiAgent      AiAgent?       @relation(fields: [aiAgentId], references: [id])
   assignedUser User?          @relation("CallHumanAgent", fields: [assignedUserId], references: [id])
+  branch       Branch?        @relation(fields: [branchId], references: [id])
   transcript   CallTranscript?
 
   @@index([companyId, startedAt])
@@ -633,6 +675,7 @@ model CallLog {
   @@index([companyId, leadId])
   @@index([companyId, aiAgentId])
   @@index([companyId, assignedUserId])
+  @@index([companyId, branchId])
 }
 
 model CallTranscript {
@@ -1234,4 +1277,72 @@ model DialerIntegrationLog {
 
   @@index([dialerCallId, type])
   @@index([dialerCallId, createdAt])
+}
+
+// ─── Branches (generic business units) ─────────────────────────────────────────
+
+model Branch {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  companyId      String       @db.ObjectId
+  name           String
+  status         BranchStatus @default(ACTIVE)
+  address        String?
+  phone          String?
+  email          String?
+  notes          String?
+  customFields   Json         @default("{}")
+  /// Per-branch AI toggle. AI configuration is stored per branch, not globally.
+  aiEnabled      Boolean      @default(false)
+  /// Branch-specific system prompt controlling the AI agent behavior.
+  systemPrompt   String?
+  /// Extensible AI settings bag (model, temperature, knowledgeBase, voice, etc.).
+  aiConfig       Json         @default("{}")
+  lastActivityAt DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  company      Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leads        Lead[]
+  callLogs     CallLog[]
+  documents    BranchDocument[]
+  activities   BranchActivity[]
+  memberAccess MemberBranchAccess[]
+
+  @@index([companyId, status])
+  @@index([companyId, name])
+  @@index([companyId, lastActivityAt])
+  @@index([companyId, aiEnabled])
+}
+
+model BranchDocument {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  companyId    String   @db.ObjectId
+  branchId     String   @db.ObjectId
+  name         String
+  url          String
+  mimeType     String?
+  sizeBytes    Int?
+  uploadedById String?  @db.ObjectId
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, createdAt])
+}
+
+model BranchActivity {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  companyId String   @db.ObjectId
+  branchId  String   @db.ObjectId
+  type      String
+  summary   String
+  actorId   String?  @db.ObjectId
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, createdAt])
 }

@@ -119,8 +119,8 @@ export function CreateCompanyDialog() {
             <DialogHeader>
               <DialogTitle>Company Created</DialogTitle>
               <DialogDescription>
-                Share this Contract ID with the client for their initial signup.
-                It can only be used once.
+                Share this Contract ID with the client. They can link it from
+                their Settings page. It can only be used once.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
