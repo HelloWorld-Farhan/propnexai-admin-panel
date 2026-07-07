@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3003",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start -p 3000",
     "lint": "eslint",
     "db:generate": "dotenv-cli -e .env.local -- prisma generate",
-    "db:push": "dotenv-cli -e .env.local -- prisma db push"
+    "db:push": "dotenv-cli -e .env.local -- prisma db push",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

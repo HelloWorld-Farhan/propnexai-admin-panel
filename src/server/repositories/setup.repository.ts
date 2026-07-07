@@ -11,6 +11,83 @@ export async function upsertCompanyContact(
   });
 }
 
+type AdminContactUpdateInput = {
+  name: string;
+  email?: string;
+  phone?: string;
+  title?: string;
+};
+
+export type AdminContactUpdateResult =
+  | { ok: true; contact: Awaited<ReturnType<typeof upsertCompanyContact>> }
+  | { ok: false; status: 400 | 403 | 404; error: string };
+
+export async function updateCompanyContactForAdmin(
+  companyId: string,
+  data: AdminContactUpdateInput,
+): Promise<AdminContactUpdateResult> {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: {
+      claimedAt: true,
+      contact: { select: { email: true } },
+    },
+  });
+
+  if (!company) {
+    return { ok: false, status: 404, error: "Company not found." };
+  }
+
+  const isClaimed = company.claimedAt != null;
+
+  if (!isClaimed) {
+    if (!company.contact) {
+      return {
+        ok: false,
+        status: 400,
+        error:
+          "Owner contact is set when the Contract ID is linked. It cannot be configured before claim.",
+      };
+    }
+
+    const contact = await upsertCompanyContact(companyId, {
+      name: data.name,
+      email: company.contact.email,
+      phone: data.phone,
+      title: data.title,
+    });
+    return { ok: true, contact };
+  }
+
+  const lockedEmail = company.contact?.email;
+  if (!lockedEmail) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Owner contact email is not available.",
+    };
+  }
+
+  if (
+    data.email &&
+    data.email.trim().toLowerCase() !== lockedEmail.toLowerCase()
+  ) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Owner email cannot be changed after the Contract ID is linked.",
+    };
+  }
+
+  const contact = await upsertCompanyContact(companyId, {
+    name: data.name,
+    email: lockedEmail,
+    phone: data.phone,
+    title: data.title,
+  });
+  return { ok: true, contact };
+}
+
 export async function upsertSetupConfig(
   companyId: string,
   data: {
