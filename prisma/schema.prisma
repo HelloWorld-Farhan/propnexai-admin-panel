@@ -31,10 +31,10 @@ enum PrimaryUseCase {
 }
 
 enum CallVolumeRange {
-  RANGE_1_100      @map("1-100")
-  RANGE_100_500    @map("100-500")
-  RANGE_500_1000   @map("500-1000")
-  RANGE_1000_PLUS  @map("1000+")
+  RANGE_1_100     @map("1-100")
+  RANGE_100_500   @map("100-500")
+  RANGE_500_1000  @map("500-1000")
+  RANGE_1000_PLUS @map("1000+")
 }
 
 enum UserStatus {
@@ -147,6 +147,15 @@ enum AgentEnvironment {
   PRODUCTION
   STAGING
   DEVELOPMENT
+}
+
+enum CommunicationChannelType {
+  WHATSAPP
+  WEB_CHAT
+  INSTAGRAM
+  FACEBOOK_MESSENGER
+  TELEGRAM
+  VOICE
 }
 
 enum AgentToolId {
@@ -333,39 +342,41 @@ model Company {
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
-  members            CompanyMember[]
-  invitations        Invitation[]
-  leadSources        LeadSource[]
-  pipelineStages     LeadPipelineStage[]
-  leads              Lead[]
-  phoneNumbers       PhoneNumber[]
-  uploadedContacts   UploadedContact[]
-  aiAgents           AiAgent[]
-  callLogs           CallLog[]
-  campaigns          Campaign[]
-  analyticsSnapshots AnalyticsSnapshot[]
-  schedulerEvents    SchedulerEvent[]
-  integrations       Integration[]
-  webhookEndpoints   WebhookEndpoint[]
-  auditLogs          AuditLog[]
-  notifications      Notification[]
-  csvImportBatches   CsvImportBatch[]
-  apiKeys            ApiKey[]
-  creditBalance      CreditBalance?
-  creditUsages       CreditUsage[]
-  billingSubscription BillingSubscription?
-  billingInvoices    BillingInvoice[]
-  systemEvents       SystemEvent[]
-  roles              Role[]
-  knowledgeSources   KnowledgeSource[]
-  agentPromptTemplates AgentPromptTemplate[]
-  contact              CompanyContact?
-  setupConfig          CompanySetupConfig?
-  channels             CompanyChannel[]
-  billingRates         CompanyBillingRates?
-  dialerChannels       Channel[]
-  dialerCalls          DialerCall[]
-  branches             Branch[]
+  members                    CompanyMember[]
+  invitations                Invitation[]
+  leadSources                LeadSource[]
+  pipelineStages             LeadPipelineStage[]
+  leads                      Lead[]
+  phoneNumbers               PhoneNumber[]
+  uploadedContacts           UploadedContact[]
+  aiAgents                   AiAgent[]
+  callLogs                   CallLog[]
+  campaigns                  Campaign[]
+  analyticsSnapshots         AnalyticsSnapshot[]
+  schedulerEvents            SchedulerEvent[]
+  integrations               Integration[]
+  webhookEndpoints           WebhookEndpoint[]
+  auditLogs                  AuditLog[]
+  notifications              Notification[]
+  csvImportBatches           CsvImportBatch[]
+  apiKeys                    ApiKey[]
+  creditBalance              CreditBalance?
+  creditUsages               CreditUsage[]
+  billingSubscription        BillingSubscription?
+  billingInvoices            BillingInvoice[]
+  systemEvents               SystemEvent[]
+  roles                      Role[]
+  knowledgeSources           KnowledgeSource[]
+  agentPromptTemplates       AgentPromptTemplate[]
+  contact                    CompanyContact?
+  setupConfig                CompanySetupConfig?
+  channels                   CompanyChannel[]
+  billingRates               CompanyBillingRates?
+  dialerChannels             Channel[]
+  dialerCalls                DialerCall[]
+  branches                   Branch[]
+  agentCommunicationChannels AgentCommunicationChannel[]
+  branchInvitations          BranchInvitation[]
 
   @@index([status])
   @@index([clerkOrganizationId])
@@ -385,13 +396,13 @@ model User {
   updatedAt   DateTime   @updatedAt
 
   memberships       CompanyMember[]
-  invitationsSent   Invitation[]      @relation("InvitedBy")
-  assignedLeads     Lead[]            @relation("LeadAssignee")
-  leadAssignments   LeadAssignment[]  @relation("AssignmentTarget")
-  leadAssignmentsBy LeadAssignment[]  @relation("AssignmentActor")
+  invitationsSent   Invitation[]     @relation("InvitedBy")
+  assignedLeads     Lead[]           @relation("LeadAssignee")
+  leadAssignments   LeadAssignment[] @relation("AssignmentTarget")
+  leadAssignmentsBy LeadAssignment[] @relation("AssignmentActor")
   leadNotes         LeadNote[]
   leadActivities    LeadActivity[]
-  assignedCalls     CallLog[]         @relation("CallHumanAgent")
+  assignedCalls     CallLog[]        @relation("CallHumanAgent")
   schedulerEvents   SchedulerEvent[]
   auditLogs         AuditLog[]
   notifications     Notification[]
@@ -430,7 +441,7 @@ model MemberBranchAccess {
   createdAt DateTime @default(now())
 
   member CompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  branch Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branch Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, branchId])
   @@index([memberId])
@@ -438,20 +449,22 @@ model MemberBranchAccess {
 }
 
 model Invitation {
-  id               String           @id @default(auto()) @map("_id") @db.ObjectId
-  companyId        String           @db.ObjectId
-  email            String
-  role             UserRole         @default(AGENT)
-  roleId           String?          @db.ObjectId
-  jobTitle         String?
-  branchAccessType BranchAccessType @default(ALL)
-  branchIds        String[]         @default([])
-  token            String           @unique
-  status           InvitationStatus @default(PENDING)
-  expiresAt        DateTime
-  invitedById      String           @db.ObjectId
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id                  String           @id @default(auto()) @map("_id") @db.ObjectId
+  companyId           String           @db.ObjectId
+  email               String
+  role                UserRole         @default(AGENT)
+  roleId              String?          @db.ObjectId
+  jobTitle            String?
+  branchAccessType    BranchAccessType @default(ALL)
+  branchIds           String[]         @default([])
+  token               String           @unique
+  clerkInvitationId   String?
+  clerkOrganizationId String?
+  status              InvitationStatus @default(PENDING)
+  expiresAt           DateTime
+  invitedById         String           @db.ObjectId
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   invitedBy User    @relation("InvitedBy", fields: [invitedById], references: [id])
@@ -498,20 +511,20 @@ model LeadPipelineStage {
 }
 
 model Lead {
-  id              String           @id @default(auto()) @map("_id") @db.ObjectId
-  companyId       String           @db.ObjectId
-  stageId         String           @db.ObjectId
-  sourceId        String?          @db.ObjectId
-  assignedUserId  String?          @db.ObjectId
-  firstName       String?
-  lastName        String?
-  email           String?
-  phone           String?
-  companyName     String?
-  temperature     LeadTemperature?
-  score           Int              @default(0)
-  customFields    Json             @default("{}")
-  tags            String[]         @default([])
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
+  companyId         String             @db.ObjectId
+  stageId           String             @db.ObjectId
+  sourceId          String?            @db.ObjectId
+  assignedUserId    String?            @db.ObjectId
+  firstName         String?
+  lastName          String?
+  email             String?
+  phone             String?
+  companyName       String?
+  temperature       LeadTemperature?
+  score             Int                @default(0)
+  customFields      Json               @default("{}")
+  tags              String[]           @default([])
   lastContactedAt   DateTime?
   nextFollowUpAt    DateTime?
   queueStatus       CallingQueueStatus @default(PENDING)
@@ -612,10 +625,10 @@ model PhoneNumber {
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
-  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  inboundAgent  AiAgent? @relation("InboundAgent", fields: [inboundAgentId], references: [id])
-  outboundAgent AiAgent? @relation("OutboundAgent", fields: [outboundAgentId], references: [id])
-  callLogs      CallLog[]
+  company            Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  inboundAgent       AiAgent?         @relation("InboundAgent", fields: [inboundAgentId], references: [id])
+  outboundAgent      AiAgent?         @relation("OutboundAgent", fields: [outboundAgentId], references: [id])
+  callLogs           CallLog[]
   channelAssignments CompanyChannel[]
 
   @@unique([companyId, number])
@@ -629,6 +642,7 @@ model UploadedContact {
   name      String?
   email     String?
   address   String?
+  branchIds String[] @default([])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -639,35 +653,35 @@ model UploadedContact {
 }
 
 model CallLog {
-  id               String         @id @default(auto()) @map("_id") @db.ObjectId
-  companyId        String         @db.ObjectId
-  leadId           String?        @db.ObjectId
-  phoneNumberId    String?        @db.ObjectId
-  aiAgentId        String?        @db.ObjectId
-  assignedUserId   String?        @db.ObjectId
-  branchId         String?        @db.ObjectId
-  direction        CallDirection
-  status           CallStatus
-  outcome          CallOutcome?
-  startedAt        DateTime
-  durationSeconds  Int            @default(0)
-  recordingUrl     String?
-  transcriptUrl    String?
-  aiSummary        Json?
-  sentiment        Json?
-  engagement       Json?
-  cost             Float?
-  creditsUsed      Int?
-  provider         String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  companyId       String        @db.ObjectId
+  leadId          String?       @db.ObjectId
+  phoneNumberId   String?       @db.ObjectId
+  aiAgentId       String?       @db.ObjectId
+  assignedUserId  String?       @db.ObjectId
+  branchId        String?       @db.ObjectId
+  direction       CallDirection
+  status          CallStatus
+  outcome         CallOutcome?
+  startedAt       DateTime
+  durationSeconds Int           @default(0)
+  recordingUrl    String?
+  transcriptUrl   String?
+  aiSummary       Json?
+  sentiment       Json?
+  engagement      Json?
+  cost            Float?
+  creditsUsed     Int?
+  provider        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  lead         Lead?          @relation(fields: [leadId], references: [id])
-  phoneNumber  PhoneNumber?   @relation(fields: [phoneNumberId], references: [id])
-  aiAgent      AiAgent?       @relation(fields: [aiAgentId], references: [id])
-  assignedUser User?          @relation("CallHumanAgent", fields: [assignedUserId], references: [id])
-  branch       Branch?        @relation(fields: [branchId], references: [id])
+  company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead         Lead?           @relation(fields: [leadId], references: [id])
+  phoneNumber  PhoneNumber?    @relation(fields: [phoneNumberId], references: [id])
+  aiAgent      AiAgent?        @relation(fields: [aiAgentId], references: [id])
+  assignedUser User?           @relation("CallHumanAgent", fields: [assignedUserId], references: [id])
+  branch       Branch?         @relation(fields: [branchId], references: [id])
   transcript   CallTranscript?
 
   @@index([companyId, startedAt])
@@ -679,12 +693,12 @@ model CallLog {
 }
 
 model CallTranscript {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  callLogId  String   @unique @db.ObjectId
-  segments   Json     @default("[]")
-  fullText   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  callLogId String   @unique @db.ObjectId
+  segments  Json     @default("[]")
+  fullText  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   callLog CallLog @relation(fields: [callLogId], references: [id], onDelete: Cascade)
 }
@@ -720,7 +734,9 @@ model AiAgent {
   id                String           @id @default(auto()) @map("_id") @db.ObjectId
   companyId         String           @db.ObjectId
   libraryEntryId    String?          @db.ObjectId
+  branchId          String?          @db.ObjectId
   name              String
+  description       String?
   type              AgentType
   category          String?
   status            AgentStatus      @default(ACTIVE)
@@ -742,6 +758,7 @@ model AiAgent {
 
   company              Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   libraryEntry         AgentLibraryEntry?    @relation(fields: [libraryEntryId], references: [id])
+  branch               Branch?               @relation(fields: [branchId], references: [id])
   promptTemplates      AgentPromptTemplate[]
   toolAssignments      AgentToolAssignment[]
   knowledgeSources     KnowledgeSource[]
@@ -752,11 +769,31 @@ model AiAgent {
   dialerLeads          Lead[]                @relation("DialerLeadAgent")
   channels             Channel[]
   dialerCalls          DialerCall[]
+  communicationChannels AgentCommunicationChannel[]
 
   @@index([companyId, status])
   @@index([companyId, type])
   @@index([companyId, enabled, status])
   @@index([libraryEntryId])
+  @@index([companyId, branchId])
+}
+
+model AgentCommunicationChannel {
+  id        String                   @id @default(auto()) @map("_id") @db.ObjectId
+  companyId String                   @db.ObjectId
+  aiAgentId String                   @db.ObjectId
+  type      CommunicationChannelType
+  enabled   Boolean                  @default(true)
+  settings  Json                     @default("{}")
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  aiAgent AiAgent @relation(fields: [aiAgentId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, type])
+  @@index([aiAgentId])
+  @@index([companyId])
 }
 
 model AgentPromptTemplate {
@@ -832,17 +869,17 @@ model AnalyticsSnapshot {
 }
 
 model Campaign {
-  id              String         @id @default(auto()) @map("_id") @db.ObjectId
-  companyId       String         @db.ObjectId
-  aiAgentId       String?        @db.ObjectId
-  name            String
-  status          CampaignStatus @default(DRAFT)
-  totalCalls      Int            @default(0)
-  connectedCalls  Int            @default(0)
-  conversionRate  Float          @default(0)
-  generatedLeads  Int            @default(0)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  companyId      String         @db.ObjectId
+  aiAgentId      String?        @db.ObjectId
+  name           String
+  status         CampaignStatus @default(DRAFT)
+  totalCalls     Int            @default(0)
+  connectedCalls Int            @default(0)
+  conversionRate Float          @default(0)
+  generatedLeads Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   aiAgent AiAgent? @relation(fields: [aiAgentId], references: [id])
@@ -1012,14 +1049,14 @@ model ApiKey {
 }
 
 model CreditBalance {
-  id                String    @id @default(auto()) @map("_id") @db.ObjectId
-  companyId         String    @unique @db.ObjectId
-  creditsRemaining  Int       @default(0)
-  creditsUsed       Int       @default(0)
-  planId            String?
-  renewalAt         DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  companyId        String    @unique @db.ObjectId
+  creditsRemaining Int       @default(0)
+  creditsUsed      Int       @default(0)
+  planId           String?
+  renewalAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
@@ -1224,13 +1261,13 @@ model DialerCall {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  company          Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  lead             Lead                   @relation(fields: [leadId], references: [id])
-  channel          Channel                @relation(fields: [channelId], references: [id])
-  aiAgent          AiAgent                @relation(fields: [aiAgentId], references: [id])
-  analysis         CallAnalysis?
-  events           CallEvent[]
-  integrationLogs  DialerIntegrationLog[]
+  company         Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead            Lead                   @relation(fields: [leadId], references: [id])
+  channel         Channel                @relation(fields: [channelId], references: [id])
+  aiAgent         AiAgent                @relation(fields: [aiAgentId], references: [id])
+  analysis        CallAnalysis?
+  events          CallEvent[]
+  integrationLogs DialerIntegrationLog[]
 
   @@index([companyId, createdAt])
   @@index([companyId, leadId])
@@ -1307,6 +1344,8 @@ model Branch {
   documents    BranchDocument[]
   activities   BranchActivity[]
   memberAccess MemberBranchAccess[]
+  agents       AiAgent[]
+  invitation   BranchInvitation?
 
   @@index([companyId, status])
   @@index([companyId, name])
@@ -1345,4 +1384,32 @@ model BranchActivity {
   branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
   @@index([branchId, createdAt])
+}
+
+enum BranchInvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+model BranchInvitation {
+  id                  String                 @id @default(auto()) @map("_id") @db.ObjectId
+  companyId           String                 @db.ObjectId
+  branchId            String                 @unique @db.ObjectId
+  email               String
+  token               String                 @unique
+  clerkInvitationId   String?
+  clerkOrganizationId String?
+  status              BranchInvitationStatus @default(PENDING)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  sentAt              DateTime               @default(now())
+  acceptedAt          DateTime?
+  expiresAt           DateTime
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
 }

@@ -107,33 +107,3 @@ export async function addCredits(
     return balance;
   });
 }
-
-export async function deployAgentFromLibrary(
-  companyId: string,
-  libraryEntryId: string,
-) {
-  const [company, entry, agentCount, setupConfig] = await Promise.all([
-    prisma.company.findUniqueOrThrow({ where: { id: companyId } }),
-    prisma.agentLibraryEntry.findUniqueOrThrow({ where: { id: libraryEntryId } }),
-    prisma.aiAgent.count({ where: { companyId } }),
-    prisma.companySetupConfig.findUnique({ where: { companyId } }),
-  ]);
-
-  const limit = setupConfig?.agentsAllocated ?? 0;
-  if (limit > 0 && agentCount >= limit) {
-    throw new Error(`Agent limit reached (${limit})`);
-  }
-
-  return prisma.aiAgent.create({
-    data: {
-      companyId,
-      libraryEntryId: entry.id,
-      name: entry.name,
-      type: entry.defaultType,
-      category: entry.category,
-      firstMessage: entry.defaultFirstMessage,
-      systemPrompt: entry.samplePrompt,
-      demoAudioUrl: entry.demoAudioUrl,
-    },
-  });
-}

@@ -119,8 +119,9 @@ export function CreateCompanyDialog() {
             <DialogHeader>
               <DialogTitle>Company Created</DialogTitle>
               <DialogDescription>
-                Share this Contract ID with the client. They can link it from
-                their Settings page. It can only be used once.
+                Share this Contract ID with the intended company owner. The first
+                account to link it from Settings becomes the owner. It can only
+                be used once.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -164,7 +165,8 @@ export function CreateCompanyDialog() {
               <DialogTitle>Create Company</DialogTitle>
               <DialogDescription>
                 Add a new tenant company. A unique Contract ID will be generated
-                automatically.
+                automatically. The first account to link the Contract ID becomes
+                the company owner.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">

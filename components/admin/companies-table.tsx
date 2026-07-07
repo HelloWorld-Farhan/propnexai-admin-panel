@@ -97,7 +97,7 @@ const columns: ColumnDef<CompanyRow>[] = [
   },
   {
     accessorKey: "pocEmail",
-    header: "POC",
+    header: "Owner email",
   },
   {
     accessorKey: "createdAt",
@@ -127,7 +127,7 @@ export function CompaniesTable({
         columns={columns}
         data={companies}
         searchKeys={["name", "slug", "pocEmail", "contractId"]}
-        searchPlaceholder="Search by name, slug, contract ID, or POC email..."
+        searchPlaceholder="Search by name, slug, contract ID, or owner email (if claimed)..."
         onRowClick={(row) => router.push(`/companies/${row.id}`)}
       />
     </div>

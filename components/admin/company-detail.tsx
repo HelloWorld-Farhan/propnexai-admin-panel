@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
+import type { CompanyAgentRow } from "@/lib/types/agent-config";
+import { CompanyAgentManagement } from "@/components/admin/company-agent-management";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,9 +89,20 @@ type CompanyData = {
   aiAgents: Array<{
     id: string;
     name: string;
+    description: string | null;
     type: string;
     status: string;
+    enabled: boolean;
+    systemPrompt: string | null;
+    firstMessage: string | null;
+    modelConfig: Record<string, unknown>;
     libraryEntry: { name: string; slug: string } | null;
+    communicationChannels: Array<{
+      id: string;
+      type: string;
+      enabled: boolean;
+      settings: Record<string, unknown>;
+    }>;
   }>;
   billingSubscription: {
     planName: string;
@@ -151,7 +164,6 @@ export function CompanyDetail({
   }>({});
   const [creditAmount, setCreditAmount] = useState("");
   const [creditDescription, setCreditDescription] = useState("Admin credit top-up");
-  const [selectedLibraryId, setSelectedLibraryId] = useState("");
   const [channelPhones, setChannelPhones] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       company.channels.map((channel) => [
@@ -167,6 +179,10 @@ export function CompanyDetail({
   const [contractCopied, setContractCopied] = useState(false);
 
   const isClaimed = liveCompany.ownerUserId != null;
+  const linkedOwner = liveCompany.members[0]?.user ?? null;
+  const linkedOwnerName = linkedOwner
+    ? [linkedOwner.firstName, linkedOwner.lastName].filter(Boolean).join(" ")
+    : "";
 
   async function handleCopyContractId() {
     try {
@@ -380,25 +396,6 @@ export function CompanyDetail({
     }
   }
 
-  async function deployAgent() {
-    if (!selectedLibraryId) return toast.error("Select a library agent");
-    setSaving(true);
-    const res = await fetch(`/api/companies/${company.id}/agents`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ libraryEntryId: selectedLibraryId }),
-    });
-    setSaving(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      return toast.error(data.error ?? "Failed to deploy agent");
-    }
-    toast.success("Agent deployed");
-    setSelectedLibraryId("");
-    await refreshLiveCompany();
-    router.refresh();
-  }
-
   async function toggleCalling(enabled: boolean) {
     setCallingUpdating(true);
     try {
@@ -492,8 +489,22 @@ export function CompanyDetail({
                     : "—"}
                 </p>
               </div>
+              {isClaimed && linkedOwner ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Linked owner</Label>
+                    <p className="text-sm font-medium">
+                      {linkedOwnerName || "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Owner email</Label>
+                    <p className="text-sm">{linkedOwner.email}</p>
+                  </div>
+                </>
+              ) : null}
               <div className="space-y-2 sm:col-span-2">
-                <Label>Owner user ID</Label>
+                <Label>Owner Clerk ID</Label>
                 <p className="font-mono text-sm">
                   {liveCompany.ownerUserId ?? "—"}
                 </p>
@@ -525,44 +536,58 @@ export function CompanyDetail({
 
           <Card>
             <CardHeader>
-              <CardTitle>Point of contact</CardTitle>
-              <CardDescription>Primary contact for this company</CardDescription>
+              <CardTitle>Owner contact</CardTitle>
+              <CardDescription>
+                {isClaimed
+                  ? "Owner who linked the Contract ID. Email is locked after claim."
+                  : "Owner contact is set when the Contract ID is linked."}
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={contact.name}
-                  onChange={(e) => setContact({ ...contact, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Title</Label>
-                <Input
-                  value={contact.title ?? ""}
-                  onChange={(e) => setContact({ ...contact, title: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={contact.email}
-                  onChange={(e) => setContact({ ...contact, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Phone</Label>
-                <Input
-                  value={contact.phone ?? ""}
-                  onChange={(e) => setContact({ ...contact, phone: e.target.value })}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Button onClick={saveContact} disabled={saving}>
-                  Save contact
-                </Button>
-              </div>
+              {isClaimed ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input
+                      value={contact.name}
+                      onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Title</Label>
+                    <Input
+                      value={contact.title ?? ""}
+                      onChange={(e) => setContact({ ...contact, title: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Owner email</Label>
+                    <Input
+                      type="email"
+                      value={contact.email}
+                      readOnly
+                      disabled
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone</Label>
+                    <Input
+                      value={contact.phone ?? ""}
+                      onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Button onClick={saveContact} disabled={saving}>
+                      Save contact
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground sm:col-span-2">
+                  Not yet claimed — owner email and contact details will be set
+                  when the Contract ID is linked.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -732,73 +757,13 @@ export function CompanyDetail({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Agents</CardTitle>
-                <CardDescription>
-                  {liveCompany.aiAgents.length}
-                  {(liveCompany.setupConfig?.agentsAllocated ?? 0) > 0
-                    ? ` / ${liveCompany.setupConfig?.agentsAllocated}`
-                    : ""}{" "}
-                  deployed
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Select value={selectedLibraryId} onValueChange={setSelectedLibraryId}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="From library" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {libraryEntries
-                      .filter((e) => e.isPublished)
-                      .map((entry) => (
-                        <SelectItem key={entry.id} value={entry.id}>
-                          {entry.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                <Button size="sm" onClick={deployAgent} disabled={saving}>
-                  Deploy
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Library</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {liveCompany.aiAgents.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-muted-foreground">
-                        No agents deployed yet
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    liveCompany.aiAgents.map((agent) => (
-                      <TableRow key={agent.id}>
-                        <TableCell>{agent.name}</TableCell>
-                        <TableCell>{agent.type}</TableCell>
-                        <TableCell>
-                          <Badge variant={agent.status === "ACTIVE" ? "success" : "secondary"}>
-                            {agent.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{agent.libraryEntry?.name ?? "—"}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <CompanyAgentManagement
+            companyId={liveCompany.id}
+            agents={liveCompany.aiAgents as CompanyAgentRow[]}
+            agentsAllocated={liveCompany.setupConfig?.agentsAllocated ?? 0}
+            libraryEntries={libraryEntries}
+            onMutated={refreshLiveCompany}
+          />
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-4">

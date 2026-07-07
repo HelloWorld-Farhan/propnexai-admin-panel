@@ -61,7 +61,9 @@ export async function listCompaniesForAdmin() {
     totalChannels: company.setupConfig?.totalChannels ?? 0,
     agentCount: company._count.aiAgents,
     agentsAllocated: company.setupConfig?.agentsAllocated ?? 0,
-    pocEmail: company.contact?.email ?? company.members[0]?.user.email ?? "—",
+    pocEmail: company.ownerUserId
+      ? (company.members[0]?.user.email ?? company.contact?.email ?? "—")
+      : (company.contact?.email ?? "—"),
     lowCredit: (company.creditBalance?.creditsRemaining ?? 0) < threshold,
   }));
 }
@@ -81,7 +83,10 @@ export async function getCompanyById(id: string) {
       phoneNumbers: { orderBy: { number: "asc" } },
       aiAgents: {
         orderBy: { createdAt: "desc" },
-        include: { libraryEntry: { select: { name: true, slug: true } } },
+        include: {
+          libraryEntry: { select: { name: true, slug: true } },
+          communicationChannels: { orderBy: { type: "asc" } },
+        },
       },
       billingSubscription: true,
       billingInvoices: { orderBy: { issuedAt: "desc" }, take: 10 },
