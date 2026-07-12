@@ -17,25 +17,41 @@ export async function getDashboardStats() {
     recentCalls,
     recentEvents,
   ] = await Promise.all([
-    prisma.company.count({ where: { status: "ACTIVE" } }),
+    prisma.company.count({ where: { status: "ACTIVE", isDemo: false } }),
     prisma.creditBalance.count({
-      where: { creditsRemaining: { lt: threshold } },
+      where: {
+        creditsRemaining: { lt: threshold },
+        company: { isDemo: false },
+      },
     }),
     prisma.callLog.count({
-      where: { startedAt: { gte: startOfDay } },
+      where: {
+        startedAt: { gte: startOfDay },
+        company: { isDemo: false },
+      },
     }),
     prisma.callLog.aggregate({
-      where: { startedAt: { gte: startOfDay } },
+      where: {
+        startedAt: { gte: startOfDay },
+        company: { isDemo: false },
+      },
       _avg: { durationSeconds: true },
       _count: { _all: true },
     }),
-    prisma.phoneNumber.count({ where: { status: "ACTIVE" } }),
-    prisma.companySetupConfig.aggregate({ _sum: { totalChannels: true } }),
+    prisma.phoneNumber.count({
+      where: { status: "ACTIVE", company: { isDemo: false } },
+    }),
+    prisma.companySetupConfig.aggregate({
+      where: { company: { isDemo: false } },
+      _sum: { totalChannels: true },
+    }),
     prisma.integration.groupBy({
       by: ["status"],
+      where: { company: { isDemo: false } },
       _count: { _all: true },
     }),
     prisma.callLog.findMany({
+      where: { company: { isDemo: false } },
       orderBy: { startedAt: "desc" },
       take: 10,
       include: {
@@ -44,6 +60,7 @@ export async function getDashboardStats() {
       },
     }),
     prisma.systemEvent.findMany({
+      where: { company: { isDemo: false } },
       orderBy: { createdAt: "desc" },
       take: 10,
       include: { company: { select: { name: true } } },
@@ -54,6 +71,7 @@ export async function getDashboardStats() {
     where: {
       startedAt: { gte: startOfDay },
       status: "COMPLETED",
+      company: { isDemo: false },
     },
   });
 

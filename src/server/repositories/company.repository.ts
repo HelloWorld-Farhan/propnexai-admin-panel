@@ -34,6 +34,7 @@ export async function listCompaniesForAdmin() {
   const threshold = getLowCreditThreshold();
 
   const companies = await prisma.company.findMany({
+    where: { isDemo: false },
     orderBy: { createdAt: "desc" },
     include: {
       creditBalance: true,
@@ -69,7 +70,7 @@ export async function listCompaniesForAdmin() {
 }
 
 export async function getCompanyById(id: string) {
-  return prisma.company.findUnique({
+  const company = await prisma.company.findUnique({
     where: { id },
     include: {
       creditBalance: true,
@@ -97,4 +98,10 @@ export async function getCompanyById(id: string) {
       },
     },
   });
+
+  if (!company || company.isDemo) {
+    return null;
+  }
+
+  return company;
 }

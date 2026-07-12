@@ -6,6 +6,7 @@ import {
   Bot,
   Building2,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Radio,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/companies", label: "Companies", icon: Building2 },
   { href: "/channels", label: "Channels", icon: Radio },
   { href: "/agents", label: "Agent Library", icon: Bot },
+  { href: "/support", label: "Support", icon: LifeBuoy },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

@@ -281,6 +281,23 @@ enum SystemEventType {
   BILLING_ALERT
 }
 
+enum SupportRequestReason {
+  GENERAL_INQUIRY
+  SALES_PRICING
+  TECHNICAL_SUPPORT
+  BILLING_CREDITS
+  BILLING_CHANNELS
+  ENTERPRISE_PLAN
+  ACCOUNT_ACCESS
+  OTHER
+}
+
+enum SupportRequestStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
 // ─── AI Dialer Enums ─────────────────────────────────────────────────────────
 
 enum CallingQueueStatus {
@@ -339,6 +356,8 @@ model Company {
   primaryUseCase      PrimaryUseCase?
   callVolume          CallVolumeRange?
   settings            Json             @default("{}")
+  /// Demo tenant for client trials; hidden from admin panel and reusable contract ID.
+  isDemo              Boolean          @default(false)
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
@@ -377,9 +396,11 @@ model Company {
   branches                   Branch[]
   agentCommunicationChannels AgentCommunicationChannel[]
   branchInvitations          BranchInvitation[]
+  supportRequests            SupportRequest[]
 
   @@index([status])
   @@index([clerkOrganizationId])
+  @@index([isDemo])
 }
 
 model User {
@@ -406,6 +427,7 @@ model User {
   schedulerEvents   SchedulerEvent[]
   auditLogs         AuditLog[]
   notifications     Notification[]
+  supportRequests   SupportRequest[]
 
   @@index([status])
 }
@@ -1215,6 +1237,29 @@ model CompanyBillingRates {
   updatedAt        DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model SupportRequest {
+  id          String               @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  email       String
+  reason      SupportRequestReason
+  planId      String?
+  planName    String?
+  message     String
+  status      SupportRequestStatus @default(NEW)
+  userId      String?              @db.ObjectId
+  companyId   String?              @db.ObjectId
+  clerkUserId String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  user    User?    @relation(fields: [userId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([companyId])
+  @@index([email])
 }
 
 // ─── AI Dialer ─────────────────────────────────────────────────────────────────
