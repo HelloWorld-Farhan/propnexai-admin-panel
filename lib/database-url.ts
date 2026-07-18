@@ -1,5 +1,5 @@
 const LOCAL_DEFAULT =
-  "mongodb://127.0.0.1:27017/propnex-admin?replicaSet=rs0";
+  "mongodb://127.0.0.1:27017/propnex-main?replicaSet=rs0";
 
 function resolveDatabaseUrl(): string {
   const isProduction = process.env.NODE_ENV === "production";
