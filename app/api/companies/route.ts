@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
     await requireAdminSession();
     const body = schema.parse(await request.json());
     const company = await createCompanyForAdmin(body);
+    revalidatePath("/companies");
 
     return NextResponse.json(
       {

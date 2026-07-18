@@ -74,6 +74,7 @@ export function CreateCompanyDialog() {
 
       setCreated(data as CreatedCompany);
       toast.success("Company created");
+      router.refresh();
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {

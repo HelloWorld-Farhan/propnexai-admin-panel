@@ -2,6 +2,8 @@ import { CompaniesTable } from "@/components/admin/companies-table";
 import { CreateCompanyDialog } from "@/components/admin/create-company-dialog";
 import { listCompaniesForAdmin } from "@/src/server/repositories/company.repository";
 
+export const dynamic = "force-dynamic";
+
 export default async function CompaniesPage() {
   const companies = await listCompaniesForAdmin();
   const lowCreditCount = companies.filter((c) => c.lowCredit).length;

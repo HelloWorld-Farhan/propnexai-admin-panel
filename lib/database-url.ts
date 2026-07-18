@@ -1,21 +1,8 @@
-const LOCAL_DEFAULT =
-  "mongodb://127.0.0.1:27017/propnex-main?replicaSet=rs0";
-
 function resolveDatabaseUrl(): string {
-  const isProduction = process.env.NODE_ENV === "production";
-
-  if (isProduction) {
-    return process.env.DATABASE_URL ?? process.env.DATABASE_URL_ATLAS ?? "";
-  }
-
-  return process.env.DATABASE_URL_LOCAL ?? LOCAL_DEFAULT;
+  return process.env.DATABASE_URL ?? process.env.DATABASE_URL_ATLAS ?? "";
 }
 
 /**
- * Resolves MongoDB URL: local when NODE_ENV !== production, Atlas otherwise.
- * Local Docker MongoDB must run as a replica set for Prisma transactions
- * (see docker-compose.yml).
- *
  * Ensures MongoDB driver timeouts are set so connection failures fail fast
  * instead of blocking requests for the default ~30s.
  */
