@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import {
+  allocatePhoneNumberEntityId,
+  generatePublicId,
+} from "@/server/lib/public-id";
 
 export async function upsertCompanyContact(
   companyId: string,
@@ -92,14 +96,17 @@ export async function upsertSetupConfig(
   companyId: string,
   data: {
     totalChannels: number;
+    serviceNumber?: string | null;
     deltaSeconds: number;
     agentsAllocated: number;
   },
 ) {
+  const serviceNumber = data.serviceNumber?.trim() || null;
+
   const config = await prisma.companySetupConfig.upsert({
     where: { companyId },
-    create: { companyId, ...data },
-    update: data,
+    create: { companyId, ...data, serviceNumber },
+    update: { ...data, serviceNumber },
   });
 
   const existingChannels = await prisma.companyChannel.findMany({
@@ -140,10 +147,51 @@ export async function assignChannelPhone(
   const trimmed = phoneNumber?.trim() ?? "";
 
   if (trimmed) {
-    const phone = await prisma.phoneNumber.upsert({
-      where: { companyId_number: { companyId, number: trimmed } },
-      create: { companyId, number: trimmed, provider: "PROPNEX" },
-      update: {},
+    const phone = await prisma.$transaction(async (tx) => {
+      const existing = await tx.phoneNumber.findUnique({
+        where: { companyId_number: { companyId, number: trimmed } },
+      });
+      if (existing) {
+        return existing;
+      }
+
+      const [company, campaign] = await Promise.all([
+        tx.company.findUnique({
+          where: { id: companyId },
+          select: { cli: true },
+        }),
+        tx.campaign.findFirst({
+          where: { companyId },
+          orderBy: { createdAt: "asc" },
+          select: { resourceKey: true },
+        }),
+      ]);
+
+      if (!company?.cli) {
+        throw new Error("Company public identity is not configured");
+      }
+      if (!campaign?.resourceKey) {
+        throw new Error(
+          "At least one campaign is required before assigning a phone number",
+        );
+      }
+
+      const phoneNumberId = await allocatePhoneNumberEntityId(tx, companyId);
+      const publicId = generatePublicId(
+        company.cli,
+        campaign.resourceKey,
+        phoneNumberId,
+      );
+
+      return tx.phoneNumber.create({
+        data: {
+          companyId,
+          number: trimmed,
+          provider: "PROPNEX",
+          phoneNumberId,
+          publicId,
+        },
+      });
     });
     phoneNumberId = phone.id;
   }

@@ -1,11 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { getLowCreditThreshold } from "@/lib/credits";
+import { normalizeCli } from "@/src/server/lib/cli";
+import { generateUniqueCompanyCode } from "@/src/server/lib/company-code";
 import { companySlugFromName } from "@/src/server/lib/company-slug";
 import { generateUniqueContractId } from "@/src/server/lib/contract-id";
 
-export async function createCompanyForAdmin(input: { name: string }) {
+export async function createCompanyForAdmin(input: { name: string; cli: string }) {
   const name = input.name.trim();
+  const cli = normalizeCli(input.cli);
+  if (!cli) {
+    throw new Error("CLI must be 2-5 uppercase letters.");
+  }
+
   const contractId = await generateUniqueContractId(prisma);
+  const companyCode = await generateUniqueCompanyCode(prisma);
   const slug = companySlugFromName(name);
 
   return prisma.$transaction(async (tx) => {
@@ -14,6 +22,8 @@ export async function createCompanyForAdmin(input: { name: string }) {
         name,
         slug,
         contractId,
+        cli,
+        companyCode,
         ownerUserId: null,
       },
     });
@@ -55,6 +65,8 @@ export async function listCompaniesForAdmin() {
     slug: company.slug,
     status: company.status,
     contractId: company.contractId,
+    cli: company.cli,
+    companyCode: company.companyCode,
     claimed: company.ownerUserId != null,
     createdAt: company.createdAt,
     creditsRemaining: company.creditBalance?.creditsRemaining ?? 0,
@@ -91,6 +103,18 @@ export async function getCompanyById(id: string) {
       },
       billingSubscription: true,
       billingInvoices: { orderBy: { issuedAt: "desc" }, take: 10 },
+      campaigns: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          resourceKey: true,
+          aiEnabled: true,
+          createdAt: true,
+          execution: { select: { status: true } },
+        },
+      },
       members: {
         where: { role: "OWNER", status: "ACTIVE" },
         take: 1,

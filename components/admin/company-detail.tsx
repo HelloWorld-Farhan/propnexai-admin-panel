@@ -5,8 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
-import type { CompanyAgentRow } from "@/lib/types/agent-config";
-import { CompanyAgentManagement } from "@/components/admin/company-agent-management";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,13 +19,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -47,6 +38,8 @@ type CompanyData = {
   slug: string;
   status: string;
   contractId: string;
+  cli: string;
+  companyCode: string;
   claimedAt: string | null;
   ownerUserId: string | null;
   createdAt: string;
@@ -62,6 +55,7 @@ type CompanyData = {
   } | null;
   setupConfig: {
     totalChannels: number;
+    serviceNumber: string | null;
     pulseTimeSeconds: number;
     deltaSeconds: number;
     agentsAllocated: number;
@@ -116,26 +110,21 @@ type CompanyData = {
     currency: string;
     issuedAt: string;
   }>;
+  campaigns: Array<{
+    id: string;
+    name: string;
+    status: string;
+    resourceKey: string;
+    aiEnabled: boolean;
+    createdAt: string;
+    execution: { status: string } | null;
+  }>;
   members: Array<{
     user: { email: string; firstName: string | null; lastName: string | null };
   }>;
 };
 
-type LibraryEntry = {
-  id: string;
-  name: string;
-  slug: string;
-  category: string;
-  isPublished: boolean;
-};
-
-export function CompanyDetail({
-  company,
-  libraryEntries,
-}: {
-  company: CompanyData;
-  libraryEntries: LibraryEntry[];
-}) {
+export function CompanyDetail({ company }: { company: CompanyData }) {
   const router = useRouter();
   const [liveCompany, setLiveCompany] = useState(company);
   const [contact, setContact] = useState({
@@ -146,8 +135,8 @@ export function CompanyDetail({
   });
   const [setup, setSetup] = useState({
     totalChannels: company.setupConfig?.totalChannels ?? 0,
+    serviceNumber: company.setupConfig?.serviceNumber ?? "",
     deltaSeconds: company.setupConfig?.deltaSeconds ?? 2,
-    agentsAllocated: company.setupConfig?.agentsAllocated ?? 0,
   });
   const [billing, setBilling] = useState({
     costPerChannel: company.billingRates?.costPerChannel ?? 650,
@@ -164,14 +153,6 @@ export function CompanyDetail({
   }>({});
   const [creditAmount, setCreditAmount] = useState("");
   const [creditDescription, setCreditDescription] = useState("Admin credit top-up");
-  const [channelPhones, setChannelPhones] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      company.channels.map((channel) => [
-        channel.id,
-        channel.phoneNumber?.number ?? "",
-      ]),
-    ),
-  );
   const [saving, setSaving] = useState(false);
   const [callingEnabled, setCallingEnabled] = useState(false);
   const [callingLoading, setCallingLoading] = useState(true);
@@ -235,23 +216,6 @@ export function CompanyDetail({
     const interval = setInterval(() => void refreshCallingStatus(), 10000);
     return () => clearInterval(interval);
   }, [refreshCallingStatus]);
-
-  useEffect(() => {
-    setChannelPhones((prev) => {
-      const hasChanges = liveCompany.channels.some((channel) => {
-        const saved = (channel.phoneNumber?.number ?? "").trim();
-        const current = (prev[channel.id] ?? "").trim();
-        return current !== saved;
-      });
-      if (hasChanges) return prev;
-      return Object.fromEntries(
-        liveCompany.channels.map((channel) => [
-          channel.id,
-          channel.phoneNumber?.number ?? "",
-        ]),
-      );
-    });
-  }, [liveCompany.channels]);
 
   const previewCredits = creditsForDuration(
     61,
@@ -356,46 +320,6 @@ export function CompanyDetail({
     router.refresh();
   }
 
-  const hasChannelPhoneChanges = liveCompany.channels.some((channel) => {
-    const saved = (channel.phoneNumber?.number ?? "").trim();
-    const current = (channelPhones[channel.id] ?? "").trim();
-    return current !== saved;
-  });
-
-  async function saveChannelPhones() {
-    const changes = liveCompany.channels.filter((channel) => {
-      const saved = (channel.phoneNumber?.number ?? "").trim();
-      const current = (channelPhones[channel.id] ?? "").trim();
-      return current !== saved;
-    });
-
-    if (changes.length === 0) return;
-
-    setSaving(true);
-    try {
-      const results = await Promise.all(
-        changes.map((channel) =>
-          fetch(`/api/companies/${company.id}/channels`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              channelId: channel.id,
-              phoneNumber: (channelPhones[channel.id] ?? "").trim() || null,
-            }),
-          }),
-        ),
-      );
-      if (results.some((res) => !res.ok)) {
-        return toast.error("Failed to save channel phone mappings");
-      }
-      toast.success("Channel phone mappings saved");
-      await refreshLiveCompany();
-      router.refresh();
-    } finally {
-      setSaving(false);
-    }
-  }
-
   async function toggleCalling(enabled: boolean) {
     setCallingUpdating(true);
     try {
@@ -441,6 +365,30 @@ export function CompanyDetail({
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Public ID Identity</CardTitle>
+              <CardDescription>
+                CLI and company code are embedded in all public resource IDs and
+                should remain unchanged after creation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>CLI</Label>
+                <Input readOnly value={liveCompany.cli} className="font-mono" />
+              </div>
+              <div className="space-y-2">
+                <Label>Company Code</Label>
+                <Input
+                  readOnly
+                  value={liveCompany.companyCode}
+                  className="font-mono"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Contract ID</CardTitle>
@@ -625,13 +573,12 @@ export function CompanyDetail({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Agents allocated</Label>
+                <Label>Service number</Label>
                 <Input
-                  type="number"
-                  min={0}
-                  value={setup.agentsAllocated}
+                  placeholder="OBD service / DID number"
+                  value={setup.serviceNumber}
                   onChange={(e) =>
-                    setSetup({ ...setup, agentsAllocated: Number(e.target.value) })
+                    setSetup({ ...setup, serviceNumber: e.target.value })
                   }
                 />
               </div>
@@ -702,68 +649,56 @@ export function CompanyDetail({
 
           <Card>
             <CardHeader>
-              <CardTitle>Channel phone mapping</CardTitle>
-              <CardDescription>Which channel uses which phone number</CardDescription>
+              <CardTitle>Campaigns</CardTitle>
+              <CardDescription>
+                Campaigns this company is currently running or has configured
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Channel</TableHead>
-                    <TableHead>Phone number</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {liveCompany.channels.length === 0 ? (
+              {liveCompany.campaigns.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No campaigns yet</p>
+              ) : (
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={2} className="text-muted-foreground">
-                        Set total channels and save setup to create channel slots
-                      </TableCell>
+                      <TableHead>Name</TableHead>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Execution</TableHead>
+                      <TableHead>AI</TableHead>
+                      <TableHead>Created</TableHead>
                     </TableRow>
-                  ) : (
-                    liveCompany.channels.map((channel) => (
-                      <TableRow key={channel.id}>
-                        <TableCell>
-                          {channel.label ?? `Channel ${channel.channelIndex}`}
+                  </TableHeader>
+                  <TableBody>
+                    {liveCompany.campaigns.map((campaign) => (
+                      <TableRow key={campaign.id}>
+                        <TableCell className="font-medium">{campaign.name}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {campaign.resourceKey}
                         </TableCell>
                         <TableCell>
-                          <Input
-                            className="max-w-xs"
-                            placeholder="Enter phone number"
-                            value={channelPhones[channel.id] ?? ""}
-                            onChange={(e) =>
-                              setChannelPhones((prev) => ({
-                                ...prev,
-                                [channel.id]: e.target.value,
-                              }))
+                          <Badge
+                            variant={
+                              campaign.status === "ACTIVE" ? "success" : "secondary"
                             }
-                          />
+                          >
+                            {campaign.status}
+                          </Badge>
                         </TableCell>
+                        <TableCell>
+                          {campaign.execution?.status ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          {campaign.aiEnabled ? "Enabled" : "Disabled"}
+                        </TableCell>
+                        <TableCell>{formatDate(campaign.createdAt)}</TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              {liveCompany.channels.length > 0 ? (
-                <div className="mt-4">
-                  <Button
-                    onClick={saveChannelPhones}
-                    disabled={saving || !hasChannelPhoneChanges}
-                  >
-                    Save channel phone mapping
-                  </Button>
-                </div>
-              ) : null}
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
-
-          <CompanyAgentManagement
-            companyId={liveCompany.id}
-            agents={liveCompany.aiAgents as CompanyAgentRow[]}
-            agentsAllocated={liveCompany.setupConfig?.agentsAllocated ?? 0}
-            libraryEntries={libraryEntries}
-            onMutated={refreshLiveCompany}
-          />
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-4">

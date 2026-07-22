@@ -8,6 +8,11 @@ import { createCompanyForAdmin } from "@/src/server/repositories/company.reposit
 
 const schema = z.object({
   name: z.string().min(1, "Company name is required").max(200),
+  cli: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{2,5}$/, "CLI must be 2-5 uppercase letters"),
 });
 
 export async function POST(request: Request) {
@@ -23,6 +28,8 @@ export async function POST(request: Request) {
         name: company.name,
         slug: company.slug,
         contractId: company.contractId,
+        cli: company.cli,
+        companyCode: company.companyCode,
         createdAt: company.createdAt,
       },
       { status: 201 },

@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
 import { upsertSetupConfig } from "@/src/server/repositories/setup.repository";
 
 const schema = z.object({
   totalChannels: z.number().int().min(0),
+  serviceNumber: z.string().trim().optional().nullable(),
   deltaSeconds: z.number().int().min(0),
-  agentsAllocated: z.number().int().min(0),
+  agentsAllocated: z.number().int().min(0).optional(),
 });
 
 export async function PUT(
@@ -18,7 +20,18 @@ export async function PUT(
     await requireAdminSession();
     const { id } = await params;
     const body = schema.parse(await request.json());
-    const config = await upsertSetupConfig(id, body);
+
+    const existing = await prisma.companySetupConfig.findUnique({
+      where: { companyId: id },
+      select: { agentsAllocated: true },
+    });
+
+    const config = await upsertSetupConfig(id, {
+      totalChannels: body.totalChannels,
+      serviceNumber: body.serviceNumber,
+      deltaSeconds: body.deltaSeconds,
+      agentsAllocated: body.agentsAllocated ?? existing?.agentsAllocated ?? 0,
+    });
     return NextResponse.json(config);
   } catch (error) {
     if (error instanceof z.ZodError) {

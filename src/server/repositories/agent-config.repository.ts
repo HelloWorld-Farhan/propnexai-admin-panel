@@ -313,7 +313,7 @@ export async function deleteCompanyAgent(companyId: string, agentId: string) {
 
   const [dialerCallCount, campaignCount] = await Promise.all([
     prisma.dialerCall.count({ where: { companyId, aiAgentId: agentId } }),
-    prisma.campaign.count({ where: { companyId, aiAgentId: agentId } }),
+    prisma.outboundCampaign.count({ where: { companyId, aiAgentId: agentId } }),
   ]);
 
   if (dialerCallCount > 0 || campaignCount > 0) {

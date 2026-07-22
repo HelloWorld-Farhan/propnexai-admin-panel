@@ -22,6 +22,8 @@ type CreatedCompany = {
   name: string;
   slug: string;
   contractId: string;
+  cli: string;
+  companyCode: string;
   createdAt: string;
 };
 
@@ -29,16 +31,20 @@ export function CreateCompanyDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [cli, setCli] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedCompany | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<"contractId" | "companyCode" | null>(
+    null,
+  );
 
   function resetForm() {
     setName("");
+    setCli("");
     setError(null);
     setCreated(null);
-    setCopied(false);
+    setCopiedField(null);
     setIsSubmitting(false);
   }
 
@@ -55,6 +61,10 @@ export function CreateCompanyDialog() {
       setError("Company name is required.");
       return;
     }
+    if (!/^[A-Z]{2,5}$/.test(cli.trim().toUpperCase())) {
+      setError("CLI must be 2-5 uppercase letters.");
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -63,7 +73,10 @@ export function CreateCompanyDialog() {
       const response = await fetch("/api/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          cli: cli.trim().toUpperCase(),
+        }),
       });
 
       const data = await response.json();
@@ -82,18 +95,14 @@ export function CreateCompanyDialog() {
     }
   }
 
-  async function handleCopyContractId() {
-    if (!created?.contractId) {
-      return;
-    }
-
+  async function handleCopy(field: "contractId" | "companyCode", value: string) {
     try {
-      await navigator.clipboard.writeText(created.contractId);
-      setCopied(true);
-      toast.success("Contract ID copied");
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      toast.success(field === "contractId" ? "Contract ID copied" : "Company code copied");
+      setTimeout(() => setCopiedField(null), 2000);
     } catch {
-      toast.error("Failed to copy Contract ID");
+      toast.error("Failed to copy value");
     }
   }
 
@@ -120,15 +129,42 @@ export function CreateCompanyDialog() {
             <DialogHeader>
               <DialogTitle>Company Created</DialogTitle>
               <DialogDescription>
-                Share this Contract ID with the intended company owner. The first
-                account to link it from Settings becomes the owner. It can only
-                be used once.
+                Share the Contract ID with the intended company owner. CLI and
+                company code are used in public resource IDs and should remain
+                unchanged.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label>Company</Label>
                 <p className="text-sm font-medium">{created.name}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>CLI</Label>
+                <p className="font-mono text-sm">{created.cli}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Company Code</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={created.companyCode}
+                    className="font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCopy("companyCode", created.companyCode)}
+                    aria-label="Copy company code"
+                  >
+                    {copiedField === "companyCode" ? (
+                      <Check className="size-4" />
+                    ) : (
+                      <Copy className="size-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Contract ID</Label>
@@ -142,10 +178,10 @@ export function CreateCompanyDialog() {
                     type="button"
                     variant="outline"
                     size="icon"
-                    onClick={handleCopyContractId}
+                    onClick={() => handleCopy("contractId", created.contractId)}
                     aria-label="Copy Contract ID"
                   >
-                    {copied ? (
+                    {copiedField === "contractId" ? (
                       <Check className="size-4" />
                     ) : (
                       <Copy className="size-4" />
@@ -165,9 +201,9 @@ export function CreateCompanyDialog() {
             <DialogHeader>
               <DialogTitle>Create Company</DialogTitle>
               <DialogDescription>
-                Add a new tenant company. A unique Contract ID will be generated
-                automatically. The first account to link the Contract ID becomes
-                the company owner.
+                Add a new tenant company. CLI is required and used in public
+                resource IDs. A unique company code and Contract ID are
+                generated automatically.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -180,6 +216,20 @@ export function CreateCompanyDialog() {
                   placeholder="Acme Realty"
                   disabled={isSubmitting}
                   autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company-cli">CLI</Label>
+                <Input
+                  id="company-cli"
+                  value={cli}
+                  onChange={(event) =>
+                    setCli(event.target.value.toUpperCase().replace(/[^A-Z]/g, ""))
+                  }
+                  placeholder="PNX"
+                  maxLength={5}
+                  disabled={isSubmitting}
+                  className="font-mono uppercase"
                 />
               </div>
               {error ? (
