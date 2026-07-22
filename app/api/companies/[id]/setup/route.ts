@@ -23,7 +23,7 @@ export async function PUT(
     const body = schema.parse(await request.json());
     const serviceNumber = body.serviceNumber?.trim() || null;
 
-    if (serviceNumber && !isValidObdServiceNumber(serviceNumber)) {
+    if (serviceNumber && !(await isValidObdServiceNumber(serviceNumber))) {
       return NextResponse.json(
         { error: "Invalid service number" },
         { status: 400 },
@@ -46,6 +46,12 @@ export async function PUT(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.json(
+      { error: "Failed to validate service number" },
+      { status: 502 },
+    );
   }
 }

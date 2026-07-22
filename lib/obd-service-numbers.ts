@@ -1,37 +1,36 @@
-export const DEFAULT_OBD_SERVICE_NUMBERS = [
-  "7971502709",
-  "7971501524",
-  "7971502635",
-] as const;
+import { getMainServerApiUrl } from "@/lib/main-server-url";
 
-function parseServiceNumbers(raw: string | undefined): string[] {
-  if (!raw?.trim()) {
-    return [];
+export type ObdServiceNumbersResponse = {
+  numbers: string[];
+  defaultNumber: string | null;
+};
+
+export async function fetchObdServiceNumbers(): Promise<ObdServiceNumbersResponse> {
+  const response = await fetch(getMainServerApiUrl("/api/obd/service-numbers"), {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch OBD service numbers from main server (${response.status})`,
+    );
   }
 
-  return [
-    ...new Set(
-      raw
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean),
-    ),
-  ];
+  return (await response.json()) as ObdServiceNumbersResponse;
 }
 
-export function getObdServiceNumbers(): string[] {
-  const configured = parseServiceNumbers(process.env.OBD_SERVICE_NUMBERS);
-  if (configured.length > 0) {
-    return configured;
-  }
-
-  return [...DEFAULT_OBD_SERVICE_NUMBERS];
+export async function getObdServiceNumbers(): Promise<string[]> {
+  const { numbers } = await fetchObdServiceNumbers();
+  return numbers;
 }
 
-export function isValidObdServiceNumber(value: string | null | undefined): boolean {
+export async function isValidObdServiceNumber(
+  value: string | null | undefined,
+): Promise<boolean> {
   if (!value?.trim()) {
     return false;
   }
 
-  return getObdServiceNumbers().includes(value.trim());
+  const numbers = await getObdServiceNumbers();
+  return numbers.includes(value.trim());
 }

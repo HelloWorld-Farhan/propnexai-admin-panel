@@ -16,10 +16,12 @@ export default async function CompanyDetailPage({
 
   if (!company) notFound();
 
+  const serviceNumbers = await getObdServiceNumbers();
+
   return (
     <CompanyDetail
       company={JSON.parse(JSON.stringify(company))}
-      serviceNumbers={getObdServiceNumbers()}
+      serviceNumbers={serviceNumbers}
     />
   );
 }
