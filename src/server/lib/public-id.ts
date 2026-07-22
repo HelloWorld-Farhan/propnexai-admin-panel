@@ -7,6 +7,13 @@ export function formatPhoneNumberEntityId(sequence: number): string {
   return `PH${String(sequence).padStart(6, "0")}`;
 }
 
+export function formatAgentEntityId(sequence: number): string {
+  if (sequence < 1) {
+    throw new Error("Resource sequence must be >= 1");
+  }
+  return `AG${String(sequence).padStart(6, "0")}`;
+}
+
 export function generatePublicId(
   cli: string,
   campaignResourceKey: string,
@@ -50,4 +57,41 @@ export async function allocatePhoneNumberEntityId(
   });
 
   return phoneNumberId;
+}
+
+export async function allocateAgentEntityId(
+  tx: Prisma.TransactionClient,
+  companyId: string,
+): Promise<string> {
+  const resourceType = "AGENT";
+  const existing = await tx.companyResourceSequence.findUnique({
+    where: {
+      companyId_resourceType: {
+        companyId,
+        resourceType,
+      },
+    },
+  });
+
+  const nextSequence = (existing?.lastSequence ?? 0) + 1;
+  const resourceKey = formatAgentEntityId(nextSequence);
+
+  await tx.companyResourceSequence.upsert({
+    where: {
+      companyId_resourceType: {
+        companyId,
+        resourceType,
+      },
+    },
+    create: {
+      companyId,
+      resourceType,
+      lastSequence: nextSequence,
+    },
+    update: {
+      lastSequence: nextSequence,
+    },
+  });
+
+  return resourceKey;
 }

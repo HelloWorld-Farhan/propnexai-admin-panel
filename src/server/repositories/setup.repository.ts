@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import {
   allocatePhoneNumberEntityId,
   generatePublicId,
-} from "@/server/lib/public-id";
+} from "@/src/server/lib/public-id";
 
 export async function upsertCompanyContact(
   companyId: string,
@@ -148,13 +148,6 @@ export async function assignChannelPhone(
 
   if (trimmed) {
     const phone = await prisma.$transaction(async (tx) => {
-      const existing = await tx.phoneNumber.findUnique({
-        where: { companyId_number: { companyId, number: trimmed } },
-      });
-      if (existing) {
-        return existing;
-      }
-
       const [company, campaign] = await Promise.all([
         tx.company.findUnique({
           where: { id: companyId },
@@ -163,7 +156,7 @@ export async function assignChannelPhone(
         tx.campaign.findFirst({
           where: { companyId },
           orderBy: { createdAt: "asc" },
-          select: { resourceKey: true },
+          select: { id: true, resourceKey: true },
         }),
       ]);
 
@@ -176,6 +169,17 @@ export async function assignChannelPhone(
         );
       }
 
+      const existing = await tx.phoneNumber.findFirst({
+        where: {
+          companyId,
+          campaignId: campaign.id,
+          number: trimmed,
+        },
+      });
+      if (existing) {
+        return existing;
+      }
+
       const phoneNumberId = await allocatePhoneNumberEntityId(tx, companyId);
       const publicId = generatePublicId(
         company.cli,
@@ -186,6 +190,7 @@ export async function assignChannelPhone(
       return tx.phoneNumber.create({
         data: {
           companyId,
+          campaignId: campaign.id,
           number: trimmed,
           provider: "PROPNEX",
           phoneNumberId,

@@ -60,6 +60,7 @@ export async function POST(
       companyId: result.companyId ?? id,
       assignedCount: result.assignedCount,
       skipped: result.skipped,
+      stoppedReason: (result as { stoppedReason?: string }).stoppedReason ?? null,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -5,6 +5,7 @@ import type {
 } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { allocateAgentEntityId } from "@/src/server/lib/public-id";
 import {
   COMMUNICATION_CHANNEL_TYPES,
   type CommunicationChannelInput,
@@ -196,19 +197,23 @@ export async function createCompanyAgent(
 ) {
   await assertAgentAllocationAvailable(companyId);
 
-  const agent = await prisma.aiAgent.create({
-    data: {
-      companyId,
-      name: data.name,
-      description: data.description,
-      type: data.type,
-      status: data.status ?? "ACTIVE",
-      enabled: data.enabled ?? true,
-      systemPrompt: data.systemPrompt,
-      firstMessage: data.firstMessage,
-      modelConfig: data.modelConfig ?? {},
-    },
-    include: agentInclude,
+  const agent = await prisma.$transaction(async (tx) => {
+    const resourceKey = await allocateAgentEntityId(tx, companyId);
+    return tx.aiAgent.create({
+      data: {
+        companyId,
+        resourceKey,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        status: data.status ?? "ACTIVE",
+        enabled: data.enabled ?? true,
+        systemPrompt: data.systemPrompt,
+        firstMessage: data.firstMessage,
+        modelConfig: data.modelConfig ?? {},
+      },
+      include: agentInclude,
+    });
   });
 
   if (data.channels?.length) {
@@ -232,18 +237,22 @@ export async function deployAgentFromLibrary(
     where: { id: libraryEntryId },
   });
 
-  const agent = await prisma.aiAgent.create({
-    data: {
-      companyId,
-      libraryEntryId: entry.id,
-      name: entry.name,
-      type: entry.defaultType,
-      category: entry.category,
-      firstMessage: entry.defaultFirstMessage,
-      systemPrompt: entry.samplePrompt,
-      demoAudioUrl: entry.demoAudioUrl,
-    },
-    include: agentInclude,
+  const agent = await prisma.$transaction(async (tx) => {
+    const resourceKey = await allocateAgentEntityId(tx, companyId);
+    return tx.aiAgent.create({
+      data: {
+        companyId,
+        resourceKey,
+        libraryEntryId: entry.id,
+        name: entry.name,
+        type: entry.defaultType,
+        category: entry.category,
+        firstMessage: entry.defaultFirstMessage,
+        systemPrompt: entry.samplePrompt,
+        demoAudioUrl: entry.demoAudioUrl,
+      },
+      include: agentInclude,
+    });
   });
 
   await autoAssignFirstUnassignedChannel(companyId, agent.id);

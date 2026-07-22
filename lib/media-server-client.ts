@@ -20,6 +20,7 @@ type DialerActionResponse = {
   companyId?: string | null;
   assignedCount?: number;
   skipped?: boolean;
+  stoppedReason?: string | null;
   error?: string;
 };
 

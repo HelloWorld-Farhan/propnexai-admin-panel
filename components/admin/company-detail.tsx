@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, Copy, Phone, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -124,7 +130,13 @@ type CompanyData = {
   }>;
 };
 
-export function CompanyDetail({ company }: { company: CompanyData }) {
+export function CompanyDetail({
+  company,
+  serviceNumbers,
+}: {
+  company: CompanyData;
+  serviceNumbers: string[];
+}) {
   const router = useRouter();
   const [liveCompany, setLiveCompany] = useState(company);
   const [contact, setContact] = useState({
@@ -158,6 +170,15 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
   const [callingLoading, setCallingLoading] = useState(true);
   const [callingUpdating, setCallingUpdating] = useState(false);
   const [contractCopied, setContractCopied] = useState(false);
+
+  const availableServiceNumbers = useMemo(() => {
+    const numbers = [...serviceNumbers];
+    const current = setup.serviceNumber.trim();
+    if (current && !numbers.includes(current)) {
+      numbers.unshift(current);
+    }
+    return numbers;
+  }, [serviceNumbers, setup.serviceNumber]);
 
   const isClaimed = liveCompany.ownerUserId != null;
   const linkedOwner = liveCompany.members[0]?.user ?? null;
@@ -332,6 +353,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
         enabled?: boolean;
         error?: string;
         assignedCount?: number;
+        stoppedReason?: string;
       } | null;
 
       if (!res.ok) {
@@ -339,10 +361,72 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
       }
 
       setCallingEnabled(data?.enabled ?? enabled);
-      toast.success(enabled ? "Calling started" : "Calling stopped");
+
+      if (data?.stoppedReason === "INSUFFICIENT_CREDITS") {
+        return toast.error("Calling stopped — no credits remaining");
+      }
+
+      const assignedCount = data?.assignedCount;
+      if (enabled && assignedCount != null && assignedCount > 0) {
+        toast.success(`Calling started — ${assignedCount} channel(s) assigned`);
+      } else {
+        toast.success(enabled ? "Calling started" : "Calling stopped");
+      }
     } finally {
       setCallingUpdating(false);
     }
+  }
+
+  const totalChannels =
+    liveCompany.setupConfig?.totalChannels ?? setup.totalChannels;
+  const creditsRemaining = liveCompany.creditBalance?.creditsRemaining ?? 0;
+  const activeCampaignCount = liveCompany.campaigns.filter(
+    (campaign) => campaign.status === "ACTIVE",
+  ).length;
+  const canStartCalling = totalChannels > 0 && creditsRemaining > 0;
+
+  function renderCallingControls() {
+    return (
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Badge variant={callingEnabled ? "success" : "secondary"}>
+              {callingLoading
+                ? "Checking..."
+                : callingEnabled
+                  ? "Running"
+                  : "Stopped"}
+            </Badge>
+          </div>
+          <ul className="text-xs text-muted-foreground">
+            <li>{totalChannels > 0 ? "✓" : "✗"} {totalChannels} channel(s) configured</li>
+            <li>{creditsRemaining > 0 ? "✓" : "✗"} {creditsRemaining.toLocaleString()} credits remaining</li>
+            <li>
+              {activeCampaignCount > 0 ? "✓" : "✗"} {activeCampaignCount} active campaign(s)
+            </li>
+          </ul>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => void toggleCalling(true)}
+            disabled={
+              callingLoading || callingUpdating || callingEnabled || !canStartCalling
+            }
+          >
+            <Phone className="size-4" />
+            {callingUpdating && !callingEnabled ? "Starting..." : "Start calling"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => void toggleCalling(false)}
+            disabled={callingLoading || callingUpdating || !callingEnabled}
+          >
+            <PhoneOff className="size-4" />
+            {callingUpdating && callingEnabled ? "Stopping..." : "Stop calling"}
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -461,25 +545,13 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-4">
-              <div>
-                <CardTitle>Start calling</CardTitle>
-                <CardDescription>
-                  Start or stop the AI dialer for this company via the media server
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-3">
-                <Label htmlFor="calling-switch" className="text-sm text-muted-foreground">
-                  {callingEnabled ? "Running" : "Stopped"}
-                </Label>
-                <Switch
-                  id="calling-switch"
-                  checked={callingEnabled}
-                  disabled={callingLoading || callingUpdating}
-                  onCheckedChange={toggleCalling}
-                />
-              </div>
+            <CardHeader>
+              <CardTitle>Start calling</CardTitle>
+              <CardDescription>
+                Start or stop the AI dialer for this company via the media server
+              </CardDescription>
             </CardHeader>
+            <CardContent>{renderCallingControls()}</CardContent>
           </Card>
 
           <Card>
@@ -555,6 +627,16 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
         <TabsContent value="setup" className="space-y-4">
           <Card>
             <CardHeader>
+              <CardTitle>Calling</CardTitle>
+              <CardDescription>
+                Start outbound dialing after channels, service number, credits, and campaigns are configured
+              </CardDescription>
+            </CardHeader>
+            <CardContent>{renderCallingControls()}</CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Channel & credit settings</CardTitle>
               <CardDescription>
                 Pulse {billing.pulseTimeSeconds}s, delta {setup.deltaSeconds}s → 61s call uses {previewCredits} credit(s)
@@ -574,13 +656,23 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
               </div>
               <div className="space-y-2">
                 <Label>Service number</Label>
-                <Input
-                  placeholder="OBD service / DID number"
-                  value={setup.serviceNumber}
-                  onChange={(e) =>
-                    setSetup({ ...setup, serviceNumber: e.target.value })
+                <Select
+                  value={setup.serviceNumber || undefined}
+                  onValueChange={(value) =>
+                    setSetup({ ...setup, serviceNumber: value })
                   }
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select OBD service / DID number" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableServiceNumbers.map((number) => (
+                      <SelectItem key={number} value={number}>
+                        {number}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Delta seconds</Label>

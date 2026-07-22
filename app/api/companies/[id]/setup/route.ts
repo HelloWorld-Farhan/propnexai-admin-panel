@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/session";
+import { isValidObdServiceNumber } from "@/lib/obd-service-numbers";
 import { prisma } from "@/lib/prisma";
 import { upsertSetupConfig } from "@/src/server/repositories/setup.repository";
 
@@ -20,6 +21,14 @@ export async function PUT(
     await requireAdminSession();
     const { id } = await params;
     const body = schema.parse(await request.json());
+    const serviceNumber = body.serviceNumber?.trim() || null;
+
+    if (serviceNumber && !isValidObdServiceNumber(serviceNumber)) {
+      return NextResponse.json(
+        { error: "Invalid service number" },
+        { status: 400 },
+      );
+    }
 
     const existing = await prisma.companySetupConfig.findUnique({
       where: { companyId: id },
@@ -28,7 +37,7 @@ export async function PUT(
 
     const config = await upsertSetupConfig(id, {
       totalChannels: body.totalChannels,
-      serviceNumber: body.serviceNumber,
+      serviceNumber,
       deltaSeconds: body.deltaSeconds,
       agentsAllocated: body.agentsAllocated ?? existing?.agentsAllocated ?? 0,
     });
