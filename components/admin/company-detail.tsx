@@ -130,15 +130,10 @@ type CompanyData = {
   }>;
 };
 
-export function CompanyDetail({
-  company,
-  serviceNumbers,
-}: {
-  company: CompanyData;
-  serviceNumbers: string[];
-}) {
+export function CompanyDetail({ company }: { company: CompanyData }) {
   const router = useRouter();
   const [liveCompany, setLiveCompany] = useState(company);
+  const [serviceNumbers, setServiceNumbers] = useState<string[]>([]);
   const [contact, setContact] = useState({
     name: company.contact?.name ?? "",
     email: company.contact?.email ?? company.members[0]?.user.email ?? "",
@@ -207,6 +202,28 @@ export function CompanyDetail({
   useEffect(() => {
     setLiveCompany(company);
   }, [company]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadServiceNumbers() {
+      try {
+        const res = await fetch("/api/service-numbers", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { numbers?: string[] };
+        if (!cancelled && Array.isArray(data.numbers)) {
+          setServiceNumbers(data.numbers);
+        }
+      } catch {
+        // Service number dropdown falls back to the company's current value.
+      }
+    }
+
+    void loadServiceNumbers();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     void refreshLiveCompany();

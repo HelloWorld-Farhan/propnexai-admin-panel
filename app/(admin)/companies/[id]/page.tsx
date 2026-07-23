@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 
 import { CompanyDetail } from "@/components/admin/company-detail";
-import { getObdServiceNumbers } from "@/lib/obd-service-numbers";
+import { getCompanyById } from "@/src/server/repositories/company.repository";
 
 export const dynamic = "force-dynamic";
-import { getCompanyById } from "@/src/server/repositories/company.repository";
 
 export default async function CompanyDetailPage({
   params,
@@ -16,12 +15,7 @@ export default async function CompanyDetailPage({
 
   if (!company) notFound();
 
-  const serviceNumbers = await getObdServiceNumbers();
-
   return (
-    <CompanyDetail
-      company={JSON.parse(JSON.stringify(company))}
-      serviceNumbers={serviceNumbers}
-    />
+    <CompanyDetail company={JSON.parse(JSON.stringify(company))} />
   );
 }

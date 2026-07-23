@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Plus } from "lucide-react";
+import { Check, Copy, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export function CreateCompanyDialog() {
   const [name, setName] = useState("");
   const [cli, setCli] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingCli, setIsGeneratingCli] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedCompany | null>(null);
   const [copiedField, setCopiedField] = useState<"contractId" | "companyCode" | null>(
@@ -46,6 +47,7 @@ export function CreateCompanyDialog() {
     setCreated(null);
     setCopiedField(null);
     setIsSubmitting(false);
+    setIsGeneratingCli(false);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -92,6 +94,33 @@ export function CreateCompanyDialog() {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleAutogenerateCli() {
+    if (!name.trim()) {
+      setError("Enter a company name first.");
+      return;
+    }
+
+    setIsGeneratingCli(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/companies/suggest-cli?name=${encodeURIComponent(name.trim())}`,
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error ?? "Failed to generate CLI.");
+        return;
+      }
+
+      setCli(data.cli);
+    } catch {
+      setError("Failed to generate CLI. Please try again.");
+    } finally {
+      setIsGeneratingCli(false);
     }
   }
 
@@ -220,17 +249,33 @@ export function CreateCompanyDialog() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="company-cli">CLI</Label>
-                <Input
-                  id="company-cli"
-                  value={cli}
-                  onChange={(event) =>
-                    setCli(event.target.value.toUpperCase().replace(/[^A-Z]/g, ""))
-                  }
-                  placeholder="PNX"
-                  maxLength={5}
-                  disabled={isSubmitting}
-                  className="font-mono uppercase"
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="company-cli"
+                    value={cli}
+                    onChange={(event) =>
+                      setCli(event.target.value.toUpperCase().replace(/[^A-Z]/g, ""))
+                    }
+                    placeholder="PNX"
+                    maxLength={5}
+                    disabled={isSubmitting || isGeneratingCli}
+                    className="font-mono uppercase"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void handleAutogenerateCli()}
+                    disabled={isSubmitting || isGeneratingCli || !name.trim()}
+                    className="shrink-0 gap-2"
+                  >
+                    <Sparkles className="size-4" />
+                    {isGeneratingCli ? "Generating…" : "Autogenerate"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  2-5 uppercase letters. Autogenerate derives a unique code from
+                  the company name.
+                </p>
               </div>
               {error ? (
                 <p className="text-sm text-destructive" role="alert">
