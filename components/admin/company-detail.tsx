@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Copy, Phone, PhoneOff } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { creditsForDuration } from "@/lib/credits";
 import { deriveCostPerMinute } from "@/lib/billing";
-import { formatDate, formatInr } from "@/lib/utils";
+import { formatDate, formatInr, formatNumber } from "@/lib/utils";
 
 type CompanyData = {
   id: string;
@@ -161,9 +161,6 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
   const [creditAmount, setCreditAmount] = useState("");
   const [creditDescription, setCreditDescription] = useState("Admin credit top-up");
   const [saving, setSaving] = useState(false);
-  const [callingEnabled, setCallingEnabled] = useState(false);
-  const [callingLoading, setCallingLoading] = useState(true);
-  const [callingUpdating, setCallingUpdating] = useState(false);
   const [contractCopied, setContractCopied] = useState(false);
 
   const availableServiceNumbers = useMemo(() => {
@@ -235,25 +232,6 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
       window.removeEventListener("focus", onFocus);
     };
   }, [refreshLiveCompany]);
-
-  const refreshCallingStatus = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/companies/${company.id}/calling`, {
-        cache: "no-store",
-      });
-      if (!res.ok) return;
-      const data = (await res.json()) as { enabled: boolean };
-      setCallingEnabled(data.enabled);
-    } finally {
-      setCallingLoading(false);
-    }
-  }, [company.id]);
-
-  useEffect(() => {
-    void refreshCallingStatus();
-    const interval = setInterval(() => void refreshCallingStatus(), 10000);
-    return () => clearInterval(interval);
-  }, [refreshCallingStatus]);
 
   const previewCredits = creditsForDuration(
     61,
@@ -356,94 +334,6 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
     setCreditAmount("");
     await refreshLiveCompany();
     router.refresh();
-  }
-
-  async function toggleCalling(enabled: boolean) {
-    setCallingUpdating(true);
-    try {
-      const res = await fetch(`/api/companies/${company.id}/calling`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled }),
-      });
-      const data = (await res.json().catch(() => null)) as {
-        enabled?: boolean;
-        error?: string;
-        assignedCount?: number;
-        stoppedReason?: string;
-      } | null;
-
-      if (!res.ok) {
-        return toast.error(data?.error ?? "Failed to update calling status");
-      }
-
-      setCallingEnabled(data?.enabled ?? enabled);
-
-      if (data?.stoppedReason === "INSUFFICIENT_CREDITS") {
-        return toast.error("Calling stopped — no credits remaining");
-      }
-
-      const assignedCount = data?.assignedCount;
-      if (enabled && assignedCount != null && assignedCount > 0) {
-        toast.success(`Calling started — ${assignedCount} channel(s) assigned`);
-      } else {
-        toast.success(enabled ? "Calling started" : "Calling stopped");
-      }
-    } finally {
-      setCallingUpdating(false);
-    }
-  }
-
-  const totalChannels =
-    liveCompany.setupConfig?.totalChannels ?? setup.totalChannels;
-  const creditsRemaining = liveCompany.creditBalance?.creditsRemaining ?? 0;
-  const activeCampaignCount = liveCompany.campaigns.filter(
-    (campaign) => campaign.status === "ACTIVE",
-  ).length;
-  const canStartCalling = totalChannels > 0 && creditsRemaining > 0;
-
-  function renderCallingControls() {
-    return (
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Badge variant={callingEnabled ? "success" : "secondary"}>
-              {callingLoading
-                ? "Checking..."
-                : callingEnabled
-                  ? "Running"
-                  : "Stopped"}
-            </Badge>
-          </div>
-          <ul className="text-xs text-muted-foreground">
-            <li>{totalChannels > 0 ? "✓" : "✗"} {totalChannels} channel(s) configured</li>
-            <li>{creditsRemaining > 0 ? "✓" : "✗"} {creditsRemaining.toLocaleString()} credits remaining</li>
-            <li>
-              {activeCampaignCount > 0 ? "✓" : "✗"} {activeCampaignCount} active campaign(s)
-            </li>
-          </ul>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => void toggleCalling(true)}
-            disabled={
-              callingLoading || callingUpdating || callingEnabled || !canStartCalling
-            }
-          >
-            <Phone className="size-4" />
-            {callingUpdating && !callingEnabled ? "Starting..." : "Start calling"}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => void toggleCalling(false)}
-            disabled={callingLoading || callingUpdating || !callingEnabled}
-          >
-            <PhoneOff className="size-4" />
-            {callingUpdating && callingEnabled ? "Stopping..." : "Stop calling"}
-          </Button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -563,16 +453,6 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Start calling</CardTitle>
-              <CardDescription>
-                Start or stop the AI dialer for this company via the media server
-              </CardDescription>
-            </CardHeader>
-            <CardContent>{renderCallingControls()}</CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle>Owner contact</CardTitle>
               <CardDescription>
                 {isClaimed
@@ -644,16 +524,6 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
         <TabsContent value="setup" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Calling</CardTitle>
-              <CardDescription>
-                Start outbound dialing after channels, service number, credits, and campaigns are configured
-              </CardDescription>
-            </CardHeader>
-            <CardContent>{renderCallingControls()}</CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle>Channel & credit settings</CardTitle>
               <CardDescription>
                 Pulse {billing.pulseTimeSeconds}s, delta {setup.deltaSeconds}s → 61s call uses {previewCredits} credit(s)
@@ -715,8 +585,8 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
               <div>
                 <CardTitle>Credits</CardTitle>
                 <CardDescription>
-                  {liveCompany.creditBalance?.creditsRemaining.toLocaleString() ?? 0} remaining ·{" "}
-                  {liveCompany.creditBalance?.creditsUsed.toLocaleString() ?? 0} used
+                  {formatNumber(liveCompany.creditBalance?.creditsRemaining ?? 0)} remaining ·{" "}
+                  {formatNumber(liveCompany.creditBalance?.creditsUsed ?? 0)} used
                 </CardDescription>
               </div>
               <Dialog>

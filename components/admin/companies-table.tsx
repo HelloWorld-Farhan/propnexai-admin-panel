@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { DataTable } from "@/components/admin/data-table";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatNumber } from "@/lib/utils";
 
 export type CompanyRow = {
   id: string;
@@ -83,7 +83,7 @@ const columns: ColumnDef<CompanyRow>[] = [
     header: "Credits",
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
-        <span>{row.original.creditsRemaining.toLocaleString()}</span>
+        <span>{formatNumber(row.original.creditsRemaining)}</span>
         {row.original.lowCredit ? (
           <Badge variant="destructive" className="gap-1">
             <AlertTriangle className="h-3 w-3" />
