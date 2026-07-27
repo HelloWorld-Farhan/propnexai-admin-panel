@@ -9,6 +9,7 @@ import { upsertSetupConfig } from "@/src/server/repositories/setup.repository";
 const schema = z.object({
   totalChannels: z.number().int().min(0),
   serviceNumber: z.string().trim().optional().nullable(),
+  ivrTemplateId: z.string().trim().optional().nullable(),
   deltaSeconds: z.number().int().min(0),
   agentsAllocated: z.number().int().min(0).optional(),
 });
@@ -22,6 +23,7 @@ export async function PUT(
     const { id } = await params;
     const body = schema.parse(await request.json());
     const serviceNumber = body.serviceNumber?.trim() || null;
+    const ivrTemplateId = body.ivrTemplateId?.trim() || null;
 
     if (serviceNumber && !(await isValidObdServiceNumber(serviceNumber))) {
       return NextResponse.json(
@@ -38,6 +40,7 @@ export async function PUT(
     const config = await upsertSetupConfig(id, {
       totalChannels: body.totalChannels,
       serviceNumber,
+      ivrTemplateId,
       deltaSeconds: body.deltaSeconds,
       agentsAllocated: body.agentsAllocated ?? existing?.agentsAllocated ?? 0,
     });

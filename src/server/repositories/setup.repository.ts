@@ -97,16 +97,18 @@ export async function upsertSetupConfig(
   data: {
     totalChannels: number;
     serviceNumber?: string | null;
+    ivrTemplateId?: string | null;
     deltaSeconds: number;
     agentsAllocated: number;
   },
 ) {
   const serviceNumber = data.serviceNumber?.trim() || null;
+  const ivrTemplateId = data.ivrTemplateId?.trim() || null;
 
   const config = await prisma.companySetupConfig.upsert({
     where: { companyId },
-    create: { companyId, ...data, serviceNumber },
-    update: { ...data, serviceNumber },
+    create: { companyId, ...data, serviceNumber, ivrTemplateId },
+    update: { ...data, serviceNumber, ivrTemplateId },
   });
 
   const existingChannels = await prisma.companyChannel.findMany({

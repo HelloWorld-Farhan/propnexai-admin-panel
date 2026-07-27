@@ -62,6 +62,7 @@ type CompanyData = {
   setupConfig: {
     totalChannels: number;
     serviceNumber: string | null;
+    ivrTemplateId: string | null;
     pulseTimeSeconds: number;
     deltaSeconds: number;
     agentsAllocated: number;
@@ -143,6 +144,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
   const [setup, setSetup] = useState({
     totalChannels: company.setupConfig?.totalChannels ?? 0,
     serviceNumber: company.setupConfig?.serviceNumber ?? "",
+    ivrTemplateId: company.setupConfig?.ivrTemplateId ?? "",
     deltaSeconds: company.setupConfig?.deltaSeconds ?? 2,
   });
   const [billing, setBilling] = useState({
@@ -560,6 +562,16 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>IVR template ID</Label>
+                <Input
+                  value={setup.ivrTemplateId}
+                  placeholder="e.g. 179"
+                  onChange={(e) =>
+                    setSetup({ ...setup, ivrTemplateId: e.target.value })
+                  }
+                />
               </div>
               <div className="space-y-2">
                 <Label>Delta seconds</Label>
