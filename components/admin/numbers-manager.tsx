@@ -84,11 +84,9 @@ function toNullableId(value: string): string | null {
 export function NumbersManager({
   numbers,
   companies,
-  serviceNumbers,
 }: {
   numbers: PhoneNumberRow[];
   companies: CompanyOption[];
-  serviceNumbers: string[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -190,7 +188,6 @@ export function NumbersManager({
     setEditingId(null);
     setForm({
       ...EMPTY_FORM,
-      number: serviceNumbers[0] ?? "",
       companyId: companies[0]?.id ?? "",
     });
     setOpen(true);
@@ -286,24 +283,14 @@ export function NumbersManager({
             <div className="grid gap-3">
               <div className="space-y-2">
                 <Label>Service number</Label>
-                <Select
+                <Input
                   value={form.number}
-                  onValueChange={(value) =>
-                    setForm((prev) => ({ ...prev, number: value }))
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, number: e.target.value }))
                   }
+                  placeholder="Enter service number"
                   disabled={!!editingId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select service number" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {serviceNumbers.map((number) => (
-                      <SelectItem key={number} value={number}>
-                        {number}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
                 {editingId ? (
                   <p className="text-xs text-muted-foreground">
                     Number cannot be changed after creation.

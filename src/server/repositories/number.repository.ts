@@ -5,10 +5,6 @@ import type {
 
 import { prisma } from "@/lib/prisma";
 import {
-  getOutgoingServiceNumbers,
-  isOutgoingServiceNumber,
-} from "@/lib/service-number-policy";
-import {
   allocatePhoneNumberEntityId,
   generatePublicId,
 } from "@/src/server/lib/public-id";
@@ -25,9 +21,7 @@ export type PhoneNumberAdminRow = Awaited<
 >[number];
 
 export async function listPhoneNumbersForAdmin() {
-  const outgoingServiceNumbers = getOutgoingServiceNumbers();
   return prisma.phoneNumber.findMany({
-    where: { number: { in: outgoingServiceNumbers } },
     orderBy: [{ updatedAt: "desc" }, { number: "asc" }],
     include: numberInclude,
   });
@@ -120,9 +114,6 @@ export async function createPhoneNumberForAdmin(input: {
   outboundAgentId?: string | null;
 }) {
   const number = input.number.trim();
-  if (!isOutgoingServiceNumber(number)) {
-    throw new Error("Only configured outgoing service numbers can be assigned");
-  }
   const campaignId = input.campaignId ?? null;
 
   await assertAgentsBelongToCompany(
@@ -191,9 +182,6 @@ export async function updatePhoneNumberForAdmin(
   });
   if (!existing) {
     throw new Error("Phone number not found");
-  }
-  if (!isOutgoingServiceNumber(existing.number)) {
-    throw new Error("Only configured outgoing service numbers are managed here");
   }
 
   const nextCompanyId = input.companyId ?? existing.companyId;
