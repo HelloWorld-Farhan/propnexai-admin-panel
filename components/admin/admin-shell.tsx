@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   LogOut,
+  Phone,
   Radio,
 } from "lucide-react";
 
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/companies", label: "Companies", icon: Building2 },
   { href: "/channels", label: "Channels", icon: Radio },
+  { href: "/numbers", label: "Numbers", icon: Phone },
   { href: "/agents", label: "Agent Library", icon: Bot },
   { href: "/support", label: "Support", icon: LifeBuoy },
 ];
