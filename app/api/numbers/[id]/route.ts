@@ -37,7 +37,8 @@ export async function PATCH(
     if (
       error instanceof Error &&
       (error.message.includes("not found") ||
-        error.message.includes("already assigned"))
+        error.message.includes("already assigned") ||
+        error.message.includes("outgoing service numbers"))
     ) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

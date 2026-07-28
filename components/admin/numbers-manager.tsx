@@ -53,36 +53,13 @@ type NumberFormState = {
   number: string;
   companyId: string;
   campaignId: string;
-  label: string;
-  provider: string;
-  status: string;
-  inboundAgentId: string;
-  outboundAgentId: string;
 };
 
 const EMPTY_FORM: NumberFormState = {
   number: "",
   companyId: "",
   campaignId: "none",
-  label: "",
-  provider: "PROPNEX",
-  status: "ACTIVE",
-  inboundAgentId: "none",
-  outboundAgentId: "none",
 };
-
-function DirectionBadges({ row }: { row: PhoneNumberRow }) {
-  return (
-    <div className="flex flex-wrap gap-1">
-      <Badge variant={row.inboundAgentId ? "success" : "secondary"}>
-        In: {row.inboundAgent?.name ?? "Unassigned"}
-      </Badge>
-      <Badge variant={row.outboundAgentId ? "default" : "secondary"}>
-        Out: {row.outboundAgent?.name ?? "Unassigned"}
-      </Badge>
-    </div>
-  );
-}
 
 function toNullableId(value: string): string | null {
   return value === "none" || value.trim() === "" ? null : value;
@@ -91,9 +68,11 @@ function toNullableId(value: string): string | null {
 export function NumbersManager({
   numbers,
   companies,
+  serviceNumbers,
 }: {
   numbers: PhoneNumberRow[];
   companies: CompanyOption[];
+  serviceNumbers: string[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -109,7 +88,7 @@ export function NumbersManager({
   const columns: ColumnDef<PhoneNumberRow>[] = [
     {
       accessorKey: "number",
-      header: "Number",
+      header: "Service Number",
       cell: ({ row }) => (
         <div>
           <p className="font-medium">{row.original.number}</p>
@@ -149,32 +128,6 @@ export function NumbersManager({
         ),
     },
     {
-      id: "direction",
-      header: "Inbound / Outbound",
-      cell: ({ row }) => <DirectionBadges row={row.original} />,
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <Badge
-          variant={
-            row.original.status === "ACTIVE"
-              ? "success"
-              : row.original.status === "INACTIVE"
-                ? "warning"
-                : "secondary"
-          }
-        >
-          {row.original.status}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "provider",
-      header: "Provider",
-    },
-    {
       id: "actions",
       header: "",
       cell: ({ row }) => (
@@ -208,6 +161,7 @@ export function NumbersManager({
     setEditingId(null);
     setForm({
       ...EMPTY_FORM,
+      number: serviceNumbers[0] ?? "",
       companyId: companies[0]?.id ?? "",
     });
     setOpen(true);
@@ -219,11 +173,6 @@ export function NumbersManager({
       number: row.number,
       companyId: row.companyId,
       campaignId: row.campaignId ?? "none",
-      label: row.label ?? "",
-      provider: row.provider,
-      status: row.status,
-      inboundAgentId: row.inboundAgentId ?? "none",
-      outboundAgentId: row.outboundAgentId ?? "none",
     });
     setOpen(true);
   }
@@ -233,8 +182,6 @@ export function NumbersManager({
       ...prev,
       companyId,
       campaignId: "none",
-      inboundAgentId: "none",
-      outboundAgentId: "none",
     }));
   }
 
@@ -253,11 +200,6 @@ export function NumbersManager({
     const assignmentPayload = {
       companyId: form.companyId,
       campaignId: toNullableId(form.campaignId),
-      label: form.label.trim() || null,
-      provider: form.provider,
-      status: form.status,
-      inboundAgentId: toNullableId(form.inboundAgentId),
-      outboundAgentId: toNullableId(form.outboundAgentId),
     };
 
     const res = await fetch(
@@ -279,19 +221,19 @@ export function NumbersManager({
       return toast.error(data.error ?? "Failed to save number");
     }
 
-    toast.success(editingId ? "Number updated" : "Number added");
+    toast.success(editingId ? "Service number updated" : "Service number added");
     setOpen(false);
     router.refresh();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Remove this phone number?")) return;
+    if (!confirm("Remove this service number assignment?")) return;
     const res = await fetch(`/api/numbers/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       return toast.error(data.error ?? "Failed to remove number");
     }
-    toast.success("Number removed");
+    toast.success("Service number removed");
     router.refresh();
   }
 
@@ -305,36 +247,37 @@ export function NumbersManager({
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>
-                {editingId ? "Edit number assignment" : "Add number"}
+                {editingId
+                  ? "Edit service number assignment"
+                  : "Add service number assignment"}
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-3">
               <div className="space-y-2">
-                <Label>Phone number</Label>
-                <Input
+                <Label>Service number</Label>
+                <Select
                   value={form.number}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, number: e.target.value }))
+                  onValueChange={(value) =>
+                    setForm((prev) => ({ ...prev, number: value }))
                   }
-                  placeholder="+9198..."
                   disabled={!!editingId}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select service number" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {serviceNumbers.map((number) => (
+                      <SelectItem key={number} value={number}>
+                        {number}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {editingId ? (
                   <p className="text-xs text-muted-foreground">
-                    Only assignment fields are updated for existing numbers.
+                    Number cannot be changed after creation.
                   </p>
                 ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Label</Label>
-                <Input
-                  value={form.label}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, label: e.target.value }))
-                  }
-                  placeholder="Optional label"
-                />
               </div>
 
               <div className="space-y-2">
@@ -376,92 +319,6 @@ export function NumbersManager({
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Inbound agent</Label>
-                  <Select
-                    value={form.inboundAgentId}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({ ...prev, inboundAgentId: value }))
-                    }
-                    disabled={!selectedCompany}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Unassigned" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Unassigned</SelectItem>
-                      {(selectedCompany?.aiAgents ?? []).map((agent) => (
-                        <SelectItem key={agent.id} value={agent.id}>
-                          {agent.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Outbound agent</Label>
-                  <Select
-                    value={form.outboundAgentId}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({ ...prev, outboundAgentId: value }))
-                    }
-                    disabled={!selectedCompany}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Unassigned" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Unassigned</SelectItem>
-                      {(selectedCompany?.aiAgents ?? []).map((agent) => (
-                        <SelectItem key={agent.id} value={agent.id}>
-                          {agent.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Provider</Label>
-                  <Select
-                    value={form.provider}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({ ...prev, provider: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PROPNEX">PROPNEX</SelectItem>
-                      <SelectItem value="TWILIO">TWILIO</SelectItem>
-                      <SelectItem value="EXOTEL">EXOTEL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={form.status}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({ ...prev, status: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-                      <SelectItem value="INACTIVE">INACTIVE</SelectItem>
-                      <SelectItem value="DISABLED">DISABLED</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? "Saving..." : "Save"}
               </Button>
@@ -474,7 +331,7 @@ export function NumbersManager({
         columns={columns}
         data={numbers}
         searchKeys={["number", "company", "campaign"]}
-        searchPlaceholder="Search numbers, companies, campaigns..."
+        searchPlaceholder="Search service numbers, companies, campaigns..."
       />
     </div>
   );
