@@ -1,0 +1,18 @@
+2026-08-11T11:29:45.071Z 
+Invalid `tx.user.findFirst()` invocation in
+C:\Users\farhan khalid\OneDrive\Pictures\Documents\Propnex\propnexai-admin-panel\.next\dev\server\chunks\[root-of-the-server]__1kpo7_r._.js:338:38
+
+  335 });
+  336 if (input.pendingUserEmail) {
+  337     // Find the user or create a placeholder User in DB
+→ 338     let user = await tx.user.findFirst(
+Error converting field "clerkUserId" of expected non-nullable type "String", found incompatible value of "null".
+2026-08-11T11:33:14.593Z 
+Invalid `tx.user.findFirst()` invocation in
+C:\Users\farhan khalid\OneDrive\Pictures\Documents\Propnex\propnexai-admin-panel\.next\dev\server\chunks\[root-of-the-server]__1kpo7_r._.js:338:38
+
+  335 });
+  336 if (input.pendingUserEmail) {
+  337     // Find the user or create a placeholder User in DB
+→ 338     let user = await tx.user.findFirst(
+Error converting field "clerkUserId" of expected non-nullable type "String", found incompatible value of "null".

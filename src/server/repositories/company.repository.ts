@@ -173,3 +173,22 @@ export async function getCompanyById(id: string) {
 
   return company;
 }
+
+export async function deleteCompanyById(id: string) {
+  const company = await prisma.company.findUnique({ where: { id } });
+  if (!company || company.isDemo) {
+    return false;
+  }
+
+  await prisma.company.delete({
+    where: { id },
+  });
+  return true;
+}
+
+export async function deleteAllCompanies() {
+  await prisma.company.deleteMany({
+    where: { isDemo: false },
+  });
+  return true;
+}

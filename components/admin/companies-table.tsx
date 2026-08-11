@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { DataTable } from "@/components/admin/data-table";
 import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
+import { DeleteCompanyDialog } from "@/components/admin/delete-company-dialog";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatNumber } from "@/lib/utils";
 
@@ -119,6 +120,14 @@ const columns: ColumnDef<CompanyRow>[] = [
     accessorKey: "createdAt",
     header: "Created",
     cell: ({ row }) => formatDate(row.original.createdAt),
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => (
+      <div className="flex justify-end">
+        <DeleteCompanyDialog companyId={row.original.id} companyName={row.original.name} />
+      </div>
+    ),
   },
 ];
 

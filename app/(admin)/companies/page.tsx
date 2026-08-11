@@ -1,5 +1,6 @@
 import { CompaniesTable } from "@/components/admin/companies-table";
 import { CreateCompanyDialog } from "@/components/admin/create-company-dialog";
+import { ClearCompaniesDialog } from "@/components/admin/clear-companies-dialog";
 import { listCompaniesForAdmin } from "@/src/server/repositories/company.repository";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,10 @@ export default async function CompaniesPage() {
             Manage tenant companies, credits, and setup
           </p>
         </div>
-        <CreateCompanyDialog />
+        <div className="flex items-center gap-2">
+          <ClearCompaniesDialog />
+          <CreateCompanyDialog />
+        </div>
       </div>
       <CompaniesTable companies={companies} lowCreditCount={lowCreditCount} />
     </div>
