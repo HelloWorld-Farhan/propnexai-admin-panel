@@ -9,8 +9,9 @@ export async function POST(request: Request) {
     password?: string;
   };
 
-  const expectedUser = process.env.ADMIN_USERNAME;
-  const expectedPass = process.env.ADMIN_PASSWORD;
+  const expectedUser = process.env.ADMIN_USERNAME?.trim();
+  const expectedPass = process.env.ADMIN_PASSWORD?.trim();
+  console.log("LOGIN ATTEMPT:", { providedUser: body.username, expectedUser, providedPass: body.password, expectedPass });
 
   if (!expectedUser || !expectedPass) {
     return NextResponse.json(
@@ -22,8 +23,8 @@ export async function POST(request: Request) {
   if (
     !body.username ||
     !body.password ||
-    !safeCompare(body.username, expectedUser) ||
-    !safeCompare(body.password, expectedPass)
+    !safeCompare(body.username.trim(), expectedUser) ||
+    !safeCompare(body.password.trim(), expectedPass)
   ) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }

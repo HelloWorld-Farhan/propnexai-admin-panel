@@ -14,6 +14,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "./notification-bell";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -77,10 +78,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center border-b border-border px-6">
+        <header className="flex h-14 items-center justify-between border-b border-border px-6">
           <p className="text-sm text-muted-foreground">
             Platform administration
           </p>
+          <NotificationBell />
         </header>
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>

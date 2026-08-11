@@ -5,7 +5,11 @@ import { generateUniqueCompanyCode } from "@/src/server/lib/company-code";
 import { companySlugFromName } from "@/src/server/lib/company-slug";
 import { generateUniqueContractId } from "@/src/server/lib/contract-id";
 
-export async function createCompanyForAdmin(input: { name: string; cli: string }) {
+export async function createCompanyForAdmin(input: { 
+  name: string; 
+  cli: string; 
+  pendingUserEmail?: string; 
+}) {
   const name = input.name.trim();
   const cli = normalizeCli(input.cli);
   if (!cli) {
@@ -35,6 +39,46 @@ export async function createCompanyForAdmin(input: { name: string; cli: string }
         creditsUsed: 0,
       },
     });
+
+    if (input.pendingUserEmail) {
+      // Find the user or create a placeholder User in DB
+      let user = await tx.user.findFirst({
+        where: { email: input.pendingUserEmail },
+      });
+      
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            email: input.pendingUserEmail,
+            clerkUserId: `local_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+            status: "ACTIVE",
+          }
+        });
+      }
+
+      // Make them the owner
+      await tx.company.update({
+        where: { id: company.id },
+        data: { ownerUserId: user.id },
+      });
+
+      // Add CompanyMember
+      await tx.companyMember.create({
+        data: {
+          companyId: company.id,
+          userId: user.id,
+          role: "OWNER",
+          status: "ACTIVE",
+          joinedAt: new Date(),
+        }
+      });
+
+      // Update PendingApproval status
+      await tx.pendingApproval.update({
+        where: { email: input.pendingUserEmail },
+        data: { status: "APPROVED" },
+      });
+    }
 
     return company;
   });
