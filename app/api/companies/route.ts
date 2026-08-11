@@ -26,16 +26,18 @@ export async function POST(request: Request) {
 
     // Send Webhook to Google Apps Script
     if (body.pendingUserEmail) {
-      const webhookUrl = process.env.GOOGLE_SCRIPT_WEBHOOK_URL;
+      const webhookUrl = "https://script.google.com/macros/s/AKfycbxMA4amQJHCW7BDgAg3enbcUEXkh9RIawfSN9TUIbZtSGKxka01KCKXr6gwquChsqgEuA/exec";
       if (webhookUrl) {
         try {
           await fetch(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              type: "company_created",
               email: body.pendingUserEmail,
               companyName: company.name,
               contractId: company.contractId,
+              name: body.pendingUserEmail.split("@")[0]
             }),
           });
         } catch (err) {
