@@ -32,6 +32,7 @@ export function NotificationBell() {
   const [pending, setPending] = useState<PendingApproval[]>([]);
   const [open, setOpen] = useState(false);
   const [verifyUser, setVerifyUser] = useState<PendingApproval | null>(null);
+  const [declineUser, setDeclineUser] = useState<PendingApproval | null>(null);
 
   // Dialog state
   const [name, setName] = useState("");
@@ -142,21 +143,9 @@ export function NotificationBell() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={async () => {
-                          if (!window.confirm("Are you sure you want to decline this request? The user will be notified via email.")) {
-                            return;
-                          }
-                          try {
-                            await fetch("/api/pending-approvals/decline", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ email: user.email }),
-                            });
-                            toast.success("Request declined.");
-                            fetchPending();
-                          } catch (err) {
-                            toast.error("Failed to decline.");
-                          }
+                        onClick={() => {
+                          setDeclineUser(user);
+                          setOpen(false);
                         }}
                       >
                         Decline
@@ -178,6 +167,50 @@ export function NotificationBell() {
           </div>
         </PopoverContent>
       </Popover>
+
+      <Dialog open={!!declineUser} onOpenChange={(val) => !val && setDeclineUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Decline Request</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to decline the request for <b>{declineUser?.email}</b>? They will receive an email notification and their request will be marked as rejected.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeclineUser(null)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              disabled={isSubmitting}
+              onClick={async () => {
+                setIsSubmitting(true);
+                try {
+                  await fetch("/api/pending-approvals/decline", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: declineUser?.email }),
+                  });
+                  toast.success("Request declined.");
+                  setDeclineUser(null);
+                  fetchPending();
+                } catch (err) {
+                  toast.error("Failed to decline.");
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+            >
+              {isSubmitting ? "Declining..." : "Decline Request"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!verifyUser} onOpenChange={(val) => !val && setVerifyUser(null)}>
         <DialogContent>

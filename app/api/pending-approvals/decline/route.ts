@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     // Trigger webhook for rejection
     try {
       const webhookUrl = "https://script.google.com/macros/s/AKfycbxMA4amQJHCW7BDgAg3enbcUEXkh9RIawfSN9TUIbZtSGKxka01KCKXr6gwquChsqgEuA/exec";
-      fetch(webhookUrl, {
+      await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
