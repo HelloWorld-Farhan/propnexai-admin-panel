@@ -138,15 +138,39 @@ export function NotificationBell() {
                         {new Date(user.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setVerifyUser(user);
-                        setOpen(false);
-                      }}
-                    >
-                      Verify
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={async () => {
+                          if (!window.confirm("Are you sure you want to decline this request? The user will be notified via email.")) {
+                            return;
+                          }
+                          try {
+                            await fetch("/api/pending-approvals/decline", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ email: user.email }),
+                            });
+                            toast.success("Request declined.");
+                            fetchPending();
+                          } catch (err) {
+                            toast.error("Failed to decline.");
+                          }
+                        }}
+                      >
+                        Decline
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setVerifyUser(user);
+                          setOpen(false);
+                        }}
+                      >
+                        Verify
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
