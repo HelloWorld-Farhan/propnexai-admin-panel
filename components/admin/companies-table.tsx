@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { DataTable } from "@/components/admin/data-table";
+import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatNumber } from "@/lib/utils";
 
@@ -84,6 +85,7 @@ const columns: ColumnDef<CompanyRow>[] = [
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <span>{formatNumber(row.original.creditsRemaining)}</span>
+        <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
         {row.original.lowCredit ? (
           <Badge variant="destructive" className="gap-1">
             <AlertTriangle className="h-3 w-3" />

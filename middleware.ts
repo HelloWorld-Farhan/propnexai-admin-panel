@@ -11,7 +11,8 @@ export async function middleware(request: NextRequest) {
 
   const isPublic =
     pathname === "/login" ||
-    pathname.startsWith("/api/auth/login");
+    pathname.startsWith("/api/auth/login") ||
+    pathname.startsWith("/api/pending-approvals");
 
   const response = NextResponse.next();
   const session = await getIronSession<AdminSession>(
