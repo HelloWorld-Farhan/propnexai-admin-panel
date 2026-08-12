@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     // Send Webhook to Google Apps Script
     if (body.pendingUserEmail) {
-      const webhookUrl = "https://script.google.com/macros/s/AKfycbxMA4amQJHCW7BDgAg3enbcUEXkh9RIawfSN9TUIbZtSGKxka01KCKXr6gwquChsqgEuA/exec";
+      const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
       if (webhookUrl) {
         try {
           await fetch(webhookUrl, {
