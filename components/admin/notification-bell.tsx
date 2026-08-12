@@ -25,6 +25,7 @@ type PendingApproval = {
   id: string;
   email: string;
   createdAt: string;
+  remindedAt?: string | null;
 };
 
 export function NotificationBell() {
@@ -132,8 +133,13 @@ export function NotificationBell() {
                     className="flex items-center justify-between border-b p-3 last:border-0"
                   >
                     <div className="flex flex-col gap-1 overflow-hidden">
-                      <p className="truncate text-sm font-medium">
+                      <p className="truncate text-sm font-medium flex items-center gap-2">
                         {user.email}
+                        {user.remindedAt && (
+                          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+                            Reminder Sent
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(user.createdAt).toLocaleDateString()}
