@@ -4,7 +4,7 @@ import { getIronSession } from "iron-session";
 import {
   sessionOptions,
   type AdminSession,
-} from "@/lib/auth/session";
+} from "@/lib/auth/session-options";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
