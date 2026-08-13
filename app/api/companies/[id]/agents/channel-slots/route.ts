@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireAdminSession } from "@/lib/auth/session";
+import { requireAdminSession } from "@/lib/auth/server-session";
 import { listCommunicationChannelSlots } from "@/src/server/repositories/agent-config.repository";
 
 export async function GET(

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireAdminSession } from "@/lib/auth/session";
+import { requireAdminSession } from "@/lib/auth/server-session";
 import { getCompanyById } from "@/src/server/repositories/company.repository";
 
 export async function GET(

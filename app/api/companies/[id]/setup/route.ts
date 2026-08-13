@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireAdminSession } from "@/lib/auth/session";
+import { requireAdminSession } from "@/lib/auth/server-session";
 import { isValidObdServiceNumber } from "@/lib/obd-service-numbers";
 import { prisma } from "@/lib/prisma";
 import { upsertSetupConfig } from "@/src/server/repositories/setup.repository";
