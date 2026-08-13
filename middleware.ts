@@ -1,10 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getIronSession } from "iron-session";
 
-import {
-  sessionOptions,
-  type AdminSession,
-} from "@/lib/auth/session-options";
+export const sessionOptions = {
+  password: process.env.ADMIN_SESSION_SECRET!,
+  cookieName: "propnex_admin_session",
+  cookieOptions: {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    sameSite: "lax" as const,
+    maxAge: 60 * 60 * 24 * 7,
+  },
+};
+
+export type AdminSession = {
+  isLoggedIn: boolean;
+  username?: string;
+};
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
