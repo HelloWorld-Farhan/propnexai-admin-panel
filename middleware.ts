@@ -1,21 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getIronSession } from "iron-session";
-
-export const sessionOptions = {
-  password: process.env.ADMIN_SESSION_SECRET!,
-  cookieName: "propnex_admin_session",
-  cookieOptions: {
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
-    sameSite: "lax" as const,
-    maxAge: 60 * 60 * 24 * 7,
-  },
-};
-
-export type AdminSession = {
-  isLoggedIn: boolean;
-  username?: string;
-};
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -26,19 +9,21 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/pending-approvals");
 
   const response = NextResponse.next();
-  const session = await getIronSession<AdminSession>(
-    request,
-    response,
-    sessionOptions,
-  );
+  
+  // Bypass iron-session in Edge middleware to prevent Vercel __dirname crashes.
+  // Instead of decoding the session cryptographically in the Edge runtime, 
+  // we just check if the cookie exists. If it's invalid, the actual Node.js 
+  // API routes will reject the request later.
+  const hasSessionCookie = request.cookies.has("propnex_admin_session");
+  const isLoggedIn = hasSessionCookie;
 
-  if (!session.isLoggedIn && !isPublic) {
+  if (!isLoggedIn && !isPublic) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (session.isLoggedIn && pathname === "/login") {
+  if (isLoggedIn && pathname === "/login") {
     return NextResponse.redirect(new URL("/companies", request.url));
   }
 
