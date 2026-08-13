@@ -1,8 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getIronSession } from "iron-session";
-import { sessionOptions, type AdminSession } from "./lib/auth/server-session";
 
-export const runtime = "nodejs";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -12,19 +9,20 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/pending-approvals");
 
   const response = NextResponse.next();
-  const session = await getIronSession<AdminSession>(
-    request,
-    response,
-    sessionOptions,
-  );
+  
+  // We cannot use iron-session in Vercel Edge middleware due to __dirname crashes.
+  // Instead, we just check if the cookie exists. If it's invalid, the actual Node.js 
+  // API routes and Server Actions will reject the request later.
+  const hasSessionCookie = request.cookies.has("propnex_admin_session");
+  const isLoggedIn = hasSessionCookie;
 
-  if (!session.isLoggedIn && !isPublic) {
+  if (!isLoggedIn && !isPublic) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (session.isLoggedIn && pathname === "/login") {
+  if (isLoggedIn && pathname === "/login") {
     return NextResponse.redirect(new URL("/companies", request.url));
   }
 
