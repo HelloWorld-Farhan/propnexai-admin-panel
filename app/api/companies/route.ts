@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import * as nodemailer from "nodemailer";
 
-import { requireAdminSession } from "@/lib/auth/session";
+import { requireAdminSession } from "@/lib/auth/server-session";
 import { createCompanyForAdmin } from "@/src/server/repositories/company.repository";
 
 const schema = z.object({

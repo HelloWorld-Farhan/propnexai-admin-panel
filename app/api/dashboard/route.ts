@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireAdminSession } from "@/lib/auth/session";
+import { requireAdminSession } from "@/lib/auth/server-session";
 import { getDashboardStats } from "@/src/server/repositories/dashboard.repository";
 
 export async function GET() {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireAdminSession } from "@/lib/auth/session";
+import { requireAdminSession } from "@/lib/auth/server-session";
 import { fetchObdServiceNumbers } from "@/lib/obd-service-numbers";
 
 export async function GET() {
