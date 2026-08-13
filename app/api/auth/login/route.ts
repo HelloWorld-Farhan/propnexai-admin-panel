@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { safeCompare } from "@/lib/auth/credentials";
-import { getSession } from "@/lib/auth/session";
+import { getSession } from "@/lib/auth/server-session";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
