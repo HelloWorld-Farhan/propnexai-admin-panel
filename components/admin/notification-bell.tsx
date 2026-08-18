@@ -299,6 +299,10 @@ export function CreditNotification() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<any[]>([]);
+  
+  const [declineCredit, setDeclineCredit] = useState<any | null>(null);
+  const [approveCredit, setApproveCredit] = useState<any | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchRequests();
@@ -318,75 +322,201 @@ export function CreditNotification() {
     }
   }
 
-  async function dismissRequest(id: string) {
+  async function handleDecline() {
+    if (!declineCredit) return;
+    setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/credit-requests/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/credit-requests/${declineCredit.id}`, { method: "DELETE" });
       if (res.ok) {
-        setPending((prev) => prev.filter((r) => r.id !== id));
+        toast.success("Credit request declined.");
+        setPending((prev) => prev.filter((r) => r.id !== declineCredit.id));
+        setDeclineCredit(null);
+      } else {
+        toast.error("Failed to decline request.");
       }
     } catch (err) {
-      console.error(err);
+      toast.error("An error occurred.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleApprove() {
+    if (!approveCredit) return;
+    setIsSubmitting(true);
+    
+    const amountMatch = approveCredit.message.match(/\d+/);
+    const amount = amountMatch ? parseInt(amountMatch[0], 10) : 0;
+
+    if (!amount || amount <= 0) {
+      toast.error("Invalid amount requested.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // Add credits
+      const resCredits = await fetch(`/api/companies/${approveCredit.companyId}/credits`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, description: `Approved credit request` }),
+      });
+
+      if (!resCredits.ok) throw new Error("Failed to add credits");
+
+      // Dismiss request
+      await fetch(`/api/credit-requests/${approveCredit.id}`, { method: "DELETE" });
+
+      toast.success(`Approved! Added ${amount} credits to ${approveCredit.company?.name || approveCredit.email}`);
+      setPending((prev) => prev.filter((r) => r.id !== approveCredit.id));
+      setApproveCredit(null);
+      router.refresh();
+    } catch (err) {
+      toast.error("Failed to approve and add credits.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label="Credit Requests">
-          <Coins className="size-5" />
-          {pending.length > 0 && (
-            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-              {pending.length}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
-        <div className="border-b p-3">
-          <h4 className="font-medium leading-none">Credit Requests</h4>
-          <p className="text-sm text-muted-foreground mt-1">
-            Users requesting additional credits
-          </p>
-        </div>
-        <div className="max-h-[300px] overflow-y-auto">
-          {pending.length === 0 ? (
-            <p className="p-4 text-center text-sm text-muted-foreground">
-              No pending requests.
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative" aria-label="Credit Requests">
+            <Coins className="size-5" />
+            {pending.length > 0 && (
+              <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                {pending.length}
+              </span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-80 p-0">
+          <div className="border-b p-3">
+            <h4 className="font-medium leading-none">Credit Requests</h4>
+            <p className="text-sm text-muted-foreground mt-1">
+              Users requesting additional credits
             </p>
-          ) : (
-            <div className="flex flex-col">
-              {pending.map((req) => (
-                <div key={req.id} className="flex flex-col border-b p-3 last:border-0 gap-2">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col gap-1 overflow-hidden">
-                      <p className="truncate text-sm font-medium">{req.email}</p>
-                      <p className="text-xs font-semibold text-fuchsia-500">{req.message}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {new Date(req.createdAt).toLocaleDateString()} - {new Date(req.createdAt).toLocaleTimeString()}
-                      </p>
+          </div>
+          <div className="max-h-[300px] overflow-y-auto">
+            {pending.length === 0 ? (
+              <p className="p-4 text-center text-sm text-muted-foreground">
+                No pending requests.
+              </p>
+            ) : (
+              <div className="flex flex-col">
+                {pending.map((req) => (
+                  <div key={req.id} className="flex flex-col border-b p-3 last:border-0 gap-2">
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        <p className="truncate text-sm font-medium">{req.email}</p>
+                        <p className="text-xs font-semibold text-fuchsia-500">{req.message}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(req.createdAt).toLocaleDateString()} - {new Date(req.createdAt).toLocaleTimeString()}
+                        </p>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 shrink-0" onClick={(e) => { e.stopPropagation(); dismissRequest(req.id); }}>
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2 w-full mt-1">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="flex-1"
+                        onClick={() => {
+                          setDeclineCredit(req);
+                          setOpen(false);
+                        }}
+                      >
+                        Decline
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setApproveCredit(req);
+                          setOpen(false);
+                        }}
+                      >
+                        Approve
+                      </Button>
+                    </div>
                   </div>
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setOpen(false);
-                      router.push("/companies");
-                      toast.info(`Please update credits for company: ${req.company?.name || req.email}`);
-                    }}
-                  >
-                    Go to Companies
-                  </Button>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <Dialog open={!!declineCredit} onOpenChange={(val) => !val && setDeclineCredit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Decline Credit Request</DialogTitle>
+            <DialogDescription>
+              Do you really want to decline the credit request from <b>{declineCredit?.email}</b>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeclineCredit(null)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              disabled={isSubmitting}
+              onClick={handleDecline}
+            >
+              {isSubmitting ? "Declining..." : "Decline Request"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!approveCredit} onOpenChange={(val) => !val && setApproveCredit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Credit Request</DialogTitle>
+            <DialogDescription>
+              Confirm credit approval. This action will immediately add the requested credits to the company balance.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={approveCredit?.email || ""} disabled />
             </div>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+            <div className="space-y-2">
+              <Label>Company Name</Label>
+              <Input value={approveCredit?.company?.name || "Unknown Company"} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label>Requested Amount</Label>
+              <Input 
+                value={approveCredit?.message?.match(/\d+/)?.[0] || "0"} 
+                disabled 
+                className="font-bold text-primary"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setApproveCredit(null)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="button" disabled={isSubmitting} onClick={handleApprove}>
+              {isSubmitting ? "Approving…" : "Approve"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
