@@ -414,6 +414,8 @@ model Company {
   settings            Json             @default("{}")
   /// Demo tenant for client trials; hidden from admin panel and reusable contract ID.
   isDemo              Boolean          @default(false)
+  /// Manually assigned phone number for this company
+  assignedNumber      String?
   /// Human-readable company label used in public IDs (e.g. PNX, TPO). Set at creation; treat as immutable.
   cli                 String           @unique
   /// Auto-generated immutable internal company code (admin use only; not used in campaign public IDs).

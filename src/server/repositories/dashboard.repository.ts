@@ -15,9 +15,17 @@ export async function getDashboardStats() {
     totalChannels,
     integrations,
     recentCalls,
-    recentEvents,
+    recentCompanies,
+    recentNumbers,
+    recentCredits
   ] = await Promise.all([
-    prisma.company.count({ where: { status: "ACTIVE", isDemo: false } }),
+    prisma.company.count({ 
+      where: { 
+        status: "ACTIVE", 
+        isDemo: false,
+        assignedNumber: { not: null } // Company must have an assigned number
+      } 
+    }),
     prisma.creditBalance.count({
       where: {
         creditsRemaining: { lt: threshold },
@@ -59,11 +67,22 @@ export async function getDashboardStats() {
         aiAgent: { select: { name: true } },
       },
     }),
-    prisma.systemEvent.findMany({
+    prisma.company.findMany({
+      where: { isDemo: false },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    prisma.phoneNumber.findMany({
       where: { company: { isDemo: false } },
       orderBy: { createdAt: "desc" },
       take: 10,
-      include: { company: { select: { name: true } } },
+      include: { company: { select: { name: true } } }
+    }),
+    prisma.creditUsage.findMany({
+      where: { company: { isDemo: false } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      include: { company: { select: { name: true } } }
     }),
   ]);
 
@@ -82,6 +101,34 @@ export async function getDashboardStats() {
     integrations.map((i) => [i.status, i._count._all]),
   );
 
+  // Combine and format the custom recent events
+  const combinedEvents = [
+    ...recentCompanies.map(c => ({
+      id: c.id,
+      company: { name: c.name },
+      type: "COMPANY_CREATED",
+      title: "Company Registered",
+      message: `A new company workspace was created for ${c.name}.`,
+      createdAt: c.createdAt
+    })),
+    ...recentNumbers.map(n => ({
+      id: n.id,
+      company: { name: n.company?.name || "Unknown" },
+      type: "NUMBER_ASSIGNED",
+      title: "Number Assigned",
+      message: `Phone number ${n.number} was assigned to ${n.company?.name || "Unknown"}.`,
+      createdAt: n.createdAt
+    })),
+    ...recentCredits.map(c => ({
+      id: c.id,
+      company: { name: c.company?.name || "Unknown" },
+      type: "CREDIT_GRANTED",
+      title: "Credit Granted",
+      message: `${c.amount} credits were given to ${c.company?.name || "Unknown"}.`,
+      createdAt: c.createdAt
+    }))
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 10);
+
   return {
     activeCompanies,
     lowCreditCount,
@@ -93,6 +140,6 @@ export async function getDashboardStats() {
     connectedIntegrations: integrationMap.CONNECTED ?? 0,
     errorIntegrations: integrationMap.ERROR ?? 0,
     recentCalls,
-    recentEvents,
+    recentEvents: combinedEvents
   };
 }

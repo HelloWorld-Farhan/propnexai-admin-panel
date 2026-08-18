@@ -26,6 +26,7 @@ export type CompanyRow = {
   agentsAllocated: number;
   pocEmail: string;
   lowCredit: boolean;
+  assignedNumber: string | null;
 };
 
 const columns: ColumnDef<CompanyRow>[] = [
@@ -62,6 +63,16 @@ const columns: ColumnDef<CompanyRow>[] = [
         </Badge>
       </div>
     ),
+  },
+  {
+    accessorKey: "assignedNumber",
+    header: "Assigned Number",
+    cell: ({ row }) => {
+      if (row.original.assignedNumber) {
+        return <span className="font-mono">{row.original.assignedNumber}</span>;
+      }
+      return <span className="text-destructive font-medium text-xs">Unassigned</span>;
+    },
   },
   {
     accessorKey: "status",

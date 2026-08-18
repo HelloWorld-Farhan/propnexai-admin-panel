@@ -14,7 +14,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { NotificationBell } from "./notification-bell";
+import { AdminNotifications } from "./notification-bell";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -53,6 +53,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={true}
                 className={cn(
                   "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                   active
@@ -82,7 +83,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <p className="text-sm text-muted-foreground">
             Platform administration
           </p>
-          <NotificationBell />
+          <AdminNotifications />
         </header>
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/server-session";
+import { prisma } from "@/lib/prisma";
 import {
   createPhoneNumberSchema,
   formatZodError,
@@ -35,6 +36,46 @@ export async function POST(request: Request) {
     const body = createPhoneNumberSchema.parse(await request.json());
     const number = await createPhoneNumberForAdmin(body);
     revalidatePath("/numbers");
+
+    // Fetch the company to get the owner's email for the webhook
+    const company = await prisma.company.findUnique({
+      where: { id: number.companyId },
+      include: {
+        members: {
+          include: { user: true }
+        }
+      }
+    });
+
+    if (company && company.members.length > 0) {
+      const user = company.members[0].user;
+      if (user && user.email) {
+        // Send Webhook to Google Apps Script
+        const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+        fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "number_assigned",
+            email: user.email,
+            name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
+            assignedNumber: number.number,
+          }),
+        }).catch(err => console.error("Failed to send number assignment webhook:", err));
+        
+        // Also resolve any pending Number Assignment Requests in SupportRequest
+        await prisma.supportRequest.updateMany({
+          where: {
+            companyId: company.id,
+            reason: "OTHER",
+            message: "Number Assignment Request",
+            status: "NEW"
+          },
+          data: { status: "RESOLVED" }
+        });
+      }
+    }
+
     return NextResponse.json(JSON.parse(JSON.stringify(number)), {
       status: 201,
     });

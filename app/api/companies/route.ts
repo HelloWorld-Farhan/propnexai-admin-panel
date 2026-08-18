@@ -5,6 +5,7 @@ import { z } from "zod";
 import * as nodemailer from "nodemailer";
 
 import { requireAdminSession } from "@/lib/auth/server-session";
+import { prisma } from "@/lib/prisma";
 import { createCompanyForAdmin } from "@/src/server/repositories/company.repository";
 
 const schema = z.object({
@@ -15,6 +16,7 @@ const schema = z.object({
     .toUpperCase()
     .regex(/^[A-Z]{2,5}$/, "CLI must be 2-5 uppercase letters"),
   pendingUserEmail: z.string().optional(),
+  assignedNumber: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -29,6 +31,14 @@ export async function POST(request: Request) {
       const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
       if (webhookUrl) {
         try {
+          let realName = body.pendingUserEmail.split("@")[0];
+          try {
+            const user = await prisma.user.findUnique({ where: { email: body.pendingUserEmail } });
+            if (user && user.firstName) {
+              realName = `${user.firstName} ${user.lastName || ''}`.trim();
+            }
+          } catch(e) {}
+
           await fetch(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -37,7 +47,7 @@ export async function POST(request: Request) {
               email: body.pendingUserEmail,
               companyName: company.name,
               contractId: company.contractId,
-              name: body.pendingUserEmail.split("@")[0]
+              name: realName
             }),
           });
         } catch (err) {

@@ -146,7 +146,7 @@ export async function createPhoneNumberForAdmin(input: {
       phoneNumberId,
     );
 
-    return tx.phoneNumber.create({
+    const createdNumber = await tx.phoneNumber.create({
       data: {
         companyId: input.companyId,
         campaignId,
@@ -161,6 +161,45 @@ export async function createPhoneNumberForAdmin(input: {
       },
       include: numberInclude,
     });
+
+    await tx.company.update({
+      where: { id: input.companyId },
+      data: { assignedNumber: number },
+    });
+
+    await tx.supportRequest.updateMany({
+      where: {
+        companyId: input.companyId,
+        reason: "OTHER",
+        message: "Number Assignment Request",
+        status: "NEW",
+      },
+      data: { status: "RESOLVED" }
+    });
+
+    try {
+      await prisma.$runCommandRaw({
+        update: "CallLog",
+        updates: [
+          {
+            q: {
+              $or: [
+                { customerNumber: number },
+                { providerWebhook: { $regex: number } }
+              ]
+            },
+            u: {
+              $set: { companyId: { $oid: input.companyId } }
+            },
+            multi: true
+          }
+        ]
+      });
+    } catch (err) {
+      console.error("Failed to backfill call logs:", err);
+    }
+
+    return createdNumber;
   });
 }
 
@@ -239,7 +278,7 @@ export async function updatePhoneNumberForAdmin(
       publicId = generatePublicId(company.cli, campaignResourceKey, phoneNumberId);
     }
 
-    return tx.phoneNumber.update({
+    const updatedNumber = await tx.phoneNumber.update({
       where: { id },
       data: {
         companyId: nextCompanyId,
@@ -254,6 +293,47 @@ export async function updatePhoneNumberForAdmin(
       },
       include: numberInclude,
     });
+
+    if (companyChanged) {
+      await tx.company.update({
+        where: { id: nextCompanyId },
+        data: { assignedNumber: existing.number },
+      });
+
+      await tx.supportRequest.updateMany({
+        where: {
+          companyId: nextCompanyId,
+          reason: "OTHER",
+          message: "Number Assignment Request",
+          status: "NEW",
+        },
+        data: { status: "RESOLVED" }
+      });
+
+      try {
+        await prisma.$runCommandRaw({
+          update: "CallLog",
+          updates: [
+            {
+              q: {
+                $or: [
+                  { "customerNumber": existing.number },
+                  { "providerWebhook.phone": existing.number },
+                  { "providerWebhook.message.call.customer.number": existing.number },
+                  { "providerWebhook.message.call.phoneNumber": existing.number }
+                ]
+              },
+              u: { $set: { companyId: { $oid: nextCompanyId } } },
+              multi: true
+            }
+          ]
+        });
+      } catch (e) {
+        console.error("Failed to backfill orphaned call logs:", e);
+      }
+    }
+
+    return updatedNumber;
   });
 }
 

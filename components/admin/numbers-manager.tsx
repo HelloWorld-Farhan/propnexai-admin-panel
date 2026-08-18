@@ -53,29 +53,13 @@ type NumberFormState = {
   number: string;
   companyId: string;
   campaignId: string;
-  direction: "INBOUND" | "OUTBOUND";
 };
 
 const EMPTY_FORM: NumberFormState = {
   number: "",
   companyId: "",
   campaignId: "none",
-  direction: "OUTBOUND",
 };
-
-function encodeDirectionLabel(direction: "INBOUND" | "OUTBOUND"): string {
-  return `DIRECTION:${direction}`;
-}
-
-function parseDirectionFromLabel(
-  label: string | null | undefined,
-): "INBOUND" | "OUTBOUND" {
-  if (!label) return "OUTBOUND";
-  const normalized = label.trim().toUpperCase();
-  if (normalized === "DIRECTION:INBOUND") return "INBOUND";
-  if (normalized === "DIRECTION:OUTBOUND") return "OUTBOUND";
-  return "OUTBOUND";
-}
 
 function toNullableId(value: string): string | null {
   return value === "none" || value.trim() === "" ? null : value;
@@ -142,19 +126,6 @@ export function NumbersManager({
         ),
     },
     {
-      id: "direction",
-      accessorFn: (row) => parseDirectionFromLabel(row.label),
-      header: "Direction",
-      cell: ({ row }) => {
-        const direction = parseDirectionFromLabel(row.original.label);
-        return (
-          <Badge variant={direction === "OUTBOUND" ? "default" : "secondary"}>
-            {direction}
-          </Badge>
-        );
-      },
-    },
-    {
       id: "actions",
       header: "",
       cell: ({ row }) => (
@@ -199,7 +170,6 @@ export function NumbersManager({
       number: row.number,
       companyId: row.companyId,
       campaignId: row.campaignId ?? "none",
-      direction: parseDirectionFromLabel(row.label),
     });
     setOpen(true);
   }
@@ -227,7 +197,6 @@ export function NumbersManager({
     const assignmentPayload = {
       companyId: form.companyId,
       campaignId: toNullableId(form.campaignId),
-      label: encodeDirectionLabel(form.direction),
     };
 
     const res = await fetch(
@@ -333,24 +302,6 @@ export function NumbersManager({
                         {campaign.name}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Direction</Label>
-                <Select
-                  value={form.direction}
-                  onValueChange={(value: "INBOUND" | "OUTBOUND") =>
-                    setForm((prev) => ({ ...prev, direction: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select direction" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OUTBOUND">Outbound</SelectItem>
-                    <SelectItem value="INBOUND">Inbound</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

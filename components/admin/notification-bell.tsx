@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Check, Plus, X } from "lucide-react";
+import { Bell, Check, Plus, X, Coins, PhoneCall, UserCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -28,16 +28,16 @@ type PendingApproval = {
   remindedAt?: string | null;
 };
 
-export function NotificationBell() {
+export function ApprovalNotification() {
   const router = useRouter();
   const [pending, setPending] = useState<PendingApproval[]>([]);
   const [open, setOpen] = useState(false);
   const [verifyUser, setVerifyUser] = useState<PendingApproval | null>(null);
   const [declineUser, setDeclineUser] = useState<PendingApproval | null>(null);
 
-  // Dialog state
   const [name, setName] = useState("");
   const [cli, setCli] = useState("");
+  const [assignedNumber, setAssignedNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,14 +71,19 @@ export function NotificationBell() {
     setError(null);
 
     try {
+      const payload: any = {
+        name: name.trim(),
+        cli: cli.trim().toUpperCase(),
+        pendingUserEmail: verifyUser.email,
+      };
+      if (assignedNumber.trim()) {
+        payload.assignedNumber = assignedNumber.trim();
+      }
+
       const response = await fetch("/api/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          cli: cli.trim().toUpperCase(),
-          pendingUserEmail: verifyUser.email,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -91,6 +96,7 @@ export function NotificationBell() {
       setVerifyUser(null);
       setName("");
       setCli("");
+      setAssignedNumber("");
       fetchPending();
       router.refresh();
     } catch {
@@ -104,8 +110,8 @@ export function NotificationBell() {
     <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="size-5" />
+          <Button variant="ghost" size="icon" className="relative" aria-label="Approvals">
+            <UserCheck className="size-5" />
             {pending.length > 0 && (
               <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                 {pending.length}
@@ -253,6 +259,16 @@ export function NotificationBell() {
                   className="font-mono uppercase"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="company-assigned-number">Assigned Number (Optional)</Label>
+                <Input
+                  id="company-assigned-number"
+                  value={assignedNumber}
+                  onChange={(event) => setAssignedNumber(event.target.value)}
+                  placeholder="+1 (555) 123-4567"
+                  disabled={isSubmitting}
+                />
+              </div>
               {error && (
                 <p className="text-sm text-destructive" role="alert">
                   {error}
@@ -276,5 +292,204 @@ export function NotificationBell() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+export function CreditNotification() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchRequests();
+    const interval = setInterval(fetchRequests, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function fetchRequests() {
+    try {
+      const res = await fetch("/api/credit-requests");
+      const data = await res.json();
+      if (data.success) {
+        setPending(data.requests);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function dismissRequest(id: string) {
+    try {
+      const res = await fetch(`/api/credit-requests/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setPending((prev) => prev.filter((r) => r.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative" aria-label="Credit Requests">
+          <Coins className="size-5" />
+          {pending.length > 0 && (
+            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {pending.length}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0">
+        <div className="border-b p-3">
+          <h4 className="font-medium leading-none">Credit Requests</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            Users requesting additional credits
+          </p>
+        </div>
+        <div className="max-h-[300px] overflow-y-auto">
+          {pending.length === 0 ? (
+            <p className="p-4 text-center text-sm text-muted-foreground">
+              No pending requests.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {pending.map((req) => (
+                <div key={req.id} className="flex flex-col border-b p-3 last:border-0 gap-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-col gap-1 overflow-hidden">
+                      <p className="truncate text-sm font-medium">{req.email}</p>
+                      <p className="text-xs font-semibold text-fuchsia-500">{req.message}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(req.createdAt).toLocaleDateString()} - {new Date(req.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 shrink-0" onClick={(e) => { e.stopPropagation(); dismissRequest(req.id); }}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setOpen(false);
+                      router.push("/companies");
+                      toast.info(`Please update credits for company: ${req.company?.name || req.email}`);
+                    }}
+                  >
+                    Go to Companies
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function NumberNotification() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchRequests();
+    const interval = setInterval(fetchRequests, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function fetchRequests() {
+    try {
+      const res = await fetch("/api/number-requests");
+      const data = await res.json();
+      if (data.success) {
+        setPending(data.requests);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function dismissRequest(id: string) {
+    try {
+      const res = await fetch(`/api/number-requests/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setPending((prev) => prev.filter((r) => r.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative" aria-label="Number Requests">
+          <PhoneCall className="size-5" />
+          {pending.length > 0 && (
+            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {pending.length}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0">
+        <div className="border-b p-3">
+          <h4 className="font-medium leading-none">Number Requests</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            Users waiting for a phone number assignment
+          </p>
+        </div>
+        <div className="max-h-[300px] overflow-y-auto">
+          {pending.length === 0 ? (
+            <p className="p-4 text-center text-sm text-muted-foreground">
+              No pending requests.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {pending.map((req) => (
+                <div key={req.id} className="flex flex-col border-b p-3 last:border-0 gap-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-col gap-1 overflow-hidden">
+                      <p className="truncate text-sm font-medium">{req.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(req.createdAt).toLocaleDateString()} - {new Date(req.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 shrink-0" onClick={(e) => { e.stopPropagation(); dismissRequest(req.id); }}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setOpen(false);
+                      router.push("/numbers");
+                      toast.info(`Please assign a number to company: ${req.company?.name || req.email}`);
+                    }}
+                  >
+                    Go to Numbers Manager
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function AdminNotifications() {
+  return (
+    <div className="flex items-center gap-1 sm:gap-2">
+      <CreditNotification />
+      <NumberNotification />
+      <ApprovalNotification />
+    </div>
   );
 }

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "user_rejected",
-          name: "User",
+          name: email.split("@")[0],
           email: email
         }),
       }).catch(err => console.error("Failed to trigger rejection webhook:", err));

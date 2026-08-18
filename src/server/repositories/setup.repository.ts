@@ -236,6 +236,61 @@ export async function addCredits(
       },
     });
 
+    try {
+      await prisma.$runCommandRaw({
+        insert: "BillingHistory",
+        documents: [
+          {
+            companyId: { $oid: companyId },
+            date: { $date: new Date().toISOString() },
+            description: description || "Credit Top-up via Admin",
+            type: "Top-up",
+            credits: amount,
+            amount: 0,
+            status: "Completed",
+          }
+        ]
+      });
+    } catch (err) {
+      console.error("Failed to insert into BillingHistory:", err);
+    }
+
+    // Resolve any pending Credit Requests for this company
+    await tx.supportRequest.updateMany({
+      where: {
+        companyId,
+        reason: "BILLING_CREDITS",
+        status: "NEW"
+      },
+      data: { status: "RESOLVED" }
+    });
+
+    // Send webhook for credit update
+    try {
+      const company = await tx.company.findUnique({
+        where: { id: companyId },
+        include: { members: { include: { user: true } } }
+      });
+      if (company && company.members.length > 0) {
+        const user = company.members[0].user;
+        if (user && user.email) {
+          const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+          fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "credit_added",
+              email: user.email,
+              name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
+              amount: amount,
+            }),
+          }).catch(err => console.error("Failed to send credit added webhook:", err));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to process credit webhook:", e);
+    }
+
     return balance;
   });
 }

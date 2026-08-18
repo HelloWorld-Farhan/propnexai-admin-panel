@@ -9,6 +9,7 @@ export async function createCompanyForAdmin(input: {
   name: string; 
   cli: string; 
   pendingUserEmail?: string; 
+  assignedNumber?: string;
 }) {
   const name = input.name.trim();
   const cli = normalizeCli(input.cli);
@@ -28,6 +29,7 @@ export async function createCompanyForAdmin(input: {
         contractId,
         cli,
         companyCode,
+        assignedNumber: input.assignedNumber || null,
         ownerUserId: null,
       },
     });
@@ -81,6 +83,9 @@ export async function createCompanyForAdmin(input: {
     }
 
     return company;
+  }, {
+    maxWait: 10000,
+    timeout: 30000,
   });
 }
 
@@ -122,6 +127,7 @@ export async function listCompaniesForAdmin() {
       ? (company.members[0]?.user.email ?? company.contact?.email ?? "—")
       : (company.contact?.email ?? "—"),
     lowCredit: (company.creditBalance?.creditsRemaining ?? 0) < threshold,
+    assignedNumber: company.assignedNumber || null,
   }));
 }
 
@@ -180,9 +186,54 @@ export async function deleteCompanyById(id: string) {
     return false;
   }
 
-  await prisma.company.delete({
-    where: { id },
+  let ownerEmail = "";
+  let ownerName = "";
+  if (company.ownerUserId) {
+    const owner = await prisma.user.findUnique({ where: { id: company.ownerUserId } });
+    if (owner) {
+      ownerEmail = owner.email;
+      ownerName = `${owner.firstName || ""} ${owner.lastName || ""}`.trim();
+    }
+  }
+
+  // Pre-delete models to clean up DB
+  await prisma.lead.deleteMany({ where: { companyId: id } });
+  await prisma.phoneNumber.deleteMany({ where: { companyId: id } });
+  await prisma.companyMember.deleteMany({ where: { companyId: id } });
+
+  // Use runCommandRaw to fully bypass Prisma's emulated cascades so CallLogs are kept intact forever
+  await prisma.$runCommandRaw({
+    delete: "Company",
+    deletes: [{ q: { _id: { $oid: id } }, limit: 1 }]
   });
+
+  if (company.ownerUserId) {
+    try {
+      await prisma.user.deleteMany({ where: { id: company.ownerUserId } });
+    } catch (e) {
+      console.error("Could not delete user:", e);
+    }
+  }
+
+  if (ownerEmail) {
+    try {
+      await prisma.pendingApproval.deleteMany({ where: { email: ownerEmail } });
+    } catch (e) {
+      console.error("Could not delete pending approval:", e);
+    }
+
+    const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+    fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "user_deleted",
+        name: ownerName,
+        email: ownerEmail
+      })
+    }).catch(err => console.error("Webhook trigger failed:", err));
+  }
+
   return true;
 }
 

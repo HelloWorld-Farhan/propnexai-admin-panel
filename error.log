@@ -16,3 +16,12 @@ C:\Users\farhan khalid\OneDrive\Pictures\Documents\Propnex\propnexai-admin-panel
   337     // Find the user or create a placeholder User in DB
 → 338     let user = await tx.user.findFirst(
 Error converting field "clerkUserId" of expected non-nullable type "String", found incompatible value of "null".
+2026-08-17T07:31:33.327Z 
+Invalid `tx.creditBalance.create()` invocation in
+C:\Users\farhan khalid\OneDrive\Pictures\Documents\Propnex\propnexai-admin-panel\.next\dev\server\chunks\[root-of-the-server]__1o36ibi._.js:417:32
+
+  414         ownerUserId: null
+  415     }
+  416 });
+→ 417 await tx.creditBalance.create(
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 6945 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
