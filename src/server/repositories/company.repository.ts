@@ -4,6 +4,7 @@ import { normalizeCli } from "@/src/server/lib/cli";
 import { generateUniqueCompanyCode } from "@/src/server/lib/company-code";
 import { companySlugFromName } from "@/src/server/lib/company-slug";
 import { generateUniqueContractId } from "@/src/server/lib/contract-id";
+import { generatePublicId, allocatePhoneNumberEntityId } from "@/src/server/lib/public-id";
 
 export async function createCompanyForAdmin(input: { 
   name: string; 
@@ -41,6 +42,22 @@ export async function createCompanyForAdmin(input: {
         creditsUsed: 0,
       },
     });
+
+    if (input.assignedNumber) {
+      const phoneNumberId = await allocatePhoneNumberEntityId(tx, company.id);
+      const publicId = generatePublicId(company.cli, "UNASSIGNED", phoneNumberId);
+
+      await tx.phoneNumber.create({
+        data: {
+          companyId: company.id,
+          phoneNumberId,
+          publicId,
+          number: input.assignedNumber.trim(),
+          provider: "PROPNEX",
+          status: "ACTIVE",
+        },
+      });
+    }
 
     if (input.pendingUserEmail) {
       // Find the user or create a placeholder User in DB
