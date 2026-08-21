@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -75,6 +77,8 @@ export function NumbersManager({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState<NumberFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -98,13 +102,13 @@ export function NumbersManager({
     },
     {
       id: "company",
-      accessorFn: (row) => row.company.name,
+      accessorFn: (row) => row.company?.name ?? "Unknown Company",
       header: "Company",
       cell: ({ row }) => (
         <div>
-          <p className="font-medium">{row.original.company.name}</p>
+          <p className="font-medium">{row.original.company?.name ?? "Unknown Company"}</p>
           <p className="text-xs text-muted-foreground">
-            {row.original.company.cli}
+            {row.original.company?.cli ?? ""}
           </p>
         </div>
       ),
@@ -223,14 +227,21 @@ export function NumbersManager({
     router.refresh();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Remove this service number assignment?")) return;
-    const res = await fetch(`/api/numbers/${id}`, { method: "DELETE" });
+  function handleDelete(id: string) {
+    setDeleteId(id);
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return;
+    setDeleting(true);
+    const res = await fetch(`/api/numbers/${deleteId}`, { method: "DELETE" });
+    setDeleting(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       return toast.error(data.error ?? "Failed to remove number");
     }
     toast.success("Service number removed");
+    setDeleteId(null);
     router.refresh();
   }
 
@@ -313,6 +324,25 @@ export function NumbersManager({
           </DialogContent>
         </Dialog>
       </div>
+
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Remove service number</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove this service number assignment? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDeleteId(null)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
+              {deleting ? "Removing..." : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DataTable
         columns={columns}

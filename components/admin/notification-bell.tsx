@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Check, Plus, X, Coins, PhoneCall, UserCheck } from "lucide-react";
+import { Bell, Check, Plus, X, Coins, PhoneCall, UserCheck, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -614,12 +614,95 @@ export function NumberNotification() {
   );
 }
 
+export function SubCompanyNotification() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [pending, setPending] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchPending();
+    const interval = setInterval(fetchPending, 15000); // Poll every 15s
+    return () => clearInterval(interval);
+  }, []);
+
+  async function fetchPending() {
+    try {
+      const res = await fetch("/api/sub-company-verifications");
+      const data = await res.json();
+      if (data.success) {
+        setPendingCount(data.count);
+        setPending(data.pending || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative" aria-label="Sub-Companies">
+          <Building2 className="size-5" />
+          {pendingCount > 0 && (
+            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white">
+              {pendingCount}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0">
+        <div className="border-b p-3">
+          <h4 className="font-medium leading-none">Sub-Company Verifications</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            Child companies pending number assignment
+          </p>
+        </div>
+        <div className="max-h-[300px] overflow-y-auto">
+          {pending.length === 0 ? (
+            <p className="p-4 text-center text-sm text-muted-foreground">
+              No pending verifications.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {pending.map((req) => (
+                <div key={req.id} className="flex flex-col border-b p-3 last:border-0 gap-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-col gap-1 overflow-hidden">
+                      <p className="truncate text-sm font-medium">{req.name}</p>
+                      <p className="text-xs font-semibold text-blue-500">Parent: {req.parentCompany?.name || "Unknown"}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(req.createdAt).toLocaleDateString()} - {new Date(req.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setOpen(false);
+                      router.push(`/companies/${req.parentCompanyId}`);
+                    }}
+                  >
+                    Go to Parent Company
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function AdminNotifications() {
   return (
-    <div className="flex items-center gap-1 sm:gap-2">
+    <div className="flex items-center gap-2">
+      <ApprovalNotification />
       <CreditNotification />
       <NumberNotification />
-      <ApprovalNotification />
+      <SubCompanyNotification />
     </div>
   );
 }

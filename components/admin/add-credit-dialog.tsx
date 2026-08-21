@@ -46,14 +46,17 @@ export function AddCreditDialog({
         body: JSON.stringify({ amount, description: creditDescription }),
       });
       
-      if (!res.ok) throw new Error("Failed to add credits");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to add credits");
+      }
       
       toast.success(`Added ${amount} credits to ${companyName}`);
       setCreditAmount("");
       setOpen(false);
       router.refresh();
-    } catch {
-      toast.error("Failed to add credits");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to add credits");
     } finally {
       setSaving(false);
     }

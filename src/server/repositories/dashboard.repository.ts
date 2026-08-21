@@ -23,7 +23,7 @@ export async function getDashboardStats() {
       where: { 
         status: "ACTIVE", 
         isDemo: false,
-        assignedNumber: { not: null } // Company must have an assigned number
+        phoneNumbers: { some: {} } // Company must have an assigned number
       } 
     }),
     prisma.creditBalance.count({

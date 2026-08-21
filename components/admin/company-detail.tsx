@@ -5,6 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
+import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
+import { DeleteCompanyDialog } from "@/components/admin/delete-company-dialog";
+import { VerifySubCompanyDialog } from "@/components/admin/verify-sub-company-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,6 +90,7 @@ type CompanyData = {
     label: string | null;
     status: string;
   }>;
+  childCompanies?: any[];
   aiAgents: Array<{
     id: string;
     name: string;
@@ -353,6 +357,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="sub-companies">Sub-Companies</TabsTrigger>
           <TabsTrigger value="setup">Setup</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
@@ -473,10 +478,11 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Title</Label>
+                    <Label>Assigned Phone Numbers</Label>
                     <Input
-                      value={contact.title ?? ""}
-                      onChange={(e) => setContact({ ...contact, title: e.target.value })}
+                      readOnly
+                      disabled
+                      value={liveCompany.phoneNumbers?.map(pn => pn.number).join(", ") || "None"}
                     />
                   </div>
                   <div className="space-y-2">
@@ -489,7 +495,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Phone</Label>
+                    <Label>Personal Login Phone Number</Label>
                     <Input
                       value={contact.phone ?? ""}
                       onChange={(e) => setContact({ ...contact, phone: e.target.value })}
@@ -519,6 +525,71 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
               <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
                 Coming soon
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sub-companies" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sub-Companies (Child Tenants)</CardTitle>
+              <CardDescription>
+                Manage companies created by this tenant.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(!liveCompany.childCompanies || liveCompany.childCompanies.length === 0) ? (
+                <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+                  No sub-companies found.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Assigned Number</TableHead>
+                      <TableHead>Credits</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created At</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {liveCompany.childCompanies.map((child: any) => {
+                      const isVerified = child.status === "ACTIVE";
+                      const assignedNum = child.phoneNumbers?.[0]?.number || "—";
+                      const credits = child.creditBalance?.creditsRemaining ?? 0;
+                      return (
+                        <TableRow key={child.id}>
+                          <TableCell className="font-medium">{child.name}</TableCell>
+                          <TableCell>{assignedNum}</TableCell>
+                          <TableCell>{credits}</TableCell>
+                          <TableCell>
+                            <Badge variant={child.status === "ACTIVE" ? "success" : "secondary"}>
+                              {child.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatDate(new Date(child.createdAt))}</TableCell>
+                          <TableCell className="text-right">
+                            {child.status === "ACTIVE" && assignedNum !== "—" ? (
+                              <span className="text-sm font-medium text-muted-foreground">
+                                Verified
+                              </span>
+                            ) : (
+                              <VerifySubCompanyDialog 
+                                subCompanyId={child.id} 
+                                subCompanyName={child.name} 
+                                parentCompanyId={company.id}
+                                onSuccess={refreshLiveCompany}
+                              />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

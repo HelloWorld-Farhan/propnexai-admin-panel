@@ -18,6 +18,10 @@ export async function GET() {
         reason: "OTHER",
         message: "Number Assignment Request",
         status: "NEW",
+        OR: [
+          { companyId: null },
+          { company: { tenantType: { not: "CHILD" } } }
+        ]
       },
       include: {
         company: true,

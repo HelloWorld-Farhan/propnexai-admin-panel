@@ -12,10 +12,17 @@ datasource db {
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
+enum TenantType {
+  SUPER_ADMIN
+  PARENT
+  CHILD
+}
+
 enum CompanyStatus {
   ACTIVE
   SUSPENDED
   ARCHIVED
+  PENDING
 }
 
 enum CampaignStatus {
@@ -409,13 +416,16 @@ model Company {
   name                String
   slug                String           @unique
   status              CompanyStatus    @default(ACTIVE)
+  blockedUntil        DateTime?
+  tenantType          TenantType       @default(PARENT)
+  parentCompanyId     String?          @db.ObjectId
+  parentCompany       Company?         @relation("CompanyToSubCompany", fields: [parentCompanyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childCompanies      Company[]        @relation("CompanyToSubCompany")
   primaryUseCase      PrimaryUseCase?
   callVolume          CallVolumeRange?
   settings            Json             @default("{}")
   /// Demo tenant for client trials; hidden from admin panel and reusable contract ID.
   isDemo              Boolean          @default(false)
-  /// Manually assigned phone number for this company
-  assignedNumber      String?
   /// Human-readable company label used in public IDs (e.g. PNX, TPO). Set at creation; treat as immutable.
   cli                 String           @unique
   /// Auto-generated immutable internal company code (admin use only; not used in campaign public IDs).
@@ -581,7 +591,6 @@ model PendingApproval {
   status      PendingApprovalStatus @default(PENDING)
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
-  remindedAt  DateTime?
 
   @@index([status])
 }
@@ -725,7 +734,8 @@ model LeadActivity {
 
 model PhoneNumber {
   id                 String            @id @default(auto()) @map("_id") @db.ObjectId
-  companyId          String            @db.ObjectId
+  companyId          String?           @db.ObjectId
+  assignedParentTenantId String?       @db.ObjectId
   /// Entity ID segment for public IDs (e.g. PH000001). Formerly resourceKey.
   phoneNumberId     String
   /// Full external ID (e.g. v1.PNX.CP000001.PH000001).
@@ -743,7 +753,7 @@ model PhoneNumber {
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
-  company            Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company            Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
   campaign           Campaign?        @relation(fields: [campaignId], references: [id])
   inboundAgent       AiAgent?         @relation("InboundAgent", fields: [inboundAgentId], references: [id])
   outboundAgent      AiAgent?         @relation("OutboundAgent", fields: [outboundAgentId], references: [id])
@@ -782,7 +792,7 @@ model UploadedContact {
 
 model CallLog {
   id              String        @id @default(auto()) @map("_id") @db.ObjectId
-  companyId       String        @db.ObjectId
+  companyId       String?       @db.ObjectId
   /// Entity ID segment for public IDs (e.g. CL00000001). Formerly resourceKey.
   callLogId       String
   /// Full external ID (e.g. v1.PNX.CP000001.CL00000001).
@@ -804,7 +814,7 @@ model CallLog {
   engagement       Json?
   reactivationPlan Json?
   cost             Float?
-  creditsUsed      Int?
+  creditsUsed      Float?
   provider         String?
   providerStatus   String?
   providerCallId   String?
@@ -826,7 +836,7 @@ model CallLog {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
-  company       Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company       Company?           @relation(fields: [companyId], references: [id], onDelete: SetNull)
   lead          Lead?              @relation(fields: [leadId], references: [id])
   phoneNumber   PhoneNumber?       @relation(fields: [phoneNumberId], references: [id])
   aiAgent       AiAgent?           @relation(fields: [aiAgentId], references: [id])
@@ -1301,8 +1311,8 @@ model ApiKeyCampaignAccess {
 model CreditBalance {
   id               String    @id @default(auto()) @map("_id") @db.ObjectId
   companyId        String    @unique @db.ObjectId
-  creditsRemaining Int       @default(0)
-  creditsUsed      Int       @default(0)
+  creditsRemaining Float     @default(0)
+  creditsUsed      Float     @default(0)
   planId           String?
   renewalAt        DateTime?
   createdAt        DateTime  @default(now())
@@ -1335,7 +1345,7 @@ model Role {
 model CreditUsage {
   id          String            @id @default(auto()) @map("_id") @db.ObjectId
   companyId   String            @db.ObjectId
-  amount      Int
+  amount      Float
   reason      CreditUsageReason
   callLogId   String?           @db.ObjectId
   description String?

@@ -30,7 +30,6 @@ export async function createCompanyForAdmin(input: {
         contractId,
         cli,
         companyCode,
-        assignedNumber: input.assignedNumber || null,
         ownerUserId: null,
       },
     });
@@ -109,44 +108,67 @@ export async function createCompanyForAdmin(input: {
 export async function listCompaniesForAdmin() {
   const threshold = getLowCreditThreshold();
 
+  // Fetch ALL non-demo companies — we filter sub-companies in JS because
+  // Prisma's `parentCompanyId: null` filter doesn't match missing MongoDB fields
   const companies = await prisma.company.findMany({
-    where: { isDemo: false },
+    where: { 
+      isDemo: false,
+    },
     orderBy: { createdAt: "desc" },
     include: {
       creditBalance: true,
       contact: true,
       setupConfig: true,
-      _count: { select: { aiAgents: true } },
+      _count: { select: { aiAgents: true, childCompanies: true } },
+      childCompanies: { select: { status: true } },
       members: {
         where: { role: "OWNER", status: "ACTIVE" },
         take: 1,
         include: { user: { select: { email: true } } },
       },
+      phoneNumbers: {
+        take: 1,
+        select: { number: true },
+      },
     },
   });
 
-  return companies.map((company) => ({
-    id: company.id,
-    name: company.name,
-    slug: company.slug,
-    status: company.status,
-    contractId: company.contractId,
-    cli: company.cli,
-    companyCode: company.companyCode,
-    claimed: company.ownerUserId != null,
-    createdAt: company.createdAt,
-    creditsRemaining: company.creditBalance?.creditsRemaining ?? 0,
-    creditsUsed: company.creditBalance?.creditsUsed ?? 0,
-    totalChannels: company.setupConfig?.totalChannels ?? 0,
-    agentCount: company._count.aiAgents,
-    agentsAllocated: company.setupConfig?.agentsAllocated ?? 0,
-    pocEmail: company.ownerUserId
-      ? (company.members[0]?.user.email ?? company.contact?.email ?? "—")
-      : (company.contact?.email ?? "—"),
-    lowCredit: (company.creditBalance?.creditsRemaining ?? 0) < threshold,
-    assignedNumber: company.assignedNumber || null,
-  }));
+  // Filter out sub-companies (those that have a real parentCompanyId set)
+  const parentCompanies = companies.filter((c) => !c.parentCompanyId);
+
+  return parentCompanies.map((company) => {
+    // Sum credits of parent and all its child companies
+    const childComps = companies.filter((c) => c.parentCompanyId === company.id);
+    const childCredits = childComps.reduce((sum, c) => sum + (c.creditBalance?.creditsRemaining ?? 0), 0);
+    const parentCredits = company.creditBalance?.creditsRemaining ?? 0;
+    const totalCredits = parentCredits + childCredits;
+
+    return {
+      id: company.id,
+      name: company.name,
+      slug: company.slug,
+      status: company.status,
+      contractId: company.contractId,
+      cli: company.cli,
+      companyCode: company.companyCode,
+      claimed: company.ownerUserId != null,
+      createdAt: company.createdAt,
+      creditsRemaining: totalCredits,
+      creditsUsed: company.creditBalance?.creditsUsed ?? 0,
+      totalChannels: company.setupConfig?.totalChannels ?? 0,
+      agentCount: company._count.aiAgents,
+      childCompanyCount: company._count.childCompanies,
+      unverifiedChildCompanyCount: company.childCompanies?.filter((c: any) => c.status !== "ACTIVE").length || 0,
+      agentsAllocated: company.setupConfig?.agentsAllocated ?? 0,
+      pocEmail: company.ownerUserId
+        ? (company.members[0]?.user.email ?? company.contact?.email ?? "—")
+        : (company.contact?.email ?? "—"),
+      lowCredit: totalCredits < threshold,
+      assignedNumber: (company as any).phoneNumbers?.[0]?.number || null,
+    };
+  });
 }
+
 
 export async function getCompanyById(id: string) {
   const company = await prisma.company.findUnique({
@@ -187,6 +209,13 @@ export async function getCompanyById(id: string) {
         take: 1,
         include: { user: { select: { email: true, firstName: true, lastName: true } } },
       },
+      childCompanies: {
+        orderBy: { createdAt: "desc" },
+        include: { 
+          phoneNumbers: { take: 1, select: { number: true } },
+          creditBalance: { select: { creditsRemaining: true } }
+        },
+      },
     },
   });
 
@@ -194,13 +223,47 @@ export async function getCompanyById(id: string) {
     return null;
   }
 
+  const sharedNumbers = await prisma.phoneNumber.findMany({
+    where: { assignedParentTenantId: id },
+    orderBy: { number: "asc" },
+  });
+
+  if (sharedNumbers.length > 0) {
+    (company as any).phoneNumbers = [...company.phoneNumbers, ...sharedNumbers];
+  }
+
   return company;
 }
 
 export async function deleteCompanyById(id: string) {
-  const company = await prisma.company.findUnique({ where: { id } });
+  const company = await prisma.company.findUnique({ 
+    where: { id },
+    include: { creditBalance: true, childCompanies: true } 
+  });
   if (!company || company.isDemo) {
     return false;
+  }
+
+  const blockedUntil = new Date();
+  blockedUntil.setMonth(blockedUntil.getMonth() + 6);
+
+  await prisma.company.update({
+    where: { id },
+    data: {
+      status: "SUSPENDED",
+      blockedUntil,
+    }
+  });
+
+  // Also block all child companies
+  if (company.childCompanies && company.childCompanies.length > 0) {
+    await prisma.company.updateMany({
+      where: { parentCompanyId: id },
+      data: {
+        status: "SUSPENDED",
+        blockedUntil,
+      }
+    });
   }
 
   let ownerEmail = "";
@@ -213,42 +276,14 @@ export async function deleteCompanyById(id: string) {
     }
   }
 
-  // Pre-delete models to clean up DB
-  await prisma.lead.deleteMany({ where: { companyId: id } });
-  await prisma.phoneNumber.deleteMany({ where: { companyId: id } });
-  await prisma.companyMember.deleteMany({ where: { companyId: id } });
-
-  // Use runCommandRaw to fully bypass Prisma's emulated cascades so CallLogs are kept intact forever
-  await prisma.$runCommandRaw({
-    delete: "Company",
-    deletes: [{ q: { _id: { $oid: id } }, limit: 1 }]
-  });
-
-  if (company.ownerUserId) {
-    try {
-      await prisma.user.deleteMany({ where: { id: company.ownerUserId } });
-    } catch (e) {
-      console.error("Could not delete user:", e);
-    }
-  }
-
   if (ownerEmail) {
-    try {
-      await prisma.pendingApproval.deleteMany({ where: { email: ownerEmail } });
-    } catch (e) {
-      console.error("Could not delete pending approval:", e);
-    }
-
-    const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
-    fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "user_deleted",
-        name: ownerName,
-        email: ownerEmail
-      })
-    }).catch(err => console.error("Webhook trigger failed:", err));
+    const { notificationService } = require("@/src/server/services/notification.service");
+    notificationService.sendCompanyBlockedEmail({
+      companyName: company.name,
+      ownerName,
+      email: ownerEmail,
+      blockedUntil: blockedUntil.toISOString()
+    }).catch((err: any) => console.error("Webhook trigger failed:", err));
   }
 
   return true;
@@ -259,4 +294,120 @@ export async function deleteAllCompanies() {
     where: { isDemo: false },
   });
   return true;
+}
+
+export async function verifySubCompany(
+  subCompanyId: string,
+  parentCompanyId: string,
+  assignedNumber: string,
+) {
+  // Validate the sub-company exists and belongs to the parent
+  const existing = await prisma.company.findUnique({
+    where: { id: subCompanyId },
+  });
+
+  if (!existing) {
+    throw new Error("Sub-company not found");
+  }
+
+  if ((existing as any).parentCompanyId !== parentCompanyId) {
+    throw new Error("Sub-company does not belong to the specified parent");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // Activate the child company
+    const updated = await tx.company.update({
+      where: { id: subCompanyId },
+      data: { status: "ACTIVE" } as any,
+    });
+
+    // Assign the phone number to the child company
+    if (assignedNumber?.trim()) {
+      const phoneNumberId = await allocatePhoneNumberEntityId(tx, subCompanyId);
+      const publicId = generatePublicId(existing.cli, "UNASSIGNED", phoneNumberId);
+      const cleanedNumber = assignedNumber.trim();
+
+      await tx.phoneNumber.create({
+        data: {
+          companyId: subCompanyId,
+          phoneNumberId,
+          publicId,
+          number: cleanedNumber,
+          provider: "PROPNEX",
+          status: "ACTIVE",
+          // Link back to parent tenant for shared number visibility
+          assignedParentTenantId: parentCompanyId,
+        },
+      });
+
+      // Transfer past inbound calls from parent to sub-company
+      const pastCalls = await tx.callLog.findMany({
+        where: {
+          companyId: parentCompanyId,
+          direction: "INBOUND",
+        },
+      });
+
+      const matchingCalls = pastCalls.filter((call) => {
+        const payload = call.providerWebhook as any;
+        if (!payload) return false;
+        const calledNo = String(payload.callid || payload.calledno || "");
+        return calledNo && calledNo.includes(cleanedNumber);
+      });
+
+      if (matchingCalls.length > 0) {
+        const callIds = matchingCalls.map(c => c.id);
+        const totalCreditsToDeduct = matchingCalls.reduce((sum, c) => sum + (c.creditsUsed || 0), 0);
+
+        // Reassign calls to sub-company
+        await tx.callLog.updateMany({
+          where: { id: { in: callIds } },
+          data: { companyId: subCompanyId },
+        });
+
+        // Deduct credits for past calls from the sub-company
+        if (totalCreditsToDeduct > 0) {
+          await tx.creditBalance.updateMany({
+            where: { companyId: subCompanyId },
+            data: {
+              creditsRemaining: { decrement: totalCreditsToDeduct },
+              creditsUsed: { increment: totalCreditsToDeduct },
+            },
+          });
+
+          // Refund the parent company
+          await tx.creditBalance.updateMany({
+            where: { companyId: parentCompanyId },
+            data: {
+              creditsRemaining: { increment: totalCreditsToDeduct },
+              creditsUsed: { decrement: totalCreditsToDeduct },
+            },
+          });
+
+          await tx.creditUsage.create({
+            data: {
+              companyId: subCompanyId,
+              amount: totalCreditsToDeduct,
+              reason: "CALL",
+              description: `Deducted credits for ${matchingCalls.length} past inbound calls upon number assignment`,
+            },
+          });
+
+          // Refund the parent company since the sub-company is now paying for these past calls out of its allocated chunk
+          await tx.creditBalance.updateMany({
+            where: { companyId: parentCompanyId },
+            data: {
+              creditsRemaining: { increment: totalCreditsToDeduct },
+              creditsUsed: { decrement: totalCreditsToDeduct },
+            },
+          });
+        }
+      }
+    }
+
+    return updated;
+  }, {
+    maxWait: 10000,
+    timeout: 30000,
+  });
 }

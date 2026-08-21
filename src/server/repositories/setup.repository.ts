@@ -3,6 +3,7 @@ import {
   allocatePhoneNumberEntityId,
   generatePublicId,
 } from "@/src/server/lib/public-id";
+import { notificationService } from "@/src/server/services/notification.service";
 
 export async function upsertCompanyContact(
   companyId: string,
@@ -214,11 +215,20 @@ export async function addCredits(
   amount: number,
   description: string,
 ) {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { parentCompanyId: true, name: true }
+  });
+  
+  if (!company) throw new Error("Company not found");
+  
+  const targetCompanyId = company.parentCompanyId || companyId;
+
   return prisma.$transaction(async (tx) => {
     const balance = await tx.creditBalance.upsert({
-      where: { companyId },
+      where: { companyId: targetCompanyId },
       create: {
-        companyId,
+        companyId: targetCompanyId,
         creditsRemaining: amount,
         creditsUsed: 0,
       },
@@ -229,7 +239,7 @@ export async function addCredits(
 
     await tx.creditUsage.create({
       data: {
-        companyId,
+        companyId: targetCompanyId,
         amount,
         reason: "MANUAL_ADJUSTMENT",
         description,
@@ -241,7 +251,7 @@ export async function addCredits(
         insert: "BillingHistory",
         documents: [
           {
-            companyId: { $oid: companyId },
+            companyId: { $oid: targetCompanyId },
             date: { $date: new Date().toISOString() },
             description: description || "Credit Top-up via Admin",
             type: "Top-up",
@@ -251,6 +261,16 @@ export async function addCredits(
           }
         ]
       });
+
+      // Fire and forget notification
+      notificationService.sendCreditUpdateEmail({
+        companyName: company.name || targetCompanyId,
+        amount,
+        newBalance: balance.creditsRemaining,
+        type: "TOP_UP"
+      }).catch(console.error);
+
+      return balance;
     } catch (err) {
       console.error("Failed to insert into BillingHistory:", err);
     }

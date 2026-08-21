@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { DataTable } from "@/components/admin/data-table";
 import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
+import { CreditBreakdown } from "@/components/admin/credit-breakdown";
 import { DeleteCompanyDialog } from "@/components/admin/delete-company-dialog";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatNumber } from "@/lib/utils";
@@ -27,6 +28,8 @@ export type CompanyRow = {
   pocEmail: string;
   lowCredit: boolean;
   assignedNumber: string | null;
+  childCompanyCount: number;
+  unverifiedChildCompanyCount: number;
 };
 
 const columns: ColumnDef<CompanyRow>[] = [
@@ -35,7 +38,12 @@ const columns: ColumnDef<CompanyRow>[] = [
     header: "Company",
     cell: ({ row }) => (
       <div>
-        <p className="font-medium">{row.original.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-medium">{row.original.name}</p>
+          <Badge variant="outline" className="text-[10px] h-5 cursor-pointer hover:bg-muted" onClick={() => window.location.href = `/companies/${row.original.id}?tab=sub-companies`}>
+            Sub-Comp({row.original.childCompanyCount}) <span>&rarr;</span>
+          </Badge>
+        </div>
         <p className="text-xs text-muted-foreground">{row.original.slug}</p>
       </div>
     ),
@@ -97,6 +105,7 @@ const columns: ColumnDef<CompanyRow>[] = [
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <span>{formatNumber(row.original.creditsRemaining)}</span>
+        <CreditBreakdown companyId={row.original.id} />
         <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
         {row.original.lowCredit ? (
           <Badge variant="destructive" className="gap-1">
@@ -107,22 +116,7 @@ const columns: ColumnDef<CompanyRow>[] = [
       </div>
     ),
   },
-  {
-    accessorKey: "totalChannels",
-    header: "Channels",
-  },
-  {
-    accessorKey: "agentCount",
-    header: "Agents",
-    cell: ({ row }) => (
-      <span>
-        {row.original.agentCount}
-        {row.original.agentsAllocated > 0
-          ? ` / ${row.original.agentsAllocated}`
-          : ""}
-      </span>
-    ),
-  },
+
   {
     accessorKey: "pocEmail",
     header: "Owner email",

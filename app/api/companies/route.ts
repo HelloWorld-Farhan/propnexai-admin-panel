@@ -85,7 +85,7 @@ export async function POST(request: Request) {
               </ul>
               <br/>
               <p>Login to your portal to start configuring your voice agents.</p>
-              <a href="http://localhost:3000/auth/sign-in" style="display: inline-block; padding: 10px 20px; color: white; background-color: #d946ef; text-decoration: none; border-radius: 5px;">Go to Dashboard</a>
+              <a href="http://200.234.34.240:3000/auth/sign-in" style="display: inline-block; padding: 10px 20px; color: white; background-color: #d946ef; text-decoration: none; border-radius: 5px;">Go to Dashboard</a>
               <br/><br/>
               <p>Best regards,<br/>The PropNex AI Team</p>
             </div>

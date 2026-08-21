@@ -19,10 +19,11 @@ export async function POST(
     const body = schema.parse(await request.json());
     const balance = await addCredits(id, body.amount, body.description);
     return NextResponse.json(balance);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    console.error("Add credits error:", error);
+    return NextResponse.json({ error: error.message || "Failed to add credits" }, { status: 500 });
   }
 }

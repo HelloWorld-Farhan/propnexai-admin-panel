@@ -59,9 +59,11 @@ export function DeleteCompanyDialog({
       </DialogTrigger>
       <DialogContent onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle>Delete Company</DialogTitle>
+          <DialogTitle>Block company?</DialogTitle>
           <DialogDescription>
-            Are you sure you want to permanently delete <strong>{companyName}</strong>? This action cannot be undone.
+            This action will suspend <strong>{companyName}</strong> and all its sub-companies for a period of 6 months. 
+            The owner will be locked out and will see a countdown timer until the suspension is lifted. 
+            An email notification will be sent. Associated phone numbers and call logs will <strong>not</strong> be removed.
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-2 pt-4">
@@ -69,7 +71,7 @@ export function DeleteCompanyDialog({
             Cancel
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading ? "Deleting..." : "Delete Permanently"}
+            {loading ? "Blocking..." : "Block for 6 Months"}
           </Button>
         </div>
       </DialogContent>

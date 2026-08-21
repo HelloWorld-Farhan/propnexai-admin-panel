@@ -1,18 +1,15 @@
-import { ChannelsTable } from "@/components/admin/channels-table";
-import { listMockChannels } from "@/lib/mock/channels";
+import { Clock } from "lucide-react";
 
 export default function ChannelsPage() {
-  const channels = listMockChannels();
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Channels</h1>
-        <p className="text-sm text-muted-foreground">
-          View all telephony channels, assignments, and activity across companies
-        </p>
+    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 text-center">
+      <div className="rounded-full bg-muted p-4">
+        <Clock className="h-8 w-8 text-muted-foreground" />
       </div>
-      <ChannelsTable channels={channels} />
+      <h1 className="text-3xl font-semibold tracking-tight">Channels coming soon</h1>
+      <p className="text-muted-foreground max-w-[500px]">
+        We are working on bringing advanced telephony channels and multi-provider configurations to the admin panel.
+      </p>
     </div>
   );
 }

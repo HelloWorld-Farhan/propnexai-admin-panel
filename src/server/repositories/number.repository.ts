@@ -162,10 +162,7 @@ export async function createPhoneNumberForAdmin(input: {
       include: numberInclude,
     });
 
-    await tx.company.update({
-      where: { id: input.companyId },
-      data: { assignedNumber: number },
-    });
+
 
     await tx.supportRequest.updateMany({
       where: {
@@ -178,23 +175,86 @@ export async function createPhoneNumberForAdmin(input: {
     });
 
     try {
-      await prisma.$runCommandRaw({
-        update: "CallLog",
-        updates: [
-          {
-            q: {
-              $or: [
-                { customerNumber: number },
-                { providerWebhook: { $regex: number } }
-              ]
-            },
-            u: {
-              $set: { companyId: { $oid: input.companyId } }
-            },
-            multi: true
-          }
-        ]
+      // Find all past calls that matched this number, regardless of current company
+      const pastCalls = await tx.callLog.findMany({
+        where: {
+          OR: [
+            { providerWebhook: { string_contains: `"callid":"${number}"` } },
+            { providerWebhook: { string_contains: `"calledno":"${number}"` } },
+            { providerWebhook: { string_contains: `"phoneNumber":"${number}"` } },
+          ]
+        } as any // Prisma JSON filtering might need raw or specific querying, but we can just use runCommandRaw for CallLog update, and raw query for finding.
       });
+      // Actually, since it's MongoDB, it's safer to just do a raw query to find them first
+    } catch(e) {}
+
+    // Let's use the safer raw command approach, but we need to know the credits to transfer.
+    // A better approach is to do a raw query to find the calls, sum the credits grouped by old companyId, then do the updates.
+    try {
+      const db = (prisma as any).$transaction ? prisma : prisma;
+      const rawCalls = await prisma.callLog.findRaw({
+        filter: {
+          $or: [
+            { "providerWebhook.callid": number },
+            { "providerWebhook.calledno": number },
+            { "providerWebhook.message.call.phoneNumber": number }
+          ],
+          companyId: { $ne: { $oid: input.companyId } }
+        }
+      }) as any[];
+
+      if (rawCalls && rawCalls.length > 0) {
+        // Group by old companyId to refund them
+        const refunds: Record<string, number> = {};
+        let totalCharge = 0;
+
+        for (const call of rawCalls) {
+          const oldCompId = call.companyId?.$oid;
+          const credits = call.creditsUsed || 0;
+          if (oldCompId && credits > 0) {
+            refunds[oldCompId] = (refunds[oldCompId] || 0) + credits;
+            totalCharge += credits;
+          }
+        }
+
+        // Refund old companies
+        for (const [oldCompId, amount] of Object.entries(refunds)) {
+          await tx.creditBalance.updateMany({
+            where: { companyId: oldCompId },
+            data: {
+              creditsRemaining: { increment: amount },
+              creditsUsed: { decrement: amount }
+            }
+          });
+        }
+
+        // Charge new company
+        if (totalCharge > 0) {
+          await tx.creditBalance.updateMany({
+            where: { companyId: input.companyId },
+            data: {
+              creditsRemaining: { decrement: totalCharge },
+              creditsUsed: { increment: totalCharge }
+            }
+          });
+        }
+
+        // Update the call logs
+        await prisma.$runCommandRaw({
+          update: "CallLog",
+          updates: [
+            {
+              q: {
+                _id: { $in: rawCalls.map(c => c._id) }
+              },
+              u: {
+                $set: { companyId: { $oid: input.companyId } }
+              },
+              multi: true
+            }
+          ]
+        });
+      }
     } catch (err) {
       console.error("Failed to backfill call logs:", err);
     }
@@ -295,10 +355,6 @@ export async function updatePhoneNumberForAdmin(
     });
 
     if (companyChanged) {
-      await tx.company.update({
-        where: { id: nextCompanyId },
-        data: { assignedNumber: existing.number },
-      });
 
       await tx.supportRequest.updateMany({
         where: {
@@ -311,23 +367,66 @@ export async function updatePhoneNumberForAdmin(
       });
 
       try {
-        await prisma.$runCommandRaw({
-          update: "CallLog",
-          updates: [
-            {
-              q: {
-                $or: [
-                  { "customerNumber": existing.number },
-                  { "providerWebhook.phone": existing.number },
-                  { "providerWebhook.message.call.customer.number": existing.number },
-                  { "providerWebhook.message.call.phoneNumber": existing.number }
-                ]
-              },
-              u: { $set: { companyId: { $oid: nextCompanyId } } },
-              multi: true
+        const rawCalls = await prisma.callLog.findRaw({
+          filter: {
+            $or: [
+              { "providerWebhook.callid": existing.number },
+              { "providerWebhook.calledno": existing.number },
+              { "providerWebhook.message.call.phoneNumber": existing.number }
+            ],
+            companyId: { $ne: { $oid: nextCompanyId } }
+          }
+        }) as any[];
+
+        if (rawCalls && rawCalls.length > 0) {
+          const refunds: Record<string, number> = {};
+          let totalCharge = 0;
+
+          for (const call of rawCalls) {
+            const oldCompId = call.companyId?.$oid;
+            const credits = call.creditsUsed || 0;
+            if (oldCompId && credits > 0) {
+              refunds[oldCompId] = (refunds[oldCompId] || 0) + credits;
+              totalCharge += credits;
             }
-          ]
-        });
+          }
+
+          // Refund old companies
+          for (const [oldCompId, amount] of Object.entries(refunds)) {
+            await tx.creditBalance.updateMany({
+              where: { companyId: oldCompId },
+              data: {
+                creditsRemaining: { increment: amount },
+                creditsUsed: { decrement: amount }
+              }
+            });
+          }
+
+          // Charge new company
+          if (totalCharge > 0) {
+            await tx.creditBalance.updateMany({
+              where: { companyId: nextCompanyId },
+              data: {
+                creditsRemaining: { decrement: totalCharge },
+                creditsUsed: { increment: totalCharge }
+              }
+            });
+          }
+
+          // Update the call logs
+          await prisma.$runCommandRaw({
+            update: "CallLog",
+            updates: [
+              {
+                q: {
+                  _id: { $in: rawCalls.map(c => c._id) }
+                },
+                u: { $set: { companyId: { $oid: nextCompanyId } } },
+                multi: true
+              }
+            ]
+          });
+        }
       } catch (e) {
         console.error("Failed to backfill orphaned call logs:", e);
       }
