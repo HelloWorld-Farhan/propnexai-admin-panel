@@ -112,7 +112,7 @@ export async function listCompaniesForAdmin() {
   // Prisma's `parentCompanyId: null` filter doesn't match missing MongoDB fields
   const companies = await prisma.company.findMany({
     where: { 
-      isDemo: false,
+      isDemo: false, status: { not: "SUSPENDED" },
     },
     orderBy: { createdAt: "desc" },
     include: {
