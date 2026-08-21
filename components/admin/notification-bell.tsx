@@ -598,11 +598,16 @@ export function NumberNotification() {
                     className="w-full"
                     onClick={() => {
                       setOpen(false);
-                      router.push("/numbers");
-                      toast.info(`Please assign a number to company: ${req.company?.name || req.email}`);
+                      if (req.company?.tenantType === "CHILD" && req.company?.parentCompanyId) {
+                        router.push(`/companies/${req.company.parentCompanyId}?tab=sub-companies`);
+                        toast.info(`Please assign a number to sub-company: ${req.company?.name}`);
+                      } else {
+                        router.push("/numbers");
+                        toast.info(`Please assign a number to company: ${req.company?.name || req.email}`);
+                      }
                     }}
                   >
-                    Go to Numbers Manager
+                    {req.company?.tenantType === "CHILD" ? "Go to Parent Company" : "Go to Numbers Manager"}
                   </Button>
                 </div>
               ))}

@@ -18,10 +18,6 @@ export async function GET() {
         reason: "OTHER",
         message: "Number Assignment Request",
         status: "NEW",
-        OR: [
-          { companyId: null },
-          { company: { tenantType: { not: "CHILD" } } }
-        ]
       },
       include: {
         company: true,
@@ -47,7 +43,12 @@ export async function POST(request: Request) {
 
     // Check if there is already an active request
     const existing = await prisma.supportRequest.findFirst({
-      where: { email, message: "Number Assignment Request", status: "NEW" },
+      where: { 
+        email, 
+        message: "Number Assignment Request", 
+        status: "NEW",
+        ...(companyId ? { companyId } : {})
+      },
     });
     
     if (existing) {
