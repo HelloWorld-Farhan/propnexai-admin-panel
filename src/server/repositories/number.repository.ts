@@ -117,19 +117,19 @@ export async function createPhoneNumberForAdmin(input: {
   const campaignId = input.campaignId ?? null;
 
   await assertAgentsBelongToCompany(
-    input.companyId,
+    input.companyId as string,
     input.inboundAgentId,
     input.outboundAgentId,
   );
 
   const { company, campaignResourceKey } = await resolvePublicIdParts(
-    input.companyId,
+    input.companyId as string,
     campaignId,
   );
 
   const existing = await prisma.phoneNumber.findFirst({
     where: {
-      companyId: input.companyId,
+      companyId: input.companyId as string,
       campaignId,
       number,
     },
@@ -148,7 +148,7 @@ export async function createPhoneNumberForAdmin(input: {
 
     const createdNumber = await tx.phoneNumber.create({
       data: {
-        companyId: input.companyId,
+        companyId: input.companyId as string,
         campaignId,
         number,
         label: input.label ?? null,
@@ -166,7 +166,7 @@ export async function createPhoneNumberForAdmin(input: {
 
     await tx.supportRequest.updateMany({
       where: {
-        companyId: input.companyId,
+        companyId: input.companyId as string,
         reason: "OTHER",
         message: "Number Assignment Request",
         status: "NEW",
@@ -201,7 +201,7 @@ export async function createPhoneNumberForAdmin(input: {
           ],
           companyId: { $ne: { $oid: input.companyId } }
         }
-      }) as any[];
+      }) as unknown as any[];
 
       if (rawCalls && rawCalls.length > 0) {
         // Group by old companyId to refund them
@@ -283,7 +283,7 @@ export async function updatePhoneNumberForAdmin(
     throw new Error("Phone number not found");
   }
 
-  const nextCompanyId = input.companyId ?? existing.companyId;
+  const nextCompanyId = (input.companyId ?? existing.companyId) as string;
   const nextCampaignId =
     input.campaignId === undefined ? existing.campaignId : input.campaignId;
   const nextInboundAgentId =
@@ -296,7 +296,7 @@ export async function updatePhoneNumberForAdmin(
       : input.outboundAgentId;
 
   await assertAgentsBelongToCompany(
-    nextCompanyId,
+    nextCompanyId as string,
     nextInboundAgentId,
     nextOutboundAgentId,
   );
@@ -306,7 +306,7 @@ export async function updatePhoneNumberForAdmin(
 
   const duplicate = await prisma.phoneNumber.findFirst({
     where: {
-      companyId: nextCompanyId,
+      companyId: nextCompanyId as string,
       campaignId: nextCampaignId,
       number: existing.number,
       NOT: { id },
@@ -317,7 +317,7 @@ export async function updatePhoneNumberForAdmin(
   }
 
   const { company, campaignResourceKey } = await resolvePublicIdParts(
-    nextCompanyId,
+    nextCompanyId as string,
     nextCampaignId,
   );
 
@@ -341,7 +341,7 @@ export async function updatePhoneNumberForAdmin(
     const updatedNumber = await tx.phoneNumber.update({
       where: { id },
       data: {
-        companyId: nextCompanyId,
+        companyId: nextCompanyId as string,
         campaignId: nextCampaignId,
         label: input.label === undefined ? undefined : input.label,
         provider: input.provider,
@@ -358,7 +358,7 @@ export async function updatePhoneNumberForAdmin(
 
       await tx.supportRequest.updateMany({
         where: {
-          companyId: nextCompanyId,
+          companyId: nextCompanyId as string,
           reason: "OTHER",
           message: "Number Assignment Request",
           status: "NEW",
@@ -376,7 +376,7 @@ export async function updatePhoneNumberForAdmin(
             ],
             companyId: { $ne: { $oid: nextCompanyId } }
           }
-        }) as any[];
+        }) as unknown as any[];
 
         if (rawCalls && rawCalls.length > 0) {
           const refunds: Record<string, number> = {};

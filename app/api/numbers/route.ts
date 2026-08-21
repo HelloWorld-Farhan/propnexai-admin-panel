@@ -38,8 +38,8 @@ export async function POST(request: Request) {
     revalidatePath("/numbers");
 
     // Fetch the company to get the owner's email for the webhook
-    const company = await prisma.company.findUnique({
-      where: { id: number.companyId },
+    if (!number.companyId) return NextResponse.json(JSON.parse(JSON.stringify(number)), { status: 201 }); const company = await prisma.company.findUnique({
+      where: { id: number.companyId as string },
       include: {
         members: {
           include: { user: true }
