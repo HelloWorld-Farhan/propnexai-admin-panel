@@ -356,14 +356,49 @@ export async function verifySubCompany(
       });
 
       if (matchingCalls.length > 0) {
-        const callIds = matchingCalls.map(c => c.id);
-        const totalCreditsToDeduct = matchingCalls.reduce((sum, c) => sum + (c.creditsUsed || 0), 0);
+        // Deduplicate calls by callLogId to prevent double cloning
+        const uniqueCalls = new Map<string, any>();
+        for (const call of matchingCalls) {
+          if (call.callLogId) {
+            uniqueCalls.set(call.callLogId, call);
+          }
+        }
 
-        // Reassign calls to sub-company
-        await tx.callLog.updateMany({
-          where: { id: { in: callIds } },
-          data: { companyId: subCompanyId },
-        });
+        let totalCreditsToDeduct = 0;
+
+        for (const call of Array.from(uniqueCalls.values())) {
+          const credits = call.creditsUsed || 0;
+          
+          try {
+            await tx.callLog.upsert({
+              where: {
+                companyId_callLogId: {
+                  companyId: subCompanyId,
+                  callLogId: call.callLogId
+                }
+              },
+              update: {},
+              create: {
+                companyId: subCompanyId,
+                callLogId: call.callLogId,
+                publicId: call.publicId || `CLONED-${call.callLogId}`,
+                direction: call.direction,
+                status: call.status,
+                startedAt: call.startedAt ? new Date(call.startedAt) : new Date(),
+                durationSeconds: call.durationSeconds,
+                recordingUrl: call.recordingUrl,
+                transcriptUrl: call.transcriptUrl,
+                creditsUsed: credits,
+                provider: call.provider,
+                providerCallId: call.providerCallId,
+                providerWebhook: call.providerWebhook
+              }
+            });
+            totalCreditsToDeduct += credits;
+          } catch (e) {
+            // Ignore if it already exists or fails
+          }
+        }
 
         // Deduct credits for past calls from the sub-company
         if (totalCreditsToDeduct > 0) {
@@ -375,30 +410,12 @@ export async function verifySubCompany(
             },
           });
 
-          // Refund the parent company
-          await tx.creditBalance.updateMany({
-            where: { companyId: parentCompanyId },
-            data: {
-              creditsRemaining: { increment: totalCreditsToDeduct },
-              creditsUsed: { decrement: totalCreditsToDeduct },
-            },
-          });
-
           await tx.creditUsage.create({
             data: {
               companyId: subCompanyId,
               amount: totalCreditsToDeduct,
               reason: "CALL",
-              description: `Deducted credits for ${matchingCalls.length} past inbound calls upon number assignment`,
-            },
-          });
-
-          // Refund the parent company since the sub-company is now paying for these past calls out of its allocated chunk
-          await tx.creditBalance.updateMany({
-            where: { companyId: parentCompanyId },
-            data: {
-              creditsRemaining: { increment: totalCreditsToDeduct },
-              creditsUsed: { decrement: totalCreditsToDeduct },
+              description: `Deducted credits for ${uniqueCalls.size} past inbound calls upon number assignment`,
             },
           });
         }

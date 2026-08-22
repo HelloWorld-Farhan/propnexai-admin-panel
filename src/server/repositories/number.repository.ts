@@ -204,56 +204,69 @@ export async function createPhoneNumberForAdmin(input: {
       }) as unknown as any[];
 
       if (rawCalls && rawCalls.length > 0) {
-        // Group by old companyId to refund them
-        const refunds: Record<string, number> = {};
-        let totalCharge = 0;
-
+        // Deduplicate calls by callLogId to prevent double cloning if multiple companies share the number
+        const uniqueCalls = new Map<string, any>();
         for (const call of rawCalls) {
-          const oldCompId = call.companyId?.$oid;
-          const credits = call.creditsUsed || 0;
-          if (oldCompId && credits > 0) {
-            refunds[oldCompId] = (refunds[oldCompId] || 0) + credits;
-            totalCharge += credits;
+          if (call.callLogId) {
+            uniqueCalls.set(call.callLogId, call);
           }
         }
 
-        // Refund old companies
-        for (const [oldCompId, amount] of Object.entries(refunds)) {
-          await tx.creditBalance.updateMany({
-            where: { companyId: oldCompId },
-            data: {
-              creditsRemaining: { increment: amount },
-              creditsUsed: { decrement: amount }
-            }
-          });
+        let totalCharge = 0;
+
+        for (const call of Array.from(uniqueCalls.values())) {
+          const credits = call.creditsUsed || 0;
+          
+          try {
+            await tx.callLog.upsert({
+              where: {
+                companyId_callLogId: {
+                  companyId: input.companyId as string,
+                  callLogId: call.callLogId
+                }
+              },
+              update: {},
+              create: {
+                companyId: input.companyId as string,
+                callLogId: call.callLogId,
+                publicId: call.publicId || `CLONED-${call.callLogId}`,
+                direction: call.direction,
+                status: call.status,
+                startedAt: call.startedAt ? new Date(call.startedAt.$date || call.startedAt) : new Date(),
+                durationSeconds: call.durationSeconds,
+                recordingUrl: call.recordingUrl,
+                transcriptUrl: call.transcriptUrl,
+                creditsUsed: credits,
+                provider: call.provider,
+                providerCallId: call.providerCallId,
+                providerWebhook: call.providerWebhook
+              }
+            });
+            totalCharge += credits;
+          } catch (e) {
+            // Ignore if it already exists or fails
+          }
         }
 
-        // Charge new company
+        // Charge new company for the cloned calls
         if (totalCharge > 0) {
           await tx.creditBalance.updateMany({
-            where: { companyId: input.companyId },
+            where: { companyId: input.companyId as string },
             data: {
               creditsRemaining: { decrement: totalCharge },
               creditsUsed: { increment: totalCharge }
             }
           });
-        }
-
-        // Update the call logs
-        await prisma.$runCommandRaw({
-          update: "CallLog",
-          updates: [
-            {
-              q: {
-                _id: { $in: rawCalls.map(c => c._id) }
-              },
-              u: {
-                $set: { companyId: { $oid: input.companyId } }
-              },
-              multi: true
+          
+          await tx.creditUsage.create({
+            data: {
+              companyId: input.companyId as string,
+              amount: totalCharge,
+              reason: "CALL",
+              description: `Deducted credits for ${uniqueCalls.size} historical calls upon number assignment`
             }
-          ]
-        });
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to backfill call logs:", err);
@@ -379,30 +392,51 @@ export async function updatePhoneNumberForAdmin(
         }) as unknown as any[];
 
         if (rawCalls && rawCalls.length > 0) {
-          const refunds: Record<string, number> = {};
-          let totalCharge = 0;
-
+          // Deduplicate calls by callLogId to prevent double cloning if multiple companies share the number
+          const uniqueCalls = new Map<string, any>();
           for (const call of rawCalls) {
-            const oldCompId = call.companyId?.$oid;
-            const credits = call.creditsUsed || 0;
-            if (oldCompId && credits > 0) {
-              refunds[oldCompId] = (refunds[oldCompId] || 0) + credits;
-              totalCharge += credits;
+            if (call.callLogId) {
+              uniqueCalls.set(call.callLogId, call);
             }
           }
 
-          // Refund old companies
-          for (const [oldCompId, amount] of Object.entries(refunds)) {
-            await tx.creditBalance.updateMany({
-              where: { companyId: oldCompId },
-              data: {
-                creditsRemaining: { increment: amount },
-                creditsUsed: { decrement: amount }
-              }
-            });
+          let totalCharge = 0;
+
+          for (const call of Array.from(uniqueCalls.values())) {
+            const credits = call.creditsUsed || 0;
+            
+            try {
+              await tx.callLog.upsert({
+                where: {
+                  companyId_callLogId: {
+                    companyId: nextCompanyId,
+                    callLogId: call.callLogId
+                  }
+                },
+                update: {},
+                create: {
+                  companyId: nextCompanyId,
+                  callLogId: call.callLogId,
+                  publicId: call.publicId || `CLONED-${call.callLogId}`,
+                  direction: call.direction,
+                  status: call.status,
+                  startedAt: call.startedAt ? new Date(call.startedAt.$date || call.startedAt) : new Date(),
+                  durationSeconds: call.durationSeconds,
+                  recordingUrl: call.recordingUrl,
+                  transcriptUrl: call.transcriptUrl,
+                  creditsUsed: credits,
+                  provider: call.provider,
+                  providerCallId: call.providerCallId,
+                  providerWebhook: call.providerWebhook
+                }
+              });
+              totalCharge += credits;
+            } catch (e) {
+              // Ignore if it already exists or fails
+            }
           }
 
-          // Charge new company
+          // Charge new company for the cloned calls
           if (totalCharge > 0) {
             await tx.creditBalance.updateMany({
               where: { companyId: nextCompanyId },
@@ -411,21 +445,16 @@ export async function updatePhoneNumberForAdmin(
                 creditsUsed: { increment: totalCharge }
               }
             });
-          }
-
-          // Update the call logs
-          await prisma.$runCommandRaw({
-            update: "CallLog",
-            updates: [
-              {
-                q: {
-                  _id: { $in: rawCalls.map(c => c._id) }
-                },
-                u: { $set: { companyId: { $oid: nextCompanyId } } },
-                multi: true
+            
+            await tx.creditUsage.create({
+              data: {
+                companyId: nextCompanyId,
+                amount: totalCharge,
+                reason: "CALL",
+                description: `Deducted credits for ${uniqueCalls.size} historical calls upon number assignment`
               }
-            ]
-          });
+            });
+          }
         }
       } catch (e) {
         console.error("Failed to backfill orphaned call logs:", e);
