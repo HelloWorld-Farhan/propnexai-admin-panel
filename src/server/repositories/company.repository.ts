@@ -341,18 +341,12 @@ export async function verifySubCompany(
       });
 
       // Transfer past inbound calls from parent to sub-company
-      const pastCalls = await tx.callLog.findMany({
+      const matchingCalls = await tx.callLog.findMany({
         where: {
-          companyId: parentCompanyId,
+          phoneNumber: { number: cleanedNumber },
           direction: "INBOUND",
+          companyId: { not: subCompanyId }
         },
-      });
-
-      const matchingCalls = pastCalls.filter((call) => {
-        const payload = call.providerWebhook as any;
-        if (!payload) return false;
-        const calledNo = String(payload.callid || payload.calledno || "");
-        return calledNo && calledNo.includes(cleanedNumber);
       });
 
       if (matchingCalls.length > 0) {

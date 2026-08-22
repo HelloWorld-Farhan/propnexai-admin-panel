@@ -191,17 +191,12 @@ export async function createPhoneNumberForAdmin(input: {
     // Let's use the safer raw command approach, but we need to know the credits to transfer.
     // A better approach is to do a raw query to find the calls, sum the credits grouped by old companyId, then do the updates.
     try {
-      const db = (prisma as any).$transaction ? prisma : prisma;
-      const rawCalls = await prisma.callLog.findRaw({
-        filter: {
-          $or: [
-            { "providerWebhook.callid": number },
-            { "providerWebhook.calledno": number },
-            { "providerWebhook.message.call.phoneNumber": number }
-          ],
-          companyId: { $ne: { $oid: input.companyId } }
+      const rawCalls = await tx.callLog.findMany({
+        where: {
+          phoneNumber: { number: number },
+          companyId: { not: input.companyId as string }
         }
-      }) as unknown as any[];
+      });
 
       if (rawCalls && rawCalls.length > 0) {
         // Deduplicate calls by callLogId to prevent double cloning if multiple companies share the number
@@ -380,16 +375,12 @@ export async function updatePhoneNumberForAdmin(
       });
 
       try {
-        const rawCalls = await prisma.callLog.findRaw({
-          filter: {
-            $or: [
-              { "providerWebhook.callid": existing.number },
-              { "providerWebhook.calledno": existing.number },
-              { "providerWebhook.message.call.phoneNumber": existing.number }
-            ],
-            companyId: { $ne: { $oid: nextCompanyId } }
+        const rawCalls = await tx.callLog.findMany({
+          where: {
+            phoneNumber: { number: existing.number },
+            companyId: { not: nextCompanyId }
           }
-        }) as unknown as any[];
+        });
 
         if (rawCalls && rawCalls.length > 0) {
           // Deduplicate calls by callLogId to prevent double cloning if multiple companies share the number
