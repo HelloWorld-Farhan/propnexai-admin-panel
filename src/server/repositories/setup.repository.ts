@@ -222,7 +222,7 @@ export async function addCredits(
   
   if (!company) throw new Error("Company not found");
   
-  const targetCompanyId = company.parentCompanyId || companyId;
+  const targetCompanyId = companyId;
 
   return prisma.$transaction(async (tx) => {
     const balance = await tx.creditBalance.upsert({
