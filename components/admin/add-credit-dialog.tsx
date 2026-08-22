@@ -34,8 +34,8 @@ export function AddCreditDialog({
     e.preventDefault();
     const amount = Number.parseInt(creditAmount, 10);
     
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return toast.error("Enter a valid credit amount");
+    if (!Number.isFinite(amount) || amount < 5000) {
+      return toast.error("Minimum credit top-up is 5000");
     }
     
     setSaving(true);
@@ -82,10 +82,10 @@ export function AddCreditDialog({
               <Label>Amount</Label>
               <Input
                 type="number"
-                min={1}
+                min={5000}
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(e.target.value)}
-                placeholder="e.g. 1000"
+                placeholder="e.g. 5000"
                 required
               />
             </div>
