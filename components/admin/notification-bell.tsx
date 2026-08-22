@@ -644,6 +644,21 @@ export function SubCompanyNotification() {
     }
   }
 
+  async function handleDismiss(companyId: string) {
+    try {
+      const res = await fetch("/api/sub-company-verifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId })
+      });
+      if (res.ok) {
+        fetchPending(); // Refresh the list
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -671,8 +686,8 @@ export function SubCompanyNotification() {
           ) : (
             <div className="flex flex-col">
               {pending.map((req) => (
-                <div key={req.id} className="flex flex-col border-b p-3 last:border-0 gap-2">
-                  <div className="flex justify-between items-start">
+                <div key={req.id} className="flex flex-col border-b p-3 last:border-0 gap-2 relative group hover:bg-muted/50 transition-colors">
+                  <div className="flex justify-between items-start pr-6">
                     <div className="flex flex-col gap-1 overflow-hidden">
                       <p className="truncate text-sm font-medium">{req.name}</p>
                       <p className="text-xs font-semibold text-blue-500">Parent: {req.parentCompany?.name || "Unknown"}</p>
@@ -681,9 +696,16 @@ export function SubCompanyNotification() {
                       </p>
                     </div>
                   </div>
+                  <button
+                    onClick={() => handleDismiss(req.id)}
+                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Dismiss"
+                  >
+                    <X className="size-4" />
+                  </button>
                   <Button
                     size="sm"
-                    className="w-full"
+                    className="w-full mt-1"
                     onClick={() => {
                       setOpen(false);
                       router.push(`/companies/${req.parentCompanyId}`);
