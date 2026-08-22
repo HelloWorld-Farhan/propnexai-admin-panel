@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Check, Plus, X, Coins, PhoneCall, UserCheck, Building2 } from "lucide-react";
+import { Bell, Check, Plus, X, Coins, PhoneCall, UserCheck, Building2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -698,10 +698,10 @@ export function SubCompanyNotification() {
                   </div>
                   <button
                     onClick={() => handleDismiss(req.id)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute right-3 top-3 text-red-500/70 hover:text-red-500 transition-colors"
                     title="Dismiss"
                   >
-                    <X className="size-4" />
+                    <Trash2 className="size-4" />
                   </button>
                   <Button
                     size="sm"
