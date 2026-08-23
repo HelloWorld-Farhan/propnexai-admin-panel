@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { DataTable } from "@/components/admin/data-table";
 import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
+import { EditCreditDialog } from "@/components/admin/edit-credit-dialog";
 import { CreditBreakdown } from "@/components/admin/credit-breakdown";
 import { DeleteCompanyDialog } from "@/components/admin/delete-company-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -107,6 +108,7 @@ const columns: ColumnDef<CompanyRow>[] = [
         <span>{formatNumber(row.original.creditsRemaining)}</span>
         <CreditBreakdown companyId={row.original.id} />
         <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
+        <EditCreditDialog companyId={row.original.id} companyName={row.original.name} currentCredits={row.original.creditsRemaining} />
         {row.original.lowCredit ? (
           <Badge variant="destructive" className="gap-1">
             <AlertTriangle className="h-3 w-3" />
