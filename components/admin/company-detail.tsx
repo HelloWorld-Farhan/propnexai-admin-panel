@@ -857,6 +857,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                   </div>
                 </DialogContent>
               </Dialog>
+              </div>
             </CardHeader>
           </Card>
 
