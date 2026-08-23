@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
@@ -167,6 +167,18 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
   const [creditAmount, setCreditAmount] = useState("");
   const [creditDescription, setCreditDescription] = useState("Admin credit top-up");
   const [saving, setSaving] = useState(false);
+  const [editChild, setEditChild] = useState<{ id: string; name: string } | null>(null);
+  const [editChildName, setEditChildName] = useState("");
+  const [editChildNumber, setEditChildNumber] = useState("");
+  const [editChildSaving, setEditChildSaving] = useState(false);
+  
+  const [editCreditChild, setEditCreditChild] = useState<{ id: string; name: string } | null>(null);
+  const [editCreditAmount, setEditCreditAmount] = useState("");
+  const [editCreditDescription, setEditCreditDescription] = useState("Admin credit override");
+  const [editCreditSaving, setEditCreditSaving] = useState(false);
+
+  const [removeChild, setRemoveChild] = useState<{ id: string; name: string } | null>(null);
+  const [removeChildSaving, setRemoveChildSaving] = useState(false);
   const [contractCopied, setContractCopied] = useState(false);
 
   const availableServiceNumbers = useMemo(() => {
@@ -201,6 +213,66 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
     const data = (await res.json()) as CompanyData;
     setLiveCompany(data);
   }, [company.id]);
+
+  async function handleEditSubCompany() {
+    if (!editChild || !editChildName.trim()) return;
+    setEditChildSaving(true);
+    try {
+      const res = await fetch(`/api/companies/${editChild.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editChildName.trim(), assignedNumber: editChildNumber.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      toast.success("Sub-company renamed successfully");
+      setEditChild(null);
+      await refreshLiveCompany();
+    } catch {
+      toast.error("Failed to rename sub-company");
+    } finally {
+      setEditChildSaving(false);
+    }
+  }
+
+  async function handleRemoveSubCompany() {
+    if (!removeChild) return;
+    setRemoveChildSaving(true);
+    try {
+      const res = await fetch(`/api/companies/${removeChild.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      toast.success(`"${removeChild.name}" removed successfully`);
+      setRemoveChild(null);
+      await refreshLiveCompany();
+    } catch {
+      toast.error("Failed to remove sub-company");
+    } finally {
+      setRemoveChildSaving(false);
+    }
+  }
+
+  async function handleEditSubCompanyCredits() {
+    if (!editCreditChild) return;
+    const amount = Number.parseInt(editCreditAmount, 10);
+    if (!Number.isFinite(amount) || amount < 0) {
+      return toast.error("Credit amount must be 0 or more");
+    }
+    setEditCreditSaving(true);
+    try {
+      const res = await fetch(`/api/companies/${editCreditChild.id}/credits/update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, description: editCreditDescription }),
+      });
+      if (!res.ok) throw new Error("Failed to update credits");
+      toast.success(`Set credits to ${amount}`);
+      setEditCreditChild(null);
+      await refreshLiveCompany();
+    } catch {
+      toast.error("Failed to update sub-company credits");
+    } finally {
+      setEditCreditSaving(false);
+    }
+  }
 
   useEffect(() => {
     setLiveCompany(company);
@@ -563,7 +635,23 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                         <TableRow key={child.id}>
                           <TableCell className="font-medium">{child.name}</TableCell>
                           <TableCell>{assignedNum}</TableCell>
-                          <TableCell>{credits}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span>{credits}</span>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                title="Edit Credits"
+                                onClick={() => {
+                                  setEditCreditChild({ id: child.id, name: child.name });
+                                  setEditCreditAmount(credits.toString());
+                                }}
+                              >
+                                <Pencil className="size-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant={child.status === "ACTIVE" ? "success" : "secondary"}>
                               {child.status}
@@ -571,18 +659,40 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                           </TableCell>
                           <TableCell>{formatDate(new Date(child.createdAt))}</TableCell>
                           <TableCell className="text-right">
-                            {child.status === "ACTIVE" && assignedNum !== "—" ? (
-                              <span className="text-sm font-medium text-muted-foreground">
-                                Verified
-                              </span>
-                            ) : (
-                              <VerifySubCompanyDialog 
-                                subCompanyId={child.id} 
-                                subCompanyName={child.name} 
-                                parentCompanyId={company.id}
-                                onSuccess={refreshLiveCompany}
-                              />
-                            )}
+                            <div className="flex items-center justify-end gap-1">
+                              {child.status !== "ACTIVE" || assignedNum === "—" ? (
+                                <VerifySubCompanyDialog
+                                  subCompanyId={child.id}
+                                  subCompanyName={child.name}
+                                  parentCompanyId={company.id}
+                                  onSuccess={refreshLiveCompany}
+                                />
+                              ) : (
+                                <span className="text-xs font-medium text-muted-foreground">Verified</span>
+                              )}
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                title="Edit sub-company"
+                                onClick={() => { 
+                                  setEditChild({ id: child.id, name: child.name }); 
+                                  setEditChildName(child.name);
+                                  setEditChildNumber(assignedNum === "—" ? "" : assignedNum);
+                                }}
+                              >
+                                <Pencil className="size-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-red-500/70 hover:text-red-500"
+                                title="Remove sub-company"
+                                onClick={() => setRemoveChild({ id: child.id, name: child.name })}
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -592,6 +702,44 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
               )}
             </CardContent>
           </Card>
+
+          {/* Edit Credit Dialog */}
+          <Dialog open={!!editCreditChild} onOpenChange={(open) => !open && setEditCreditChild(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Credits for {editCreditChild?.name}</DialogTitle>
+                <DialogDescription>
+                  This will override and set the exact credit balance for this sub-company.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>New Credit Balance</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={editCreditAmount}
+                    onChange={(e) => setEditCreditAmount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input
+                    value={editCreditDescription}
+                    onChange={(e) => setEditCreditDescription(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setEditCreditChild(null)} disabled={editCreditSaving}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleEditSubCompanyCredits} disabled={editCreditSaving}>
+                    Save Credits
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="setup" className="space-y-4">
@@ -903,6 +1051,66 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Sub-Company Dialog */}
+      <Dialog open={!!editChild} onOpenChange={(v) => !v && setEditChild(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Sub-Company</DialogTitle>
+            <DialogDescription>
+              Update the settings for &quot;{editChild?.name}&quot;.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <Label htmlFor="edit-child-name">Company Name</Label>
+            <Input
+              id="edit-child-name"
+              value={editChildName}
+              onChange={(e) => setEditChildName(e.target.value)}
+              placeholder="Enter new name"
+              onKeyDown={(e) => e.key === "Enter" && handleEditSubCompany()}
+            />
+          </div>
+          <div className="space-y-3 mt-2">
+            <Label htmlFor="edit-child-number">Assigned Phone Number</Label>
+            <Input
+              id="edit-child-number"
+              value={editChildNumber}
+              onChange={(e) => setEditChildNumber(e.target.value)}
+              placeholder="e.g. 919429390765"
+              onKeyDown={(e) => e.key === "Enter" && handleEditSubCompany()}
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setEditChild(null)} disabled={editChildSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSubCompany} disabled={editChildSaving || !editChildName.trim()}>
+              {editChildSaving ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Sub-Company Dialog */}
+      <Dialog open={!!removeChild} onOpenChange={(v) => !v && setRemoveChild(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Sub-Company</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently remove <b>&quot;{removeChild?.name}&quot;</b>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setRemoveChild(null)} disabled={removeChildSaving}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemoveSubCompany} disabled={removeChildSaving}>
+              {removeChildSaving ? "Removing…" : "Remove"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

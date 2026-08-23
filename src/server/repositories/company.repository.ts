@@ -238,12 +238,66 @@ export async function getCompanyById(id: string) {
 export async function deleteCompanyById(id: string) {
   const company = await prisma.company.findUnique({ 
     where: { id },
-    include: { creditBalance: true, childCompanies: true } 
+    include: { creditBalance: true, childCompanies: true, members: true, phoneNumbers: true } 
   });
   if (!company || company.isDemo) {
     return false;
   }
 
+  // If this is a CHILD (sub-company), hard-delete it fully so the user's
+  // credentials are completely cleared on the main website.
+  if (company.parentCompanyId) {
+    await prisma.$transaction(async (tx) => {
+      // Delete all related records in safe order (leaves first, then company)
+      await tx.campaignInvitation.deleteMany({ where: { companyId: id } });
+      await tx.supportRequest.deleteMany({ where: { companyId: id } });
+      await tx.billingQuote.deleteMany({ where: { companyId: id } });
+      await tx.callInternalNote.deleteMany({ where: { companyId: id } });
+      await tx.callTranscript.deleteMany({ where: { callLog: { companyId: id } } });
+      await tx.callLogProviderEvent.deleteMany({ where: { callLog: { companyId: id } } });
+      await tx.callLog.deleteMany({ where: { companyId: id } });
+      await tx.dialerCall.deleteMany({ where: { companyId: id } });
+      await tx.campaignExecution.deleteMany({ where: { companyId: id } });
+      await tx.campaign.deleteMany({ where: { companyId: id } });
+      await tx.outboundCampaign.deleteMany({ where: { companyId: id } });
+      await tx.lead.deleteMany({ where: { companyId: id } });
+      await tx.leadSource.deleteMany({ where: { companyId: id } });
+      await tx.leadPipelineStage.deleteMany({ where: { companyId: id } });
+      await tx.uploadedContact.deleteMany({ where: { companyId: id } });
+      await tx.agentCommunicationChannel.deleteMany({ where: { companyId: id } });
+      await tx.agentPromptTemplate.deleteMany({ where: { companyId: id } });
+      await tx.knowledgeSource.deleteMany({ where: { companyId: id } });
+      await tx.aiAgent.deleteMany({ where: { companyId: id } });
+      await tx.companyChannel.deleteMany({ where: { companyId: id } });
+      await tx.companySetupConfig.deleteMany({ where: { companyId: id } });
+      await tx.companyContact.deleteMany({ where: { companyId: id } });
+      await tx.companyBillingRates.deleteMany({ where: { companyId: id } });
+      await tx.billingSubscription.deleteMany({ where: { companyId: id } });
+      await tx.billingInvoice.deleteMany({ where: { companyId: id } });
+      await tx.creditUsage.deleteMany({ where: { companyId: id } });
+      await tx.creditBalance.deleteMany({ where: { companyId: id } });
+      await tx.phoneNumber.deleteMany({ where: { companyId: id } });
+      await tx.invitation.deleteMany({ where: { companyId: id } });
+      await tx.companyMember.deleteMany({ where: { companyId: id } });
+      await tx.apiKey.deleteMany({ where: { companyId: id } });
+      await tx.auditLog.deleteMany({ where: { companyId: id } });
+      await tx.notification.deleteMany({ where: { companyId: id } });
+      await tx.systemEvent.deleteMany({ where: { companyId: id } });
+      await tx.analyticsSnapshot.deleteMany({ where: { companyId: id } });
+      await tx.schedulerEvent.deleteMany({ where: { companyId: id } });
+      await tx.integration.deleteMany({ where: { companyId: id } });
+      await tx.webhookEndpoint.deleteMany({ where: { companyId: id } });
+      await tx.csvImportBatch.deleteMany({ where: { companyId: id } });
+      await tx.role.deleteMany({ where: { companyId: id } });
+      await tx.channel.deleteMany({ where: { companyId: id } });
+      await tx.companyResourceSequence.deleteMany({ where: { companyId: id } });
+      // Finally delete the company itself
+      await tx.company.delete({ where: { id } });
+    }, { maxWait: 15000, timeout: 30000 });
+    return true;
+  }
+
+  // For PARENT companies — keep suspend behavior (safer, preserves history)
   const blockedUntil = new Date();
   blockedUntil.setMonth(blockedUntil.getMonth() + 6);
 
@@ -255,7 +309,7 @@ export async function deleteCompanyById(id: string) {
     }
   });
 
-  // Also block all child companies
+  // Also suspend all child companies
   if (company.childCompanies && company.childCompanies.length > 0) {
     await prisma.company.updateMany({
       where: { parentCompanyId: id },

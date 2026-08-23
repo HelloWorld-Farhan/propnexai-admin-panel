@@ -136,13 +136,13 @@ export function ApprovalNotification() {
                 {pending.map((user) => (
                   <div
                     key={user.id}
-                    className="flex items-center justify-between border-b p-3 last:border-0"
+                    className="flex flex-col gap-2 border-b p-3 last:border-0"
                   >
-                    <div className="flex flex-col gap-1 overflow-hidden">
-                      <p className="truncate text-sm font-medium flex items-center gap-2">
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <p className="text-sm font-medium break-all leading-snug">
                         {user.email}
                         {user.remindedAt && (
-                          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+                          <span className="ml-2 inline-block rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
                             Reminder Sent
                           </span>
                         )}
@@ -155,6 +155,7 @@ export function ApprovalNotification() {
                       <Button
                         size="sm"
                         variant="destructive"
+                        className="flex-1"
                         onClick={() => {
                           setDeclineUser(user);
                           setOpen(false);
@@ -164,6 +165,7 @@ export function ApprovalNotification() {
                       </Button>
                       <Button
                         size="sm"
+                        className="flex-1"
                         onClick={() => {
                           setVerifyUser(user);
                           setOpen(false);

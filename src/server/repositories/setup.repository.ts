@@ -314,3 +314,104 @@ export async function addCredits(
     return balance;
   });
 }
+
+export async function updateCredits(
+  companyId: string,
+  amount: number,
+  description: string,
+) {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { parentCompanyId: true, name: true }
+  });
+  
+  if (!company) throw new Error("Company not found");
+  
+  const targetCompanyId = companyId;
+
+  return prisma.$transaction(async (tx) => {
+    const balance = await tx.creditBalance.upsert({
+      where: { companyId: targetCompanyId },
+      create: {
+        companyId: targetCompanyId,
+        creditsRemaining: amount,
+        creditsUsed: 0,
+      },
+      update: {
+        creditsRemaining: amount,
+      },
+    });
+
+    await tx.creditUsage.create({
+      data: {
+        companyId: targetCompanyId,
+        amount,
+        reason: "MANUAL_ADJUSTMENT",
+        description,
+      },
+    });
+
+    try {
+      await prisma.$runCommandRaw({
+        insert: "BillingHistory",
+        documents: [
+          {
+            companyId: { $oid: targetCompanyId },
+            date: { $date: new Date().toISOString() },
+            description: description || "Credit Set via Admin",
+            type: "Top-up",
+            credits: amount,
+            amount: 0,
+            status: "Completed",
+          }
+        ]
+      });
+
+      notificationService.sendCreditUpdateEmail({
+        companyName: company.name || targetCompanyId,
+        amount,
+        newBalance: balance.creditsRemaining,
+        type: "TOP_UP"
+      }).catch(console.error);
+
+    } catch (err) {
+      console.error("Failed to insert into BillingHistory:", err);
+    }
+
+    await tx.supportRequest.updateMany({
+      where: {
+        companyId,
+        reason: "BILLING_CREDITS",
+        status: "NEW"
+      },
+      data: { status: "RESOLVED" }
+    });
+
+    try {
+      const fullCompany = await tx.company.findUnique({
+        where: { id: companyId },
+        include: { members: { include: { user: true } } }
+      });
+      if (fullCompany && fullCompany.members.length > 0) {
+        const user = fullCompany.members[0].user;
+        if (user && user.email) {
+          const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+          fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "credit_added",
+              email: user.email,
+              name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
+              amount: amount,
+            }),
+          }).catch(err => console.error("Failed to send credit added webhook:", err));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to process credit webhook:", e);
+    }
+
+    return balance;
+  });
+}
