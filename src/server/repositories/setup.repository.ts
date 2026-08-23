@@ -329,7 +329,7 @@ export async function updateCredits(
   
   const targetCompanyId = companyId;
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const balance = await tx.creditBalance.upsert({
       where: { companyId: targetCompanyId },
       create: {
@@ -414,4 +414,13 @@ export async function updateCredits(
 
     return balance;
   });
+
+  // Fire-and-forget: trigger voice web sync so the credits widget
+  // shows the new balance immediately when the user opens the dashboard.
+  try {
+    const voiceWebUrl = process.env.VOICE_WEB_URL || "https://www.propnexai.com";
+    fetch(`${voiceWebUrl}/api/internal-sync-credits`, { method: "GET" }).catch(() => {});
+  } catch (_) {}
+
+  return result;
 }
