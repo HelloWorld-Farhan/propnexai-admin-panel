@@ -6,6 +6,7 @@ import { Check, Copy, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
+import { EditCreditDialog } from "@/components/admin/edit-credit-dialog";
 import { DeleteCompanyDialog } from "@/components/admin/delete-company-dialog";
 import { VerifySubCompanyDialog } from "@/components/admin/verify-sub-company-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -820,10 +821,12 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                   {formatNumber(liveCompany.creditBalance?.creditsUsed ?? 0)} used
                 </CardDescription>
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm">Add credits</Button>
-                </DialogTrigger>
+              <div className="flex items-center gap-2">
+                <EditCreditDialog companyId={liveCompany.id} companyName={liveCompany.name} currentCredits={liveCompany.creditBalance?.creditsRemaining ?? 0} />
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm">Add credits</Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Add credits</DialogTitle>
