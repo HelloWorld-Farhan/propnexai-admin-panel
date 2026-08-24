@@ -72,7 +72,7 @@ export async function POST(
         number: numTrimmed,
         companyId: id,
         status: "ACTIVE",
-        provider: "MANUAL",
+        provider: "PROPNEX",
         phoneNumberId,
         publicId,
         assignedParentTenantId: company.parentCompanyId,
