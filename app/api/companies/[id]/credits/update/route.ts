@@ -5,7 +5,7 @@ import { requireAdminSession } from "@/lib/auth/server-session";
 import { updateCredits } from "@/src/server/repositories/setup.repository";
 
 const schema = z.object({
-  amount: z.number().int().min(0, "Credit amount cannot be negative"),
+  delta: z.number().int(),
   description: z.string().min(1),
 });
 
@@ -17,7 +17,7 @@ export async function PUT(
     await requireAdminSession();
     const { id } = await params;
     const body = schema.parse(await request.json());
-    const balance = await updateCredits(id, body.amount, body.description);
+    const balance = await updateCredits(id, body.delta, body.description);
     return NextResponse.json(balance);
   } catch (error: any) {
     if (error instanceof z.ZodError) {

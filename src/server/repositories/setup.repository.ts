@@ -317,7 +317,7 @@ export async function addCredits(
 
 export async function updateCredits(
   companyId: string,
-  amount: number,
+  delta: number,
   description: string,
 ) {
   const company = await prisma.company.findUnique({
@@ -330,24 +330,23 @@ export async function updateCredits(
   const targetCompanyId = companyId;
 
   const result = await prisma.$transaction(async (tx) => {
-    const existingBalance = await tx.creditBalance.findUnique({
-      where: { companyId: targetCompanyId },
-    });
-    
+    // If delta is 0, we do nothing
+    if (delta === 0) return null;
+
     let creditsUsedIncrement = 0;
-    if (existingBalance && amount < existingBalance.creditsRemaining) {
-      creditsUsedIncrement = existingBalance.creditsRemaining - amount;
+    if (delta < 0) {
+      creditsUsedIncrement = Math.abs(delta);
     }
 
     const balance = await tx.creditBalance.upsert({
       where: { companyId: targetCompanyId },
       create: {
         companyId: targetCompanyId,
-        creditsRemaining: amount,
+        creditsRemaining: delta,
         creditsUsed: 0,
       },
       update: {
-        creditsRemaining: amount,
+        creditsRemaining: { increment: delta },
         creditsUsed: { increment: creditsUsedIncrement },
       },
     });
@@ -355,9 +354,9 @@ export async function updateCredits(
     await tx.creditUsage.create({
       data: {
         companyId: targetCompanyId,
-        amount,
+        amount: Math.abs(delta),
         reason: "MANUAL_ADJUSTMENT",
-        description,
+        description: delta < 0 ? `Admin deducted ${Math.abs(delta)}` : `Admin added ${delta}`,
       },
     });
 
@@ -369,19 +368,18 @@ export async function updateCredits(
             companyId: { $oid: targetCompanyId },
             date: { $date: new Date().toISOString() },
             description: description || "Credit Set via Admin",
-            type: "Top-up",
-            credits: amount,
+            type: delta < 0 ? "Deduction" : "Top-up",
+            credits: delta,
             amount: 0,
             status: "Completed",
           }
         ]
       });
-
       notificationService.sendCreditUpdateEmail({
         companyName: company.name || targetCompanyId,
-        amount,
+        amount: Math.abs(delta),
         newBalance: balance.creditsRemaining,
-        type: "TOP_UP"
+        type: delta < 0 ? "DEDUCTION" : "TOP_UP"
       }).catch(console.error);
 
     } catch (err) {

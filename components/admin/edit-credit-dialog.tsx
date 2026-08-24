@@ -46,7 +46,7 @@ export function EditCreditDialog({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: Math.round(newAmount),
+          delta: Math.round(diff || 0),
           description: creditDescription,
         }),
       });
