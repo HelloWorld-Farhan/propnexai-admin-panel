@@ -306,6 +306,9 @@ export async function deleteCompanyById(id: string) {
       await tx.callInternalNote.deleteMany({ where: { companyId: id } });
       await tx.callTranscript.deleteMany({ where: { callLog: { companyId: id } } });
       await tx.callLogProviderEvent.deleteMany({ where: { callLog: { companyId: id } } });
+      await tx.contactRetryJob.deleteMany({ where: { companyId: id } });
+      await tx.campaignDocument.deleteMany({ where: { companyId: id } });
+      await tx.campaignActivity.deleteMany({ where: { companyId: id } });
       
       // Call logs are now owned by the parent, so they won't be deleted here
       await tx.callLog.deleteMany({ where: { companyId: id } });
