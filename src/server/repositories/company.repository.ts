@@ -468,6 +468,7 @@ export async function verifySubCompany(
           });
         }
       }
+    }
     return updated;
   }, {
     maxWait: 10000,
