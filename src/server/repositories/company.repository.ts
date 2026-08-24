@@ -368,7 +368,7 @@ export async function verifySubCompany(
     throw new Error("Sub-company does not belong to the specified parent");
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     // Activate the child company
     const updated = await tx.company.update({
       where: { id: subCompanyId },
