@@ -27,8 +27,7 @@ export async function getDashboardStats() {
         OR: [
           { parentCompanyId: null },
           { parentCompanyId: { isSet: false } }
-        ],
-        phoneNumbers: { some: {} } // Company must have an assigned number
+        ]
       } 
     }),
     prisma.company.count({ 
