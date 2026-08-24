@@ -284,7 +284,7 @@ export async function deleteCompanyById(id: string) {
       // Unassign phone numbers (if any) and suffix them to prevent ID collision in the unassigned pool
       const phoneNumbers = await tx.phoneNumber.findMany({ 
         where: { companyId: id },
-        select: { id: true, phoneNumberId: true, publicId: true }
+        select: { id: true, phoneNumberId: true, publicId: true, number: true }
       });
       for (const phone of phoneNumbers) {
         await tx.phoneNumber.update({
@@ -294,6 +294,7 @@ export async function deleteCompanyById(id: string) {
             assignedParentTenantId: parentId,
             phoneNumberId: `${phone.phoneNumberId}-sub-${id.slice(-4)}`,
             publicId: `${phone.publicId}-sub-${id.slice(-4)}`,
+            number: `${phone.number}-sub-${id.slice(-4)}`,
           }
         });
       }
