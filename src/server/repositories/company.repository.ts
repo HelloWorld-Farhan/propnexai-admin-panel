@@ -279,11 +279,22 @@ export async function deleteCompanyById(id: string) {
         });
       }
 
-      // 3. Unassign Phone Numbers
-      await tx.phoneNumber.updateMany({
+      // Unassign phone numbers (if any) and suffix them to prevent ID collision in the unassigned pool
+      const phoneNumbers = await tx.phoneNumber.findMany({ 
         where: { companyId: id },
-        data: { companyId: null, assignedParentTenantId: parentId }
+        select: { id: true, phoneNumberId: true, publicId: true }
       });
+      for (const phone of phoneNumbers) {
+        await tx.phoneNumber.update({
+          where: { id: phone.id },
+          data: {
+            companyId: null,
+            assignedParentTenantId: parentId,
+            phoneNumberId: `${phone.phoneNumberId}-sub-${id.slice(-4)}`,
+            publicId: `${phone.publicId}-sub-${id.slice(-4)}`,
+          }
+        });
+      }
 
       // --- Continue Hard Deletion (leaves first, then company) ---
       
