@@ -264,10 +264,20 @@ export async function deleteCompanyById(id: string) {
       }
 
       // 2. Re-parent Call Logs (inbound and outbound)
-      await tx.callLog.updateMany({
+      const callLogs = await tx.callLog.findMany({ 
         where: { companyId: id },
-        data: { companyId: parentId }
+        select: { id: true, callLogId: true, publicId: true }
       });
+      for (const log of callLogs) {
+        await tx.callLog.update({
+          where: { id: log.id },
+          data: {
+            companyId: parentId,
+            callLogId: `${log.callLogId}-sub-${id.slice(-4)}`,
+            publicId: `${log.publicId}-sub-${id.slice(-4)}`,
+          }
+        });
+      }
 
       // 3. Unassign Phone Numbers
       await tx.phoneNumber.updateMany({
