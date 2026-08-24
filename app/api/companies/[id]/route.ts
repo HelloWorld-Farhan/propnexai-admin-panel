@@ -36,8 +36,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Not found or cannot delete demo" }, { status: 404 });
     }
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error: any) {
+    console.error("Delete Company Error:", error);
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
 

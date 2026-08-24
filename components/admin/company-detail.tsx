@@ -241,12 +241,15 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
     setRemoveChildSaving(true);
     try {
       const res = await fetch(`/api/companies/${removeChild.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to delete");
+      }
       toast.success(`"${removeChild.name}" removed successfully`);
       setRemoveChild(null);
       await refreshLiveCompany();
-    } catch {
-      toast.error("Failed to remove sub-company");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove sub-company");
     } finally {
       setRemoveChildSaving(false);
     }
