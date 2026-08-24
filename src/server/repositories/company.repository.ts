@@ -212,7 +212,7 @@ export async function getCompanyById(id: string) {
       childCompanies: {
         orderBy: { createdAt: "desc" },
         include: { 
-          phoneNumbers: { take: 1, select: { number: true } },
+          phoneNumbers: { select: { number: true } },
           creditBalance: { select: { creditsRemaining: true } }
         },
       },
