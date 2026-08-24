@@ -559,3 +559,118 @@ export async function verifySubCompany(
 
   return result;
 }
+
+export async function deleteCompanyById(id: string): Promise<boolean> {
+  const company = await prisma.company.findUnique({
+    where: { id },
+    include: { creditBalance: true },
+  });
+
+  if (!company || company.isDemo) {
+    return false;
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (company.parentCompanyId) {
+        const remainingCredits = company.creditBalance?.creditsRemaining || 0;
+        const usedCredits = company.creditBalance?.creditsUsed || 0;
+        
+        if (remainingCredits > 0 || usedCredits > 0) {
+          await tx.creditBalance.update({
+            where: { companyId: company.parentCompanyId },
+            data: {
+              creditsRemaining: { increment: remainingCredits },
+              creditsUsed: { increment: usedCredits },
+            },
+          });
+        }
+        
+        const callLogs = await tx.callLog.findMany({ 
+          where: { companyId: id },
+          select: { id: true, callLogId: true, publicId: true }
+        });
+        for (const log of callLogs) {
+          await tx.callLog.update({
+            where: { id: log.id },
+            data: {
+              companyId: company.parentCompanyId,
+              callLogId: `${log.callLogId}-sub-${id.slice(-4)}`,
+              publicId: `${log.publicId}-sub-${id.slice(-4)}`,
+            }
+          });
+        }
+        
+        const phoneNumbers = await tx.phoneNumber.findMany({ 
+          where: { companyId: id },
+          select: { id: true, phoneNumberId: true, publicId: true }
+        });
+        for (const phone of phoneNumbers) {
+          await tx.phoneNumber.update({
+            where: { id: phone.id },
+            data: {
+              companyId: null, 
+              assignedParentTenantId: company.parentCompanyId,
+              phoneNumberId: `${phone.phoneNumberId}-sub-${id.slice(-4)}`,
+              publicId: `${phone.publicId}-sub-${id.slice(-4)}`,
+            }
+          });
+        }
+      }
+
+      await tx.campaignInvitation.deleteMany({ where: { companyId: id } });
+      await tx.supportRequest.deleteMany({ where: { companyId: id } });
+      await tx.billingQuote.deleteMany({ where: { companyId: id } });
+      await tx.callInternalNote.deleteMany({ where: { companyId: id } });
+      await tx.callTranscript.deleteMany({ where: { callLog: { companyId: id } } });
+      await tx.callLogProviderEvent.deleteMany({ where: { callLog: { companyId: id } } });
+      
+      await tx.callLog.deleteMany({ where: { companyId: id } });
+      await tx.dialerCall.deleteMany({ where: { companyId: id } });
+      await tx.campaignExecution.deleteMany({ where: { companyId: id } });
+      await tx.campaign.deleteMany({ where: { companyId: id } });
+      await tx.outboundCampaign.deleteMany({ where: { companyId: id } });
+      await tx.lead.deleteMany({ where: { companyId: id } });
+      await tx.leadSource.deleteMany({ where: { companyId: id } });
+      await tx.leadPipelineStage.deleteMany({ where: { companyId: id } });
+      await tx.uploadedContact.deleteMany({ where: { companyId: id } });
+      await tx.agentCommunicationChannel.deleteMany({ where: { companyId: id } });
+      await tx.agentPromptTemplate.deleteMany({ where: { companyId: id } });
+      await tx.knowledgeSource.deleteMany({ where: { companyId: id } });
+      await tx.aiAgent.deleteMany({ where: { companyId: id } });
+      await tx.companyChannel.deleteMany({ where: { companyId: id } });
+      await tx.companySetupConfig.deleteMany({ where: { companyId: id } });
+      await tx.companyContact.deleteMany({ where: { companyId: id } });
+      await tx.companyBillingRates.deleteMany({ where: { companyId: id } });
+      await tx.billingSubscription.deleteMany({ where: { companyId: id } });
+      await tx.billingInvoice.deleteMany({ where: { companyId: id } });
+      await tx.creditUsage.deleteMany({ where: { companyId: id } });
+      await tx.creditBalance.deleteMany({ where: { companyId: id } });
+      await tx.phoneNumber.deleteMany({ where: { companyId: id } });
+      await tx.invitation.deleteMany({ where: { companyId: id } });
+      await tx.companyMember.deleteMany({ where: { companyId: id } });
+      await tx.apiKey.deleteMany({ where: { companyId: id } });
+      await tx.auditLog.deleteMany({ where: { companyId: id } });
+      await tx.notification.deleteMany({ where: { companyId: id } });
+      await tx.systemEvent.deleteMany({ where: { companyId: id } });
+      await tx.analyticsSnapshot.deleteMany({ where: { companyId: id } });
+      await tx.schedulerEvent.deleteMany({ where: { companyId: id } });
+      await tx.integration.deleteMany({ where: { companyId: id } });
+      await tx.webhookEndpoint.deleteMany({ where: { companyId: id } });
+      await tx.csvImportBatch.deleteMany({ where: { companyId: id } });
+      await tx.role.deleteMany({ where: { companyId: id } });
+      await tx.channel.deleteMany({ where: { companyId: id } });
+      await tx.companyResourceSequence.deleteMany({ where: { companyId: id } });
+
+      await tx.company.delete({
+        where: { id },
+      });
+    }, { maxWait: 15000, timeout: 30000 });
+
+    return true;
+  } catch (error) {
+    console.error("Failed to delete company in repository:", error);
+    return false;
+  }
+}
+
