@@ -247,14 +247,44 @@ export async function deleteCompanyById(id: string) {
   // If this is a CHILD (sub-company), hard-delete it fully so the user's
   // credentials are completely cleared on the main website.
   if (company.parentCompanyId) {
+    const parentId = company.parentCompanyId;
     await prisma.$transaction(async (tx) => {
-      // Delete all related records in safe order (leaves first, then company)
+      
+      // --- Safe Deletion Sync Logic ---
+      
+      // 1. Rollback Credits to Parent
+      const remainingCredits = company.creditBalance?.creditsRemaining || 0;
+      if (remainingCredits > 0) {
+        await tx.creditBalance.updateMany({
+          where: { companyId: parentId },
+          data: {
+            creditsRemaining: { increment: remainingCredits }
+          }
+        });
+      }
+
+      // 2. Re-parent Call Logs (inbound and outbound)
+      await tx.callLog.updateMany({
+        where: { companyId: id },
+        data: { companyId: parentId }
+      });
+
+      // 3. Unassign Phone Numbers
+      await tx.phoneNumber.updateMany({
+        where: { companyId: id },
+        data: { companyId: null, assignedParentTenantId: parentId }
+      });
+
+      // --- Continue Hard Deletion (leaves first, then company) ---
+      
       await tx.campaignInvitation.deleteMany({ where: { companyId: id } });
       await tx.supportRequest.deleteMany({ where: { companyId: id } });
       await tx.billingQuote.deleteMany({ where: { companyId: id } });
       await tx.callInternalNote.deleteMany({ where: { companyId: id } });
       await tx.callTranscript.deleteMany({ where: { callLog: { companyId: id } } });
       await tx.callLogProviderEvent.deleteMany({ where: { callLog: { companyId: id } } });
+      
+      // Call logs are now owned by the parent, so they won't be deleted here
       await tx.callLog.deleteMany({ where: { companyId: id } });
       await tx.dialerCall.deleteMany({ where: { companyId: id } });
       await tx.campaignExecution.deleteMany({ where: { companyId: id } });
