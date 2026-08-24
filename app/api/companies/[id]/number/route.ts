@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generatePublicId, allocatePhoneNumberEntityId } from "@/src/server/lib/public-id";
 
 // PATCH — update the existing (first) assigned number
 export async function PATCH(
@@ -47,7 +48,7 @@ export async function POST(
     // Verify company exists
     const company = await prisma.company.findUnique({
       where: { id },
-      select: { id: true, name: true, phoneNumbers: { select: { number: true } } },
+      select: { id: true, name: true, parentCompanyId: true, phoneNumbers: { select: { number: true } } },
     });
 
     if (!company) {
@@ -61,6 +62,10 @@ export async function POST(
       return NextResponse.json({ error: "This number is already assigned to this company" }, { status: 409 });
     }
 
+    // Generate required IDs
+    const phoneNumberId = await allocatePhoneNumberEntityId(prisma as any, id);
+    const publicId = generatePublicId(company.name.substring(0, 3).toUpperCase(), "UNASSIGNED", phoneNumberId);
+
     // Create the new phone number record
     const created = await prisma.phoneNumber.create({
       data: {
@@ -68,6 +73,9 @@ export async function POST(
         companyId: id,
         status: "ACTIVE",
         provider: "MANUAL",
+        phoneNumberId,
+        publicId,
+        assignedParentTenantId: company.parentCompanyId,
       } as any,
     });
 
