@@ -330,6 +330,15 @@ export async function updateCredits(
   const targetCompanyId = companyId;
 
   const result = await prisma.$transaction(async (tx) => {
+    const existingBalance = await tx.creditBalance.findUnique({
+      where: { companyId: targetCompanyId },
+    });
+    
+    let creditsUsedIncrement = 0;
+    if (existingBalance && amount < existingBalance.creditsRemaining) {
+      creditsUsedIncrement = existingBalance.creditsRemaining - amount;
+    }
+
     const balance = await tx.creditBalance.upsert({
       where: { companyId: targetCompanyId },
       create: {
@@ -339,6 +348,7 @@ export async function updateCredits(
       },
       update: {
         creditsRemaining: amount,
+        creditsUsed: { increment: creditsUsedIncrement },
       },
     });
 
