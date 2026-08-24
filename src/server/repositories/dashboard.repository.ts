@@ -8,6 +8,7 @@ export async function getDashboardStats() {
 
   const [
     activeCompanies,
+    activeSubCompanies,
     lowCreditCount,
     todayCalls,
     callStats,
@@ -23,7 +24,18 @@ export async function getDashboardStats() {
       where: { 
         status: "ACTIVE", 
         isDemo: false,
+        OR: [
+          { parentCompanyId: null },
+          { parentCompanyId: { isSet: false } }
+        ],
         phoneNumbers: { some: {} } // Company must have an assigned number
+      } 
+    }),
+    prisma.company.count({ 
+      where: { 
+        status: "ACTIVE", 
+        isDemo: false,
+        parentCompanyId: { isSet: true, not: null },
       } 
     }),
     prisma.creditBalance.count({
@@ -130,7 +142,8 @@ export async function getDashboardStats() {
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 10);
 
   return {
-    activeCompanies,
+    activeCompanies, // This will now represent active parent companies
+    activeSubCompanies,
     lowCreditCount,
     todayCalls,
     avgCallDuration: Math.round(callStats._avg.durationSeconds ?? 0),

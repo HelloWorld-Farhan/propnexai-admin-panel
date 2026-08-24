@@ -16,6 +16,7 @@ import { formatDate } from "@/lib/utils";
 
 type DashboardStats = {
   activeCompanies: number;
+  activeSubCompanies: number;
   lowCreditCount: number;
   todayCalls: number;
   avgCallDuration: number;
@@ -62,7 +63,25 @@ export function DashboardView({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Active companies" value={stats.activeCompanies} />
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Active Companies
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Parent</span>
+                <span className="font-semibold">{stats.activeCompanies}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Sub-companies</span>
+                <span className="font-semibold">{stats.activeSubCompanies ?? 0}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         <StatCard
           title="Low credit alerts"
           value={stats.lowCreditCount}

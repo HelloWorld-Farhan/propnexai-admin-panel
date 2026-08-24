@@ -41,7 +41,10 @@ const columns: ColumnDef<CompanyRow>[] = [
       <div>
         <div className="flex items-center gap-2">
           <p className="font-medium">{row.original.name}</p>
-          <Badge variant="outline" className="text-[10px] h-5 cursor-pointer hover:bg-muted" onClick={() => window.location.href = `/companies/${row.original.id}?tab=sub-companies`}>
+          <Badge variant="outline" className="flex items-center gap-1 whitespace-nowrap text-[10px] h-5 cursor-pointer hover:bg-muted" onClick={(e) => {
+            e.stopPropagation();
+            window.location.href = `/companies/${row.original.id}?tab=sub-companies`;
+          }}>
             Sub-Comp({row.original.childCompanyCount}) <span>&rarr;</span>
           </Badge>
         </div>
