@@ -127,8 +127,7 @@ export async function listCompaniesForAdmin() {
         include: { user: { select: { email: true } } },
       },
       phoneNumbers: {
-        take: 1,
-        select: { number: true },
+        select: { number: true }, // fetch ALL numbers (no take:1)
       },
     },
   });
@@ -164,7 +163,8 @@ export async function listCompaniesForAdmin() {
         ? (company.members[0]?.user.email ?? company.contact?.email ?? "—")
         : (company.contact?.email ?? "—"),
       lowCredit: totalCredits < threshold,
-      assignedNumber: (company as any).phoneNumbers?.[0]?.number || null,
+      assignedNumber: (company as any).phoneNumbers?.[0]?.number || null, // legacy: first number
+      assignedNumbers: ((company as any).phoneNumbers || []).map((p: any) => p.number).filter(Boolean), // ALL numbers
     };
   });
 }
