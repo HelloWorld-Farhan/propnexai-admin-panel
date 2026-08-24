@@ -642,18 +642,20 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                             {allNums.length === 0 ? (
                               <span className="text-muted-foreground text-xs italic">Not Assigned</span>
                             ) : (
-                              <div className="flex flex-col gap-1">
+                              <div className="flex flex-wrap items-center gap-1">
                                 {allNums.map((num, i) => {
                                   const last3 = num.replace(/\s/g, "").slice(-3);
                                   return (
-                                    <span
-                                      key={i}
-                                      title={num}
-                                      className="inline-flex items-center gap-1 font-mono text-xs cursor-default group"
-                                    >
-                                      <span className="size-1.5 rounded-full bg-green-500 shrink-0" />
-                                      <span className="group-hover:hidden font-medium">•••{last3}</span>
-                                      <span className="hidden group-hover:inline font-medium text-primary">{num}</span>
+                                    <span key={i} className="flex items-center">
+                                      <span
+                                        title={num}
+                                        className="inline-flex items-center gap-1 font-mono text-xs cursor-default group"
+                                      >
+                                        <span className="size-1.5 rounded-full bg-green-500 shrink-0" />
+                                        <span className="group-hover:hidden font-medium">•••{last3}</span>
+                                        <span className="hidden group-hover:inline font-medium text-primary">{num}</span>
+                                      </span>
+                                      {i < allNums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
                                     </span>
                                   );
                                 })}

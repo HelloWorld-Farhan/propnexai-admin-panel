@@ -61,7 +61,14 @@ function AssignedNumberCell({ row, onRefresh }: { row: CompanyRow; onRefresh: ()
       {allNums.length === 0 ? (
         <span className="text-destructive font-medium text-xs">Unassigned</span>
       ) : (
-        allNums.map((num, i) => <MaskedNumber key={i} num={num} />)
+        <div className="flex flex-wrap items-center gap-1">
+          {allNums.map((num, i) => (
+            <span key={i} className="flex items-center">
+              <MaskedNumber num={num} />
+              {i < allNums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
+            </span>
+          ))}
+        </div>
       )}
       <div onClick={(e) => e.stopPropagation()}>
         <AddNumberDialog
