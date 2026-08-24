@@ -411,7 +411,7 @@ export async function updateCredits(
               type: "credit_added",
               email: user.email,
               name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
-              amount: amount,
+              amount: Math.abs(delta),
             }),
           }).catch(err => console.error("Failed to send credit added webhook:", err));
         }
