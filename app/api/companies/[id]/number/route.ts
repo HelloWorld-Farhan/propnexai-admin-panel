@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// PATCH — update the existing (first) assigned number
 export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -26,6 +27,53 @@ export async function PATCH(
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("[EDIT_SUB_COMPANY_NUMBER_ERROR]", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// POST — add an additional phone number to a company
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const body = await req.json();
+
+    if (!body.newNumber || !body.newNumber.trim()) {
+      return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
+    }
+
+    // Verify company exists
+    const company = await prisma.company.findUnique({
+      where: { id },
+      select: { id: true, name: true, phoneNumbers: { select: { number: true } } },
+    });
+
+    if (!company) {
+      return NextResponse.json({ error: "Company not found" }, { status: 404 });
+    }
+
+    // Check not already assigned
+    const numTrimmed = body.newNumber.trim();
+    const alreadyExists = company.phoneNumbers.some((p: any) => p.number === numTrimmed);
+    if (alreadyExists) {
+      return NextResponse.json({ error: "This number is already assigned to this company" }, { status: 409 });
+    }
+
+    // Create the new phone number record
+    const created = await prisma.phoneNumber.create({
+      data: {
+        number: numTrimmed,
+        companyId: id,
+        status: "ACTIVE",
+        provider: "MANUAL",
+      } as any,
+    });
+
+    return NextResponse.json({ success: true, phoneNumber: created });
+  } catch (error: any) {
+    console.error("[ADD_COMPANY_NUMBER_ERROR]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

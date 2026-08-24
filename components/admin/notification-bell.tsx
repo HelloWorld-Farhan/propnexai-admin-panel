@@ -526,6 +526,10 @@ export function NumberNotification() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<any[]>([]);
+  // Track which req is in "assign inline" mode
+  const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [assignNumber, setAssignNumber] = useState("");
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     fetchRequests();
@@ -556,6 +560,40 @@ export function NumberNotification() {
     }
   }
 
+  async function handleAssignNumber(req: any, isAdditional: boolean = false) {
+    if (!assignNumber.trim()) {
+      toast.error("Enter a phone number first");
+      return;
+    }
+    const companyId = req.company?.id;
+    if (!companyId) {
+      toast.error("Company not found for this request");
+      return;
+    }
+    setAssigning(true);
+    try {
+      const method = isAdditional ? "POST" : "POST"; // POST always = add new number
+      const res = await fetch(`/api/companies/${companyId}/number`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newNumber: assignNumber.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to assign number");
+
+      toast.success(`Number assigned to ${req.company?.name || req.email}`);
+      setAssigningId(null);
+      setAssignNumber("");
+      // Dismiss the notification request
+      await dismissRequest(req.id);
+      router.refresh();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setAssigning(false);
+    }
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -575,44 +613,100 @@ export function NumberNotification() {
             Users waiting for a phone number assignment
           </p>
         </div>
-        <div className="max-h-[300px] overflow-y-auto">
+        <div className="max-h-[400px] overflow-y-auto">
           {pending.length === 0 ? (
             <p className="p-4 text-center text-sm text-muted-foreground">
               No pending requests.
             </p>
           ) : (
             <div className="flex flex-col">
-              {pending.map((req) => (
-                <div key={req.id} className="flex flex-col border-b p-3 last:border-0 gap-2">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col gap-1 overflow-hidden">
-                      <p className="truncate text-sm font-medium">{req.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(req.createdAt).toLocaleDateString()} - {new Date(req.createdAt).toLocaleTimeString()}
-                      </p>
+              {pending.map((req) => {
+                const hasNumber = !!(req.company?.phoneNumbers?.length);
+                const isAssigningThis = assigningId === req.id;
+                return (
+                  <div key={req.id} className="flex flex-col border-b p-3 last:border-0 gap-2">
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        <p className="truncate text-sm font-medium">{req.company?.name || req.email}</p>
+                        <p className="truncate text-xs text-muted-foreground">{req.email}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(req.createdAt).toLocaleDateString()} - {new Date(req.createdAt).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 shrink-0" onClick={(e) => { e.stopPropagation(); dismissRequest(req.id); }}>
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 shrink-0" onClick={(e) => { e.stopPropagation(); dismissRequest(req.id); }}>
-                      <X className="h-4 w-4" />
-                    </Button>
+
+                    {/* Inline assign number input */}
+                    {isAssigningThis ? (
+                      <div className="flex flex-col gap-2">
+                        <input
+                          className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          placeholder="e.g. 919429390765"
+                          value={assignNumber}
+                          onChange={(e) => setAssignNumber(e.target.value)}
+                          autoFocus
+                          onKeyDown={(e) => e.key === "Escape" && (setAssigningId(null), setAssignNumber(""))}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => { setAssigningId(null); setAssignNumber(""); }}
+                            disabled={assigning}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleAssignNumber(req, hasNumber)}
+                            disabled={assigning || !assignNumber.trim()}
+                          >
+                            {assigning ? "Saving..." : hasNumber ? "+ Add Number" : "Assign"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        {/* Primary: Assign (or Add Another) number inline */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 gap-1"
+                          onClick={() => {
+                            setAssigningId(req.id);
+                            setAssignNumber("");
+                          }}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          {hasNumber ? "+ Add Number" : "Assign Number"}
+                        </Button>
+                        {/* Secondary: navigate to company page */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="flex-1 text-xs"
+                          onClick={() => {
+                            setOpen(false);
+                            if (req.company?.tenantType === "CHILD" && req.company?.parentCompanyId) {
+                              router.push(`/companies/${req.company.parentCompanyId}?tab=sub-companies`);
+                              toast.info(`Please assign a number to sub-company: ${req.company?.name}`);
+                            } else {
+                              router.push("/numbers");
+                              toast.info(`Please assign a number to company: ${req.company?.name || req.email}`);
+                            }
+                          }}
+                        >
+                          {req.company?.tenantType === "CHILD" ? "Go to Parent" : "Go to Numbers"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setOpen(false);
-                      if (req.company?.tenantType === "CHILD" && req.company?.parentCompanyId) {
-                        router.push(`/companies/${req.company.parentCompanyId}?tab=sub-companies`);
-                        toast.info(`Please assign a number to sub-company: ${req.company?.name}`);
-                      } else {
-                        router.push("/numbers");
-                        toast.info(`Please assign a number to company: ${req.company?.name || req.email}`);
-                      }
-                    }}
-                  >
-                    {req.company?.tenantType === "CHILD" ? "Go to Parent Company" : "Go to Numbers Manager"}
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

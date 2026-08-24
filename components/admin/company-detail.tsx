@@ -9,6 +9,7 @@ import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
 import { EditCreditDialog } from "@/components/admin/edit-credit-dialog";
 import { DeleteCompanyDialog } from "@/components/admin/delete-company-dialog";
 import { VerifySubCompanyDialog } from "@/components/admin/verify-sub-company-dialog";
+import { AddNumberDialog } from "@/components/admin/add-number-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -630,12 +631,35 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                   <TableBody>
                     {liveCompany.childCompanies.map((child: any) => {
                       const isVerified = child.status === "ACTIVE";
-                      const assignedNum = child.phoneNumbers?.[0]?.number || "—";
+                      // Show ALL assigned numbers, masked: last 3 digits visible
+                      const allNums: string[] = (child.phoneNumbers || []).map((p: any) => p.number).filter(Boolean);
+                      const assignedNum = allNums[0] || "—";
                       const credits = child.creditBalance?.creditsRemaining ?? 0;
                       return (
                         <TableRow key={child.id}>
                           <TableCell className="font-medium">{child.name}</TableCell>
-                          <TableCell>{assignedNum}</TableCell>
+                          <TableCell>
+                            {allNums.length === 0 ? (
+                              <span className="text-muted-foreground text-xs italic">Not Assigned</span>
+                            ) : (
+                              <div className="flex flex-col gap-1">
+                                {allNums.map((num, i) => {
+                                  const last3 = num.replace(/\s/g, "").slice(-3);
+                                  return (
+                                    <span
+                                      key={i}
+                                      title={num}
+                                      className="inline-flex items-center gap-1 font-mono text-xs cursor-default group"
+                                    >
+                                      <span className="size-1.5 rounded-full bg-green-500 shrink-0" />
+                                      <span className="group-hover:hidden font-medium">•••{last3}</span>
+                                      <span className="hidden group-hover:inline font-medium text-primary">{num}</span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span>{credits}</span>
@@ -660,16 +684,27 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                           </TableCell>
                           <TableCell>{formatDate(new Date(child.createdAt))}</TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              {child.status !== "ACTIVE" || assignedNum === "—" ? (
+                            <div className="flex items-center justify-end gap-1 flex-wrap">
+                              {/* Verify button — only for un-verified or no number assigned yet */}
+                              {(child.status !== "ACTIVE" || allNums.length === 0) && (
                                 <VerifySubCompanyDialog
                                   subCompanyId={child.id}
                                   subCompanyName={child.name}
                                   parentCompanyId={company.id}
                                   onSuccess={refreshLiveCompany}
                                 />
-                              ) : (
-                                <span className="text-xs font-medium text-muted-foreground">Verified</span>
+                              )}
+                              {/* + Add Number — always available once company exists */}
+                              <AddNumberDialog
+                                companyId={child.id}
+                                companyName={child.name}
+                                onSuccess={refreshLiveCompany}
+                                triggerLabel="+ Number"
+                                triggerVariant="ghost"
+                              />
+                              {/* Show 'Verified' label if active and has number */}
+                              {isVerified && allNums.length > 0 && child.status === "ACTIVE" && (
+                                <span className="text-xs font-medium text-green-600">✓ Verified</span>
                               )}
                               <Button
                                 size="icon"
