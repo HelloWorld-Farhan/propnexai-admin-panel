@@ -468,11 +468,42 @@ export async function verifySubCompany(
           });
         }
       }
-    }
-
     return updated;
   }, {
     maxWait: 10000,
     timeout: 30000,
   });
+
+  // Fire webhook after transaction
+  try {
+    const fullCompany = await prisma.company.findUnique({
+      where: { id: subCompanyId },
+      include: {
+        members: {
+          where: { role: "OWNER", status: "ACTIVE" },
+          include: { user: true }
+        },
+        creditBalance: true
+      }
+    });
+    const user = fullCompany?.members?.[0]?.user;
+    if (user && user.email) {
+      const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "subcompany_approved",
+          email: user.email,
+          subcompanyName: fullCompany.name,
+          assignedNumber: assignedNumber || "Pending",
+          credits: fullCompany.creditBalance?.creditsRemaining || 0
+        }),
+      }).catch(err => console.error("Failed to send subcompany approved webhook:", err));
+    }
+  } catch (e) {
+    console.error("Failed to process subcompany approved webhook:", e);
+  }
+
+  return result;
 }
