@@ -24,6 +24,7 @@ export type PhoneNumberAdminRow = Awaited<
 
 export async function listPhoneNumbersForAdmin() {
   return prisma.phoneNumber.findMany({
+    where: { companyId: { not: null } },
     orderBy: [{ updatedAt: "desc" }, { number: "asc" }],
     include: numberInclude,
   });
@@ -138,6 +139,14 @@ export async function createPhoneNumberForAdmin(input: {
     },
   });
   if (existing) {
+    if (existing.direction !== input.direction && input.direction) {
+      const updatedNumber = await prisma.phoneNumber.update({
+        where: { id: existing.id },
+        data: { direction: "BOTH" as any },
+        include: numberInclude,
+      });
+      return updatedNumber;
+    }
     throw new Error("This number is already assigned to that company/campaign");
   }
 

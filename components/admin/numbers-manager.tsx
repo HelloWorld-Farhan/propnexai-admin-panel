@@ -45,7 +45,7 @@ export type PhoneNumberRow = {
   campaignId: string | null;
   inboundAgentId: string | null;
   outboundAgentId: string | null;
-  direction: "INBOUND" | "OUTBOUND" | null;
+  direction: "INBOUND" | "OUTBOUND" | "BOTH" | null;
   company: { id: string; name: string; slug: string; cli: string; parentCompanyId: string | null; };
   campaign: { id: string; name: string; resourceKey: string } | null;
   inboundAgent: { id: string; name: string } | null;
@@ -56,7 +56,7 @@ export type PhoneNumberRow = {
 type NumberFormState = {
   number: string;
   companyId: string;
-  direction: "INBOUND" | "OUTBOUND" | "none";
+  direction: "INBOUND" | "OUTBOUND" | "BOTH" | "none";
 };
 
 const EMPTY_FORM: NumberFormState = {
@@ -304,7 +304,7 @@ export function NumbersManager({
                 <Label>Direction</Label>
                 <Select
                   value={form.direction}
-                  onValueChange={(value: "INBOUND" | "OUTBOUND") =>
+                  onValueChange={(value: "INBOUND" | "OUTBOUND" | "BOTH") =>
                     setForm((prev) => ({ ...prev, direction: value }))
                   }
                 >
@@ -314,6 +314,7 @@ export function NumbersManager({
                   <SelectContent>
                     <SelectItem value="INBOUND">Inbound</SelectItem>
                     <SelectItem value="OUTBOUND">Outbound</SelectItem>
+                    <SelectItem value="BOTH">Both</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -361,7 +362,7 @@ export function NumbersManager({
         <TabsContent value="outbound" className="mt-4">
           <DataTable
             columns={columns}
-            data={numbers.filter(n => n.direction === "OUTBOUND")}
+            data={numbers.filter(n => n.direction === "OUTBOUND" || n.direction === "BOTH")}
             searchKeys={["number", "company", "campaign"]}
             searchPlaceholder="Search outbound numbers, companies..."
           />
