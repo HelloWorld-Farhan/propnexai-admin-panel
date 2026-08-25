@@ -659,21 +659,23 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                           </TableCell>
 
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span>{credits}</span>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                                title="Edit Credits"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditCreditChild({ id: child.id, name: child.name });
-                                  setEditCreditAmount(credits.toString());
-                                }}
-                              >
-                                <Pencil className="size-3" />
-                              </Button>
+                            <div className="flex flex-col gap-1 min-w-[80px]">
+                              <span className="font-medium">{formatNumber(credits)}</span>
+                              <div className="flex items-center">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                  title="Edit Credits"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditCreditChild({ id: child.id, name: child.name });
+                                    setEditCreditAmount(credits.toString());
+                                  }}
+                                >
+                                  <Pencil className="size-3" />
+                                </Button>
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>

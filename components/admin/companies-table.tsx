@@ -217,17 +217,21 @@ export function CompaniesTable({
       accessorKey: "creditsRemaining",
       header: "Credits",
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <span>{formatNumber(row.original.creditsRemaining)}</span>
-          <CreditBreakdown companyId={row.original.id} />
-          <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
-          <EditCreditDialog companyId={row.original.id} companyName={row.original.name} currentCredits={row.original.creditsRemaining} />
-          {row.original.lowCredit ? (
-            <Badge variant="destructive" className="gap-1">
-              <AlertTriangle className="h-3 w-3" />
-              Low
-            </Badge>
-          ) : null}
+        <div className="flex flex-col gap-1 min-w-[100px]">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">{formatNumber(row.original.creditsRemaining)}</span>
+            {row.original.lowCredit && (
+              <Badge variant="destructive" className="h-5 px-1.5 text-[10px] gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Low
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <CreditBreakdown companyId={row.original.id} />
+            <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
+            <EditCreditDialog companyId={row.original.id} companyName={row.original.name} currentCredits={row.original.creditsRemaining} />
+          </div>
         </div>
       ),
     },
