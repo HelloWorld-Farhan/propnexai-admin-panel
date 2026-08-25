@@ -68,7 +68,7 @@ export async function POST(request: Request) {
           where: {
             companyId: company.id,
             reason: "OTHER",
-            message: "Number Assignment Request",
+            message: { contains: "Number Assignment Request" },
             status: "NEW"
           },
           data: { status: "RESOLVED" }

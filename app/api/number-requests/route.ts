@@ -16,7 +16,7 @@ export async function GET() {
     const requests = await prisma.supportRequest.findMany({
       where: {
         reason: "OTHER",
-        message: "Number Assignment Request",
+        message: { contains: "Number Assignment Request" },
         status: "NEW",
       },
       include: {
@@ -36,16 +36,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { email, companyId, name } = await request.json();
+    const { email, companyId, name, type } = await request.json();
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400, headers: corsHeaders });
     }
+
+    const directionLabel = type ? type.toUpperCase() : "GENERAL";
+    const requestMessage = `${directionLabel} Number Assignment Request`;
 
     // Check if there is already an active request
     const existing = await prisma.supportRequest.findFirst({
       where: { 
         email, 
-        message: "Number Assignment Request", 
+        message: requestMessage, 
         status: "NEW",
         ...(companyId ? { companyId } : {})
       },
@@ -69,7 +72,8 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           type: "reminder_number",
           name: name || "Unknown User",
-          email
+          email,
+          direction: directionLabel
         })
       }).catch(err => console.error("Webhook trigger failed:", err));
 
@@ -82,7 +86,7 @@ export async function POST(request: Request) {
         email,
         companyId: companyId || null,
         reason: "OTHER",
-        message: "Number Assignment Request",
+        message: requestMessage,
         status: "NEW",
       },
     });
@@ -94,7 +98,8 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         type: "reminder_number",
         name: name || "Unknown User",
-        email
+        email,
+        direction: directionLabel
       })
     }).catch(err => console.error("Webhook trigger failed:", err));
 

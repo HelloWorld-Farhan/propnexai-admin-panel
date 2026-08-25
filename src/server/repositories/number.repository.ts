@@ -183,7 +183,7 @@ export async function createPhoneNumberForAdmin(input: {
       where: {
         companyId: input.companyId as string,
         reason: "OTHER",
-        message: "Number Assignment Request",
+        message: { contains: "Number Assignment Request" },
         status: "NEW",
       },
       data: { status: "RESOLVED" }
@@ -387,7 +387,7 @@ export async function updatePhoneNumberForAdmin(
         where: {
           companyId: nextCompanyId as string,
           reason: "OTHER",
-          message: "Number Assignment Request",
+          message: { contains: "Number Assignment Request" },
           status: "NEW",
         },
         data: { status: "RESOLVED" }
