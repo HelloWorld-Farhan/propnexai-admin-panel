@@ -110,11 +110,7 @@ export function NumbersManager({
         <div>
           <div className="flex items-center gap-2">
             <p className="font-medium">
-              {row.original.company
-                ? row.original.company.parentCompanyId
-                  ? `SubCompany(${row.original.company.name})`
-                  : `MainCompany(${row.original.company.name})`
-                : "Unknown Company"}
+              {row.original.company?.name ?? "Unknown Company"}
             </p>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -127,11 +123,18 @@ export function NumbersManager({
       id: "direction",
       accessorFn: (row) => row.direction ?? "Unassigned",
       header: "Direction",
-      cell: ({ row }) => (
-        <Badge variant="secondary">
-          {row.original.direction || "Unassigned"}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const dir = row.original.direction || "Unassigned";
+        const isActive = dir === "INBOUND" || dir === "OUTBOUND";
+        return (
+          <Badge 
+            variant={isActive ? "default" : "secondary"} 
+            className={isActive ? "bg-green-500/15 text-green-700 hover:bg-green-500/25 border-green-500/20" : ""}
+          >
+            {dir}
+          </Badge>
+        );
+      },
     },
     {
       id: "actions",

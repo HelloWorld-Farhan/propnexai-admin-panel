@@ -501,7 +501,20 @@ export async function updatePhoneNumberForAdmin(
 }
 
 export async function deletePhoneNumberForAdmin(id: string) {
-  const existing = await prisma.phoneNumber.findUnique({ where: { id } });
+  const existing = await prisma.phoneNumber.findUnique({ 
+    where: { id },
+    include: {
+      company: {
+        include: {
+          members: {
+            include: { user: true }
+          },
+          contact: true,
+          creditBalance: true
+        }
+      }
+    }
+  });
   if (!existing) {
     throw new Error("Phone number not found");
   }
@@ -517,4 +530,25 @@ export async function deletePhoneNumberForAdmin(id: string) {
     });
     await tx.phoneNumber.delete({ where: { id } });
   });
+
+  // Fire webhook notification for number removal
+  try {
+    const user = existing.company?.members?.[0]?.user;
+    if (user && user.email) {
+      const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "number_removed",
+          email: user.email,
+          subcompanyName: existing.company?.name || "Unknown Company",
+          removedNumber: existing.number,
+          credits: existing.company?.creditBalance?.creditsRemaining || 0
+        }),
+      }).catch(err => console.error("Failed to send number removal webhook:", err));
+    }
+  } catch (e) {
+    console.error("Failed to process number removal webhook:", e);
+  }
 }

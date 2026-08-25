@@ -74,7 +74,7 @@ export function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row
           companyName={row.name}
           direction={direction}
           onSuccess={onRefresh}
-          triggerLabel={nums.length === 0 ? "Assign" : "+ Number"}
+          triggerLabel={nums.length === 0 ? "Assign" : "Number"}
           triggerVariant="ghost"
         />
       </div>
@@ -105,7 +105,7 @@ export function CompaniesTable({
       cell: ({ row }) => (
         <div>
           <div className="flex items-center gap-2">
-            <p className="font-medium">MainCompany({row.original.name})</p>
+            <p className="font-medium">{row.original.name}</p>
             <Badge variant="outline" className="flex items-center gap-1 whitespace-nowrap text-[10px] h-5 cursor-pointer hover:bg-muted" onClick={(e) => {
               e.stopPropagation();
               window.location.href = `/companies/${row.original.id}?tab=sub-companies`;
