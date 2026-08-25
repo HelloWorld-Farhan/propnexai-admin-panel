@@ -56,6 +56,10 @@ export function MaskedNumber({ num }: { num: string }) {
 }
 
 export function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row: CompanyRow; direction: "INBOUND" | "OUTBOUND"; nums: { number: string; channels: number | null }[]; onRefresh: () => void }) {
+  const otherDirectionNumbers = direction === "INBOUND" 
+    ? (row.outboundNumbers ?? []) 
+    : (row.inboundNumbers ?? []);
+
   return (
     <div className="flex flex-col gap-1 min-w-[120px]">
       {nums.length === 0 ? (
@@ -95,7 +99,7 @@ export function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row
             companyName={row.name}
             direction={direction}
             currentNumbers={nums}
-            otherDirectionNumbers={direction === "INBOUND" ? (row.outboundNumbers ?? []) : (row.inboundNumbers ?? [])}
+            otherDirectionNumbers={otherDirectionNumbers}
             totalChannels={row.totalChannels}
             onSuccess={onRefresh}
             customTrigger={
