@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Copy, Pencil, Trash2, Plus } from "lucide-react";
+import { Check, Copy, Pencil, Trash2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
@@ -10,6 +10,7 @@ import { EditCreditDialog } from "@/components/admin/edit-credit-dialog";
 import { DeleteCompanyDialog } from "@/components/admin/delete-company-dialog";
 import { VerifySubCompanyDialog } from "@/components/admin/verify-sub-company-dialog";
 import { AddNumberDialog } from "@/components/admin/add-number-dialog";
+import { EditChannelDialog } from "@/components/admin/edit-channel-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DirectionalNumberCell } from "@/components/admin/companies-table";
@@ -172,7 +173,9 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
   const [saving, setSaving] = useState(false);
   const [editChild, setEditChild] = useState<{ id: string; name: string } | null>(null);
   const [editChildName, setEditChildName] = useState("");
-  const [editChildNumber, setEditChildNumber] = useState("");
+  const [editChildInbound, setEditChildInbound] = useState<string[]>([]);
+  const [editChildOutbound, setEditChildOutbound] = useState<string[]>([]);
+  const [editChildChannels, setEditChildChannels] = useState<string>("0");
   const [editChildSaving, setEditChildSaving] = useState(false);
   
   const [editCreditChild, setEditCreditChild] = useState<{ id: string; name: string } | null>(null);
@@ -221,17 +224,25 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
     if (!editChild || !editChildName.trim()) return;
     setEditChildSaving(true);
     try {
-      const res = await fetch(`/api/companies/${editChild.id}`, {
-        method: "PATCH",
+      const res = await fetch(`/api/companies/${editChild.id}/full-update`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editChildName.trim(), assignedNumber: editChildNumber.trim() }),
+        body: JSON.stringify({ 
+          name: editChildName.trim(), 
+          totalChannels: Number.parseInt(editChildChannels, 10) || 0,
+          inboundNumbers: editChildInbound,
+          outboundNumbers: editChildOutbound
+        }),
       });
-      if (!res.ok) throw new Error("Failed to update");
-      toast.success("Sub-company renamed successfully");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to update sub-company");
+      }
+      toast.success("Sub-company updated successfully");
       setEditChild(null);
       await refreshLiveCompany();
-    } catch {
-      toast.error("Failed to rename sub-company");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update sub-company");
     } finally {
       setEditChildSaving(false);
     }
@@ -661,11 +672,11 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                           <TableCell>
                             <div className="flex items-center justify-between min-w-[80px]">
                               <span className="font-medium text-sm">{formatNumber(totalChannels)}</span>
-                              <div onClick={(e) => e.stopPropagation()}>
-                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => window.location.href = `/companies/${child.id}?tab=channels`}>
-                                   <Plus className="h-3 w-3" />
-                                 </Button>
-                              </div>
+                              <EditChannelDialog
+                                companyId={child.id}
+                                companyName={child.name}
+                                currentChannels={totalChannels}
+                              />
                             </div>
                           </TableCell>
                           <TableCell>
@@ -722,7 +733,9 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                                 onClick={() => { 
                                   setEditChild({ id: child.id, name: child.name }); 
                                   setEditChildName(child.name);
-                                  setEditChildNumber(assignedNum === "—" ? "" : assignedNum);
+                                  setEditChildInbound(inboundNums);
+                                  setEditChildOutbound(outboundNums);
+                                  setEditChildChannels(totalChannels.toString());
                                 }}
                               >
                                 <Pencil className="size-3.5" />
@@ -1101,39 +1114,104 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
 
       {/* Edit Sub-Company Dialog */}
       <Dialog open={!!editChild} onOpenChange={(v) => !v && setEditChild(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Sub-Company</DialogTitle>
             <DialogDescription>
               Update the settings for &quot;{editChild?.name}&quot;.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 mt-2">
-            <Label htmlFor="edit-child-name">Company Name</Label>
-            <Input
-              id="edit-child-name"
-              value={editChildName}
-              onChange={(e) => setEditChildName(e.target.value)}
-              placeholder="Enter new name"
-              onKeyDown={(e) => e.key === "Enter" && handleEditSubCompany()}
-            />
-          </div>
-          <div className="space-y-3 mt-2">
-            <Label htmlFor="edit-child-number">Assigned Phone Number</Label>
-            <Input
-              id="edit-child-number"
-              value={editChildNumber}
-              onChange={(e) => setEditChildNumber(e.target.value)}
-              placeholder="e.g. 919429390765"
-              onKeyDown={(e) => e.key === "Enter" && handleEditSubCompany()}
-            />
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <Label htmlFor="edit-child-name">Company Name</Label>
+                <Input
+                  id="edit-child-name"
+                  value={editChildName}
+                  onChange={(e) => setEditChildName(e.target.value)}
+                  placeholder="Enter new name"
+                />
+              </div>
+              <div className="space-y-3">
+                <Label htmlFor="edit-child-channels">Total Channels</Label>
+                <Input
+                  id="edit-child-channels"
+                  type="number"
+                  min={0}
+                  value={editChildChannels}
+                  onChange={(e) => setEditChildChannels(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 mt-2">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Inbound Numbers</Label>
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setEditChildInbound([...editChildInbound, ""])}>
+                    <Plus className="h-3 w-3 mr-1" /> Add
+                  </Button>
+                </div>
+                {editChildInbound.length === 0 && <p className="text-xs text-muted-foreground">No inbound numbers.</p>}
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                  {editChildInbound.map((num, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input 
+                        value={num} 
+                        onChange={(e) => {
+                          const newArr = [...editChildInbound];
+                          newArr[i] = e.target.value;
+                          setEditChildInbound(newArr);
+                        }}
+                        placeholder="e.g. +1234567890" 
+                      />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0" onClick={() => {
+                        setEditChildInbound(editChildInbound.filter((_, idx) => idx !== i));
+                      }}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Outbound Numbers</Label>
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setEditChildOutbound([...editChildOutbound, ""])}>
+                    <Plus className="h-3 w-3 mr-1" /> Add
+                  </Button>
+                </div>
+                {editChildOutbound.length === 0 && <p className="text-xs text-muted-foreground">No outbound numbers.</p>}
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                  {editChildOutbound.map((num, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Input 
+                        value={num} 
+                        onChange={(e) => {
+                          const newArr = [...editChildOutbound];
+                          newArr[i] = e.target.value;
+                          setEditChildOutbound(newArr);
+                        }}
+                        placeholder="e.g. +1234567890" 
+                      />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 shrink-0" onClick={() => {
+                        setEditChildOutbound(editChildOutbound.filter((_, idx) => idx !== i));
+                      }}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setEditChild(null)} disabled={editChildSaving}>
               Cancel
             </Button>
             <Button onClick={handleEditSubCompany} disabled={editChildSaving || !editChildName.trim()}>
-              {editChildSaving ? "Saving…" : "Save"}
+              {editChildSaving ? "Saving…" : "Save Changes"}
             </Button>
           </div>
         </DialogContent>

@@ -24,6 +24,7 @@ export function AddNumberDialog({
   direction,
   triggerLabel = "Add Number",
   triggerVariant = "outline",
+  triggerClassName,
 }: {
   companyId: string;
   companyName: string;
@@ -31,6 +32,7 @@ export function AddNumberDialog({
   onSuccess: () => void;
   triggerLabel?: string;
   triggerVariant?: "outline" | "ghost" | "default" | "secondary";
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [newNumber, setNewNumber] = useState("");
@@ -58,8 +60,8 @@ export function AddNumberDialog({
       }
 
       toast.success(`Number added to ${companyName}`);
-      setNewNumber("");
       setOpen(false);
+      setNewNumber("");
       onSuccess();
     } catch (err: any) {
       toast.error(err.message);
@@ -74,7 +76,7 @@ export function AddNumberDialog({
         <Button
           variant={triggerVariant}
           size="sm"
-          className="h-7 gap-1 text-xs"
+          className={triggerClassName || "h-7 px-2 text-xs gap-1 whitespace-nowrap"}
           onClick={(e) => e.stopPropagation()}
         >
           <Plus className="h-3 w-3" />
@@ -84,10 +86,12 @@ export function AddNumberDialog({
       <DialogContent onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleAdd}>
           <DialogHeader>
-            <DialogTitle>Add Phone Number</DialogTitle>
+            <DialogTitle>
+              {direction ? `Assign ${direction === "INBOUND" ? "Inbound" : "Outbound"} Number` : "Add Phone Number"}
+            </DialogTitle>
             <DialogDescription>
-              Assign an <strong>additional</strong> phone number to{" "}
-              <strong>{companyName}</strong>. The company will have all assigned numbers active simultaneously.
+              Assign a phone number to <strong>{companyName}</strong>
+              {direction && ` for ${direction.toLowerCase()} calls`}.
             </DialogDescription>
           </DialogHeader>
 

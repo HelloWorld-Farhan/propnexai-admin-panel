@@ -21,10 +21,12 @@ export function EditCreditDialog({
   companyId,
   companyName,
   currentCredits,
+  customTrigger,
 }: {
   companyId: string;
   companyName: string;
   currentCredits: number;
+  customTrigger?: React.ReactNode;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -84,14 +86,16 @@ export function EditCreditDialog({
         }}
       >
         <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-6 w-6 shrink-0 rounded-full bg-background ml-1"
-            title="Override Credits"
-          >
-            <Pencil className="h-3 w-3" />
-          </Button>
+          {customTrigger || (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground"
+              title="Edit Credit Balance"
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
         </DialogTrigger>
         <DialogContent onClick={(e) => e.stopPropagation()}>
           <DialogHeader>

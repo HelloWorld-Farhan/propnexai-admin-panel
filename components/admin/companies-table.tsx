@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, Plus, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -12,8 +12,11 @@ import { EditCreditDialog } from "@/components/admin/edit-credit-dialog";
 import { CreditBreakdown } from "@/components/admin/credit-breakdown";
 import { DeleteCompanyDialog } from "@/components/admin/delete-company-dialog";
 import { AddNumberDialog } from "@/components/admin/add-number-dialog";
+import { EditNumbersDialog } from "@/components/admin/edit-numbers-dialog";
+import { EditChannelDialog } from "@/components/admin/edit-channel-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 export type CompanyRow = {
@@ -55,29 +58,55 @@ export function MaskedNumber({ num }: { num: string }) {
 
 export function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row: CompanyRow; direction: "INBOUND" | "OUTBOUND"; nums: string[]; onRefresh: () => void }) {
   return (
-    <div className="flex flex-col gap-1 min-w-[120px]">
-      {nums.length === 0 ? (
-        <span className="text-destructive font-medium text-xs">Unassigned</span>
-      ) : (
-        <div className="flex flex-wrap items-center gap-1">
-          {nums.map((num, i) => (
-            <span key={i} className="flex items-center">
-              <MaskedNumber num={num} />
-              {i < nums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
-            </span>
-          ))}
-        </div>
-      )}
-      <div onClick={(e) => e.stopPropagation()}>
-        <AddNumberDialog
-          companyId={row.id}
-          companyName={row.name}
-          direction={direction}
-          onSuccess={onRefresh}
-          triggerLabel={nums.length === 0 ? "Assign" : "Number"}
-          triggerVariant="ghost"
-        />
+    <div className="flex items-start justify-between min-w-[120px]">
+      <div className="flex flex-col gap-1">
+        {nums.length === 0 ? (
+          <span className="text-destructive font-medium text-xs mt-1">Unassigned</span>
+        ) : (
+          <div className="flex flex-wrap items-center gap-1 mt-1">
+            {nums.map((num, i) => (
+              <span key={i} className="flex items-center">
+                <MaskedNumber num={num} />
+                {i < nums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-zinc-800 shrink-0 mt-0.5">
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-1" align="end" sideOffset={4}>
+          <div className="flex flex-col gap-1">
+            <div onClick={(e) => e.stopPropagation()}>
+              <AddNumberDialog
+                companyId={row.id}
+                companyName={row.name}
+                direction={direction}
+                onSuccess={onRefresh}
+                triggerLabel="Assign New"
+                triggerVariant="ghost"
+                triggerClassName="w-full justify-start font-normal text-xs h-7"
+              />
+            </div>
+            {nums.length > 0 && (
+              <EditNumbersDialog
+                companyId={row.id}
+                companyName={row.name}
+                direction={direction}
+                currentNumbers={nums}
+                otherDirectionNumbers={direction === "INBOUND" ? row.outboundNumbers || [] : row.inboundNumbers || []}
+                totalChannels={row.totalChannels}
+                onSuccess={onRefresh}
+              />
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
@@ -171,12 +200,22 @@ export function CompaniesTable({
       cell: ({ row }) => (
         <div className="flex items-center justify-between min-w-[80px]">
           <span className="font-medium text-sm">{formatNumber(row.original.totalChannels)}</span>
-          <div onClick={(e) => e.stopPropagation()}>
-             {/* Note: This button currently doesn't trigger anything specific for channels, it just redirects or opens a modal you can implement later */}
-             <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => window.location.href = `/companies/${row.original.id}?tab=channels`}>
-               <Plus className="h-3 w-3" />
-             </Button>
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-zinc-800">
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-1" align="end" sideOffset={8}>
+              <div className="flex flex-col gap-1">
+                <EditChannelDialog
+                  companyId={row.original.id}
+                  companyName={row.original.name}
+                  currentChannels={row.original.totalChannels}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       ),
     },
@@ -203,15 +242,26 @@ export function CompaniesTable({
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <span>{formatNumber(row.original.creditsRemaining)}</span>
-          <CreditBreakdown companyId={row.original.id} />
-          <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
-          <EditCreditDialog companyId={row.original.id} companyName={row.original.name} currentCredits={row.original.creditsRemaining} />
           {row.original.lowCredit ? (
             <Badge variant="destructive" className="gap-1">
               <AlertTriangle className="h-3 w-3" />
               Low
             </Badge>
           ) : null}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-zinc-800 shrink-0">
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-1" align="end" sideOffset={8}>
+              <div className="flex flex-col gap-1">
+                <CreditBreakdown companyId={row.original.id} />
+                <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
+                <EditCreditDialog companyId={row.original.id} companyName={row.original.name} currentCredits={row.original.creditsRemaining} />
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       ),
     },

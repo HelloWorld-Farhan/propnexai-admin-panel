@@ -5,7 +5,7 @@ import { Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatNumber } from "@/lib/utils";
 
-export function CreditBreakdown({ companyId }: { companyId: string }) {
+export function CreditBreakdown({ companyId, customTrigger }: { companyId: string; customTrigger?: React.ReactNode }) {
   const [breakdown, setBreakdown] = useState<any[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState(false);
@@ -44,18 +44,24 @@ export function CreditBreakdown({ companyId }: { companyId: string }) {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <button 
-          type="button"
-          className="text-muted-foreground hover:text-foreground transition-colors ml-1"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-        >
-          <Info className="h-4 w-4" />
-        </button>
+        {customTrigger ? (
+          <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+            {customTrigger}
+          </div>
+        ) : (
+          <button 
+            type="button"
+            className="text-muted-foreground hover:text-foreground transition-colors ml-1"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <Info className="h-4 w-4" />
+          </button>
+        )}
       </PopoverTrigger>
       <PopoverContent 
         className="w-64 p-4" 
