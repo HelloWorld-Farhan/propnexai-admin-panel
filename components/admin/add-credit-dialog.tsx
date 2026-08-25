@@ -20,11 +20,9 @@ import { Label } from "@/components/ui/label";
 export function AddCreditDialog({
   companyId,
   companyName,
-  customTrigger,
 }: {
   companyId: string;
   companyName: string;
-  customTrigger?: React.ReactNode;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -68,16 +66,9 @@ export function AddCreditDialog({
     <div onClick={(e) => e.stopPropagation()}>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          {customTrigger || (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-muted-foreground"
-              title="Add Credit"
-            >
-              <Plus className="h-3 w-3" />
-            </Button>
-          )}
+          <Button variant="outline" size="icon" className="h-6 w-6 shrink-0 rounded-full bg-background ml-1">
+            <Plus className="h-3 w-3" />
+          </Button>
         </DialogTrigger>
         <DialogContent onClick={(e) => e.stopPropagation()}>
           <DialogHeader>

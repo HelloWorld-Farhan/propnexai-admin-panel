@@ -22,17 +22,13 @@ export function AddNumberDialog({
   companyName,
   onSuccess,
   direction,
-  triggerLabel = "Add Number",
-  triggerVariant = "outline",
-  triggerClassName,
+  customTrigger,
 }: {
   companyId: string;
   companyName: string;
   direction?: "INBOUND" | "OUTBOUND" | null;
   onSuccess: () => void;
-  triggerLabel?: string;
-  triggerVariant?: "outline" | "ghost" | "default" | "secondary";
-  triggerClassName?: string;
+  customTrigger?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [newNumber, setNewNumber] = useState("");
@@ -73,25 +69,25 @@ export function AddNumberDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant={triggerVariant}
-          size="sm"
-          className={triggerClassName || "h-7 px-2 text-xs gap-1 whitespace-nowrap"}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Plus className="h-3 w-3" />
-          {triggerLabel}
-        </Button>
+        {customTrigger || (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs gap-1 whitespace-nowrap"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Plus className="h-3 w-3" />
+            Add Number
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleAdd}>
           <DialogHeader>
-            <DialogTitle>
-              {direction ? `Assign ${direction === "INBOUND" ? "Inbound" : "Outbound"} Number` : "Add Phone Number"}
-            </DialogTitle>
+            <DialogTitle>Add Phone Number</DialogTitle>
             <DialogDescription>
-              Assign a phone number to <strong>{companyName}</strong>
-              {direction && ` for ${direction.toLowerCase()} calls`}.
+              Assign an <strong>additional</strong> phone number to{" "}
+              <strong>{companyName}</strong>. The company will have all assigned numbers active simultaneously.
             </DialogDescription>
           </DialogHeader>
 

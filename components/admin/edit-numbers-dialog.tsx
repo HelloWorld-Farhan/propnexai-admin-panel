@@ -25,6 +25,7 @@ export function EditNumbersDialog({
   otherDirectionNumbers,
   totalChannels,
   onSuccess,
+  customTrigger,
 }: {
   companyId: string;
   companyName: string;
@@ -33,6 +34,7 @@ export function EditNumbersDialog({
   otherDirectionNumbers: string[];
   totalChannels: number;
   onSuccess?: () => void;
+  customTrigger?: React.ReactNode;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -82,14 +84,16 @@ export function EditNumbersDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start font-normal text-xs h-7"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Edit Numbers
-        </Button>
+        {customTrigger || (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start font-normal text-xs h-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Edit Numbers
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent onClick={(e) => e.stopPropagation()} className="max-w-md">
         <DialogHeader>

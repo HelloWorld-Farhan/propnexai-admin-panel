@@ -58,38 +58,3 @@ export async function PUT(
     );
   }
 }
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    await requireAdminSession();
-    const { id } = await params;
-    const body = await request.json();
-
-    const existing = await prisma.companySetupConfig.findUnique({
-      where: { companyId: id },
-    });
-
-    if (body.serviceNumber && body.serviceNumber.trim() && body.serviceNumber !== existing?.serviceNumber) {
-      if (!(await isValidObdServiceNumber(body.serviceNumber.trim()))) {
-        return NextResponse.json({ error: "Invalid service number" }, { status: 400 });
-      }
-    }
-
-    const config = await upsertSetupConfig(id, {
-      totalChannels: body.totalChannels ?? existing?.totalChannels ?? 0,
-      serviceNumber: body.serviceNumber ?? existing?.serviceNumber ?? null,
-      ivrTemplateId: body.ivrTemplateId ?? existing?.ivrTemplateId ?? null,
-      deltaSeconds: body.deltaSeconds ?? existing?.deltaSeconds ?? 2,
-      agentsAllocated: body.agentsAllocated ?? existing?.agentsAllocated ?? 0,
-    });
-    return NextResponse.json(config);
-  } catch (error) {
-    console.error("Setup PATCH Error:", error);
-    if (error instanceof Error && error.message === "Unauthorized") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    return NextResponse.json({ error: "Failed to update setup config" }, { status: 500 });
-  }
-}

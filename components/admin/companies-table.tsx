@@ -1,7 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, Plus, ChevronDown } from "lucide-react";
+import { AlertTriangle, Plus, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -16,7 +16,6 @@ import { EditNumbersDialog } from "@/components/admin/edit-numbers-dialog";
 import { EditChannelDialog } from "@/components/admin/edit-channel-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 export type CompanyRow = {
@@ -58,55 +57,59 @@ export function MaskedNumber({ num }: { num: string }) {
 
 export function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row: CompanyRow; direction: "INBOUND" | "OUTBOUND"; nums: string[]; onRefresh: () => void }) {
   return (
-    <div className="flex items-start justify-between min-w-[120px]">
-      <div className="flex flex-col gap-1">
-        {nums.length === 0 ? (
-          <span className="text-destructive font-medium text-xs mt-1">Unassigned</span>
-        ) : (
-          <div className="flex flex-wrap items-center gap-1 mt-1">
-            {nums.map((num, i) => (
-              <span key={i} className="flex items-center">
-                <MaskedNumber num={num} />
-                {i < nums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
-              </span>
-            ))}
-          </div>
+    <div className="flex flex-col gap-1 min-w-[120px]">
+      {nums.length === 0 ? (
+        <span className="text-destructive font-medium text-xs mt-1">Unassigned</span>
+      ) : (
+        <div className="flex flex-wrap items-center gap-1 mt-1">
+          {nums.map((num, i) => (
+            <span key={i} className="flex items-center">
+              <MaskedNumber num={num} />
+              {i < nums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
+            </span>
+          ))}
+        </div>
+      )}
+      
+      <div className="flex items-center gap-1 mt-1" onClick={(e) => e.stopPropagation()}>
+        <AddNumberDialog
+          companyId={row.id}
+          companyName={row.name}
+          direction={direction}
+          onSuccess={onRefresh}
+          customTrigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:bg-zinc-800 shrink-0"
+              title="Add Number"
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          }
+        />
+        {nums.length > 0 && (
+          <EditNumbersDialog
+            companyId={row.id}
+            companyName={row.name}
+            direction={direction}
+            currentNumbers={nums}
+            otherDirectionNumbers={direction === "INBOUND" ? row.outboundNumbers || [] : row.inboundNumbers || []}
+            totalChannels={row.totalChannels}
+            onSuccess={onRefresh}
+            customTrigger={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:bg-zinc-800 shrink-0"
+                title="Edit Numbers"
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            }
+          />
         )}
       </div>
-
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-zinc-800 shrink-0 mt-0.5">
-            <ChevronDown className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-1" align="end" sideOffset={4}>
-          <div className="flex flex-col gap-1">
-            <div onClick={(e) => e.stopPropagation()}>
-              <AddNumberDialog
-                companyId={row.id}
-                companyName={row.name}
-                direction={direction}
-                onSuccess={onRefresh}
-                triggerLabel="Assign New"
-                triggerVariant="ghost"
-                triggerClassName="w-full justify-start font-normal text-xs h-7"
-              />
-            </div>
-            {nums.length > 0 && (
-              <EditNumbersDialog
-                companyId={row.id}
-                companyName={row.name}
-                direction={direction}
-                currentNumbers={nums}
-                otherDirectionNumbers={direction === "INBOUND" ? row.outboundNumbers || [] : row.inboundNumbers || []}
-                totalChannels={row.totalChannels}
-                onSuccess={onRefresh}
-              />
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
     </div>
   );
 }
@@ -200,22 +203,18 @@ export function CompaniesTable({
       cell: ({ row }) => (
         <div className="flex items-center justify-between min-w-[80px]">
           <span className="font-medium text-sm">{formatNumber(row.original.totalChannels)}</span>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-zinc-800">
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-1" align="end" sideOffset={8}>
-              <div className="flex flex-col gap-1">
-                <EditChannelDialog
-                  companyId={row.original.id}
-                  companyName={row.original.name}
-                  currentChannels={row.original.totalChannels}
-                />
-              </div>
-            </PopoverContent>
-          </Popover>
+          <div onClick={(e) => e.stopPropagation()}>
+             <EditChannelDialog
+               companyId={row.original.id}
+               companyName={row.original.name}
+               currentChannels={row.original.totalChannels}
+               customTrigger={
+                 <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground shrink-0" title="Edit Channels">
+                   <Pencil className="h-3 w-3" />
+                 </Button>
+               }
+             />
+          </div>
         </div>
       ),
     },
@@ -242,26 +241,15 @@ export function CompaniesTable({
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <span>{formatNumber(row.original.creditsRemaining)}</span>
+          <CreditBreakdown companyId={row.original.id} />
+          <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
+          <EditCreditDialog companyId={row.original.id} companyName={row.original.name} currentCredits={row.original.creditsRemaining} />
           {row.original.lowCredit ? (
             <Badge variant="destructive" className="gap-1">
               <AlertTriangle className="h-3 w-3" />
               Low
             </Badge>
           ) : null}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-zinc-800 shrink-0">
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-1" align="end" sideOffset={8}>
-              <div className="flex flex-col gap-1">
-                <CreditBreakdown companyId={row.original.id} />
-                <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
-                <EditCreditDialog companyId={row.original.id} companyName={row.original.name} currentCredits={row.original.creditsRemaining} />
-              </div>
-            </PopoverContent>
-          </Popover>
         </div>
       ),
     },
