@@ -44,6 +44,38 @@ export async function POST(request: Request) {
     const directionLabel = type ? type.toUpperCase() : "GENERAL";
     const requestMessage = `${directionLabel} Number Assignment Request`;
 
+    let isSubCompany = false;
+    let subcompanyName = "";
+    let parentCompanyName = "";
+
+    if (companyId) {
+      const company = await prisma.company.findUnique({
+        where: { id: companyId },
+        include: { parentCompany: true }
+      });
+      if (company && company.parentCompanyId) {
+        isSubCompany = true;
+        subcompanyName = company.name;
+        parentCompanyName = company.parentCompany?.name || "Unknown Parent";
+      }
+    }
+
+    const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+
+    const triggerWebhook = () => {
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: isSubCompany ? "reminder_number_subcompany" : "reminder_number",
+          name: name || "Unknown User",
+          email,
+          direction: directionLabel,
+          ...(isSubCompany ? { subcompanyName, parentCompanyName } : {})
+        })
+      }).catch(err => console.error("Webhook trigger failed:", err));
+    };
+
     // Check if there is already an active request
     const existing = await prisma.supportRequest.findFirst({
       where: { 
@@ -65,18 +97,7 @@ export async function POST(request: Request) {
         data: { updatedAt: new Date() }
       });
       
-      const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
-      fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "reminder_number",
-          name: name || "Unknown User",
-          email,
-          direction: directionLabel
-        })
-      }).catch(err => console.error("Webhook trigger failed:", err));
-
+      triggerWebhook();
       return NextResponse.json({ success: true, request: existing }, { status: 200, headers: corsHeaders });
     }
 
@@ -91,18 +112,7 @@ export async function POST(request: Request) {
       },
     });
 
-    const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
-    fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "reminder_number",
-        name: name || "Unknown User",
-        email,
-        direction: directionLabel
-      })
-    }).catch(err => console.error("Webhook trigger failed:", err));
-
+    triggerWebhook();
     return NextResponse.json({ success: true, request: newRequest }, { status: 201, headers: corsHeaders });
   } catch (error: any) {
     console.error("Failed to create number request:", error);

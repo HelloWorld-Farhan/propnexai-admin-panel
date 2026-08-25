@@ -80,6 +80,46 @@ export async function POST(
       } as any,
     });
 
+    // Webhook and Resolution Logic
+    try {
+      const companyWithMembers = await prisma.company.findUnique({
+        where: { id },
+        include: { members: { include: { user: true } }, parentCompany: true }
+      });
+      if (companyWithMembers && companyWithMembers.members.length > 0) {
+        const user = companyWithMembers.members[0].user;
+        if (user && user.email) {
+          const isSubCompany = !!companyWithMembers.parentCompanyId;
+          const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+          
+          fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: isSubCompany ? "number_assigned_subcompany" : "number_assigned",
+              email: user.email,
+              name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
+              assignedNumber: numTrimmed,
+              direction: body.direction || "GENERAL",
+              subcompanyName: isSubCompany ? companyWithMembers.name : undefined
+            }),
+          }).catch(err => console.error("Failed to send number assignment webhook:", err));
+          
+          await prisma.supportRequest.updateMany({
+            where: {
+              companyId: id,
+              reason: "OTHER",
+              message: { contains: "Number Assignment Request" },
+              status: "NEW"
+            },
+            data: { status: "RESOLVED" }
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Webhook/SupportRequest resolution error:", e);
+    }
+
     return NextResponse.json({ success: true, phoneNumber: created });
   } catch (error: any) {
     console.error("[ADD_COMPANY_NUMBER_ERROR]", error);

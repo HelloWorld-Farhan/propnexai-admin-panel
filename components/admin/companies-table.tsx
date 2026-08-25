@@ -122,9 +122,6 @@ export function CompaniesTable({
   lowCreditCount: number;
 }) {
   const router = useRouter();
-  // Local state to trigger re-fetch after number assignment
-  const [rows, setRows] = useState<CompanyRow[]>(companies);
-
     function refreshRow(companyId: string, newNumber: string) {
       // Actually we just refresh from server
       router.refresh();
@@ -283,7 +280,7 @@ export function CompaniesTable({
       ) : null}
       <DataTable
         columns={columns}
-        data={rows}
+        data={companies}
         searchKeys={["name", "slug", "pocEmail", "contractId", "cli", "companyCode"]}
         searchPlaceholder="Search by name, slug, contract ID, or owner email (if claimed)..."
         onRowClick={(row) => router.push(`/companies/${row.id}`)}

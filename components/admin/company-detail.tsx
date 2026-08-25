@@ -647,7 +647,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                               row={{ id: child.id, name: child.name } as any}
                               direction="INBOUND"
                               nums={inboundNums}
-                              onRefresh={() => router.refresh()}
+                              onRefresh={refreshLiveCompany}
                             />
                           </TableCell>
                           <TableCell>
@@ -655,7 +655,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                               row={{ id: child.id, name: child.name } as any}
                               direction="OUTBOUND"
                               nums={outboundNums}
-                              onRefresh={() => router.refresh()}
+                              onRefresh={refreshLiveCompany}
                             />
                           </TableCell>
                           <TableCell>
