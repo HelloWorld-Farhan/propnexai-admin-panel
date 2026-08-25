@@ -59,17 +59,25 @@ export async function PUT(
         });
       }
 
-      // 3. Process Inbound Numbers
-      const existingInbounds = company.phoneNumbers.filter(p => p.direction === "INBOUND");
+      // 3. Process Inbound Numbers — include BOTH direction numbers
+      const existingInbounds = company.phoneNumbers.filter(p => p.direction === "INBOUND" || p.direction === "BOTH");
       const existingInboundSet = new Set(existingInbounds.map(p => p.number));
       const newInboundMap = new Map(cleanedInbounds.map(n => [n.number.trim(), n.channels]));
 
-      // Delete removed inbounds
+      // Delete removed inbounds (only pure INBOUND, not BOTH)
       for (const p of existingInbounds) {
         if (!newInboundMap.has(p.number)) {
-          await tx.phoneNumber.delete({ where: { id: p.id } });
+          if (p.direction === "BOTH") {
+            // Downgrade to OUTBOUND instead of deleting
+            await tx.phoneNumber.update({
+              where: { id: p.id },
+              data: { direction: "OUTBOUND" }
+            });
+          } else {
+            await tx.phoneNumber.delete({ where: { id: p.id } });
+          }
         } else {
-          // Update channels if exists
+          // Update channels
           await tx.phoneNumber.update({
             where: { id: p.id },
             data: { channels: newInboundMap.get(p.number) }
@@ -81,35 +89,52 @@ export async function PUT(
       for (const item of cleanedInbounds) {
         const number = item.number.trim();
         if (!existingInboundSet.has(number)) {
-          const phoneNumberId = await allocatePhoneNumberEntityId(tx as any, id);
-          const publicId = generatePublicId(company.name.substring(0, 3).toUpperCase(), "UNASSIGNED", phoneNumberId);
-          await tx.phoneNumber.create({
-            data: {
-              number,
-              companyId: id,
-              status: "ACTIVE",
-              provider: "PROPNEX",
-              phoneNumberId,
-              publicId,
-              assignedParentTenantId: company.parentCompanyId,
-              direction: "INBOUND",
-              channels: item.channels
-            } as any,
-          });
+          // Check if it exists as OUTBOUND — upgrade to BOTH
+          const existingOutbound = company.phoneNumbers.find(p => p.number === number && p.direction === "OUTBOUND");
+          if (existingOutbound) {
+            await tx.phoneNumber.update({
+              where: { id: existingOutbound.id },
+              data: { direction: "BOTH", channels: item.channels }
+            });
+          } else {
+            const phoneNumberId = await allocatePhoneNumberEntityId(tx as any, id);
+            const publicId = generatePublicId(company.name.substring(0, 3).toUpperCase(), "UNASSIGNED", phoneNumberId);
+            await tx.phoneNumber.create({
+              data: {
+                number,
+                companyId: id,
+                status: "ACTIVE",
+                provider: "PROPNEX",
+                phoneNumberId,
+                publicId,
+                assignedParentTenantId: company.parentCompanyId,
+                direction: "INBOUND",
+                channels: item.channels
+              } as any,
+            });
+          }
         }
       }
 
-      // 4. Process Outbound Numbers
-      const existingOutbounds = company.phoneNumbers.filter(p => p.direction === "OUTBOUND");
+      // 4. Process Outbound Numbers — include BOTH direction numbers
+      const existingOutbounds = company.phoneNumbers.filter(p => p.direction === "OUTBOUND" || p.direction === "BOTH");
       const existingOutboundSet = new Set(existingOutbounds.map(p => p.number));
       const newOutboundMap = new Map(cleanedOutbounds.map(n => [n.number.trim(), n.channels]));
 
-      // Delete removed outbounds
+      // Delete removed outbounds (only pure OUTBOUND, not BOTH)
       for (const p of existingOutbounds) {
         if (!newOutboundMap.has(p.number)) {
-          await tx.phoneNumber.delete({ where: { id: p.id } });
+          if (p.direction === "BOTH") {
+            // Downgrade to INBOUND instead of deleting
+            await tx.phoneNumber.update({
+              where: { id: p.id },
+              data: { direction: "INBOUND" }
+            });
+          } else {
+            await tx.phoneNumber.delete({ where: { id: p.id } });
+          }
         } else {
-          // Update channels if exists
+          // Update channels
           await tx.phoneNumber.update({
             where: { id: p.id },
             data: { channels: newOutboundMap.get(p.number) }
@@ -121,21 +146,30 @@ export async function PUT(
       for (const item of cleanedOutbounds) {
         const number = item.number.trim();
         if (!existingOutboundSet.has(number)) {
-          const phoneNumberId = await allocatePhoneNumberEntityId(tx as any, id);
-          const publicId = generatePublicId(company.name.substring(0, 3).toUpperCase(), "UNASSIGNED", phoneNumberId);
-          await tx.phoneNumber.create({
-            data: {
-              number,
-              companyId: id,
-              status: "ACTIVE",
-              provider: "PROPNEX",
-              phoneNumberId,
-              publicId,
-              assignedParentTenantId: company.parentCompanyId,
-              direction: "OUTBOUND",
-              channels: item.channels
-            } as any,
-          });
+          // Check if it exists as INBOUND — upgrade to BOTH
+          const existingInbound = company.phoneNumbers.find(p => p.number === number && p.direction === "INBOUND");
+          if (existingInbound) {
+            await tx.phoneNumber.update({
+              where: { id: existingInbound.id },
+              data: { direction: "BOTH", channels: item.channels }
+            });
+          } else {
+            const phoneNumberId = await allocatePhoneNumberEntityId(tx as any, id);
+            const publicId = generatePublicId(company.name.substring(0, 3).toUpperCase(), "UNASSIGNED", phoneNumberId);
+            await tx.phoneNumber.create({
+              data: {
+                number,
+                companyId: id,
+                status: "ACTIVE",
+                provider: "PROPNEX",
+                phoneNumberId,
+                publicId,
+                assignedParentTenantId: company.parentCompanyId,
+                direction: "OUTBOUND",
+                channels: item.channels
+              } as any,
+            });
+          }
         }
       }
 
