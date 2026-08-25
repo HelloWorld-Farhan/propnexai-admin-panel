@@ -95,7 +95,7 @@ export function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row
             companyName={row.name}
             direction={direction}
             currentNumbers={nums}
-            otherDirectionNumbers={direction === "INBOUND" ? row.outboundNumbers || [] : row.inboundNumbers || []}
+            otherDirectionNumbers={direction === "INBOUND" ? (row.outboundNumbers ?? []) : (row.inboundNumbers ?? [])}
             totalChannels={row.totalChannels}
             onSuccess={onRefresh}
             customTrigger={
