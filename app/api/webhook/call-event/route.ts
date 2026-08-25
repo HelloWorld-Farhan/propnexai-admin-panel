@@ -74,28 +74,54 @@ export async function POST(req: Request) {
       }
     }
 
-    // Generate random IDs for the call log
-    const randomId = crypto.randomBytes(4).toString("hex").toUpperCase();
-    const callLogIdStr = `CL${randomId}`;
-    const publicIdStr = `v1.PNX.CP000000.${callLogIdStr}`; // Mock public ID
-
-    // Create call log
-    await prisma.callLog.create({
-      data: {
+    const finalStatus = status === "completed" || status === "answered" ? "COMPLETED" : "FAILED";
+    const durationInt = duration ? parseInt(duration, 10) : 0;
+    
+    // Check if we have a pending call log for this customer
+    const existingPending = await prisma.callLog.findFirst({
+      where: {
         companyId,
-        leadId,
-        phoneNumberId: phoneNumberId,
-        direction: "OUTBOUND",
-        status: status === "completed" || status === "answered" ? "COMPLETED" : "FAILED",
-        durationSeconds: duration ? parseInt(duration, 10) : 0,
-        recordingUrl: payload.recording_url || null,
-        providerCallId: call_id,
-        startedAt: new Date(),
-        callLogId: callLogIdStr,
-        publicId: publicIdStr,
-        creditsUsed: 1
-      }
+        receiverNumber: customer_number,
+        status: { in: ["PENDING", "QUEUED", "DISPATCHING"] }
+      },
+      orderBy: { startedAt: 'desc' }
     });
+
+    if (existingPending) {
+      await prisma.callLog.update({
+        where: { id: existingPending.id },
+        data: {
+          status: finalStatus,
+          durationSeconds: durationInt,
+          recordingUrl: payload.recording_url || null,
+          providerCallId: call_id,
+          leadId,
+          creditsUsed: 1
+        }
+      });
+    } else {
+      // Generate random IDs for the call log
+      const randomId = crypto.randomBytes(4).toString("hex").toUpperCase();
+      const callLogIdStr = `CL${randomId}`;
+      const publicIdStr = `v1.PNX.CP000000.${callLogIdStr}`; // Mock public ID
+
+      await prisma.callLog.create({
+        data: {
+          companyId,
+          leadId,
+          phoneNumberId: phoneNumberId,
+          direction: "OUTBOUND",
+          status: finalStatus,
+          durationSeconds: durationInt,
+          recordingUrl: payload.recording_url || null,
+          providerCallId: call_id,
+          startedAt: new Date(),
+          callLogId: callLogIdStr,
+          publicId: publicIdStr,
+          creditsUsed: 1
+        }
+      });
+    }
 
     // 2. Deduct credit
     // Update credit balance

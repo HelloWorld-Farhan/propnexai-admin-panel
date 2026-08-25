@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCompanyById } from "@/src/server/repositories/company.repository";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
 const VOICELINK_API_URL = "https://app.voicelink.co.in/api";
 
@@ -99,6 +100,34 @@ export async function POST(req: Request) {
     }
 
     const addLeadData = await addLeadRes.json();
+
+    // 5. Create PENDING CallLogs for the UI to display immediately
+    try {
+      await prisma.callLog.createMany({
+        data: formattedLeads.map((lead: any) => {
+          const randomId = crypto.randomBytes(4).toString("hex").toUpperCase();
+          const callLogIdStr = `CL${randomId}`;
+          const publicIdStr = `v1.PNX.CP000000.${callLogIdStr}`; // Mock public ID
+          
+          return {
+            companyId,
+            phoneNumberId: outboundNumber.id,
+            direction: "OUTBOUND",
+            status: "PENDING",
+            callerNumber: outboundNumber.number,
+            receiverNumber: lead.customer_number,
+            callLogId: callLogIdStr,
+            publicId: publicIdStr,
+            startedAt: new Date(),
+            durationSeconds: 0,
+            creditsUsed: 0
+          };
+        })
+      });
+    } catch (dbError) {
+      console.error("Failed to insert pending call logs:", dbError);
+      // We don't fail the whole request if this fails, the campaign is already started.
+    }
 
     return NextResponse.json({
       success: true,
