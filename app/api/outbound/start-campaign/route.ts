@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCompanyById } from "@/src/server/repositories/company.repository";
 import { prisma } from "@/lib/prisma";
+import { CallDirection, CallStatus } from "@prisma/client";
 import crypto from "crypto";
 
 const VOICELINK_API_URL = "https://app.voicelink.co.in/api";
@@ -107,7 +108,7 @@ export async function POST(req: Request) {
         where: { companyId, isDefault: true }
       });
       
-      const callLogsToCreate = [];
+      const callLogsToCreate: any[] = [];
       
       for (const lead of leads) {
         let dbLead = await prisma.lead.findFirst({
@@ -134,8 +135,8 @@ export async function POST(req: Request) {
             companyId,
             phoneNumberId: outboundNumber.id,
             leadId: dbLead.id,
-            direction: "OUTBOUND",
-            status: "PENDING",
+            direction: CallDirection.OUTBOUND,
+            status: CallStatus.PENDING,
             callLogId: callLogIdStr,
             publicId: publicIdStr,
             startedAt: new Date(),
@@ -146,7 +147,7 @@ export async function POST(req: Request) {
       }
       
       if (callLogsToCreate.length > 0) {
-        await prisma.callLog.createMany({ data: callLogsToCreate });
+        await prisma.callLog.createMany({ data: callLogsToCreate as any });
       }
     } catch (dbError) {
       console.error("Failed to insert pending call logs:", dbError);
