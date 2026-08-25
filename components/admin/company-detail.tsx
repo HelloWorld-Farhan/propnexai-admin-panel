@@ -624,7 +624,6 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                       <TableHead>Name</TableHead>
                       <TableHead>Inbound Number</TableHead>
                       <TableHead>Outbound Number</TableHead>
-                      <TableHead>Channels</TableHead>
                       <TableHead>Credits</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Created At</TableHead>
@@ -634,9 +633,9 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                   <TableBody>
                     {liveCompany.childCompanies.map((child: any) => {
                       const isVerified = child.status === "ACTIVE";
-                      const inboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "INBOUND").map((p: any) => p.number);
-                      const outboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "OUTBOUND").map((p: any) => p.number);
-                      const assignedNum = inboundNums[0] || outboundNums[0] || "—";
+                      const inboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "INBOUND").map((p: any) => ({ number: p.number, channels: p.channels || null }));
+                      const outboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "OUTBOUND").map((p: any) => ({ number: p.number, channels: p.channels || null }));
+                      const assignedNum = inboundNums[0]?.number || outboundNums[0]?.number || "—";
                       const totalChannels = child.setupConfig?.totalChannels || 0;
                       const credits = child.creditBalance?.creditsRemaining ?? 0;
                       return (
@@ -658,23 +657,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                               onRefresh={refreshLiveCompany}
                             />
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-between min-w-[80px]">
-                              <span className="font-medium text-sm">{formatNumber(totalChannels)}</span>
-                              <div onClick={(e) => e.stopPropagation()}>
-                                 <EditChannelDialog
-                                   companyId={child.id}
-                                   companyName={child.name}
-                                   currentChannels={totalChannels}
-                                   customTrigger={
-                                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground shrink-0" title="Edit Channels">
-                                       <Pencil className="h-3 w-3" />
-                                     </Button>
-                                   }
-                                 />
-                              </div>
-                            </div>
-                          </TableCell>
+
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span>{credits}</span>
@@ -715,8 +698,11 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                                 companyId={child.id}
                                 companyName={child.name}
                                 onSuccess={refreshLiveCompany}
-                                triggerLabel="+ Number"
-                                triggerVariant="ghost"
+                                customTrigger={
+                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                                    + Number
+                                  </Button>
+                                }
                               />
                               {/* Show 'Verified' label if active and has number */}
                               {isVerified && (inboundNums.length + outboundNums.length) > 0 && child.status === "ACTIVE" && (
