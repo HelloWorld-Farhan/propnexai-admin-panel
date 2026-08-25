@@ -695,17 +695,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                                   onSuccess={refreshLiveCompany}
                                 />
                               )}
-                              {/* + Add Number — always available once company exists */}
-                              <AddNumberDialog
-                                companyId={child.id}
-                                companyName={child.name}
-                                onSuccess={refreshLiveCompany}
-                                customTrigger={
-                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                                    + Number
-                                  </Button>
-                                }
-                              />
+
                               {/* Show 'Verified' label if active and has number */}
                               {isVerified && (inboundNums.length + outboundNums.length) > 0 && child.status === "ACTIVE" && (
                                 <span className="text-xs font-medium text-green-600">✓ Verified</span>
