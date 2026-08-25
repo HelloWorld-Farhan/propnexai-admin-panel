@@ -633,8 +633,8 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                   <TableBody>
                     {liveCompany.childCompanies.map((child: any) => {
                       const isVerified = child.status === "ACTIVE";
-                      const inboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "INBOUND").map((p: any) => ({ number: p.number, channels: p.channels || null }));
-                      const outboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "OUTBOUND").map((p: any) => ({ number: p.number, channels: p.channels || null }));
+                      const inboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "INBOUND" || p.direction === "BOTH" || p.direction == null).map((p: any) => ({ number: p.number, channels: p.channels || null }));
+                      const outboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "OUTBOUND" || p.direction === "BOTH" || p.direction == null).map((p: any) => ({ number: p.number, channels: p.channels || null }));
                       const assignedNum = inboundNums[0]?.number || outboundNums[0]?.number || "—";
                       const totalChannels = child.setupConfig?.totalChannels || 0;
                       const credits = child.creditBalance?.creditsRemaining ?? 0;

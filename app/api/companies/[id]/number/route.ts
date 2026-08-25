@@ -48,7 +48,7 @@ export async function POST(
     // Verify company exists
     const company = await prisma.company.findUnique({
       where: { id },
-      select: { id: true, name: true, parentCompanyId: true, phoneNumbers: { select: { number: true } } },
+      select: { id: true, name: true, parentCompanyId: true, phoneNumbers: { select: { id: true, number: true, direction: true, channels: true } } },
     });
 
     if (!company) {
@@ -57,9 +57,18 @@ export async function POST(
 
     // Check not already assigned
     const numTrimmed = body.newNumber.trim();
-    const alreadyExists = company.phoneNumbers.some((p: any) => p.number === numTrimmed);
-    if (alreadyExists) {
-      return NextResponse.json({ error: "This number is already assigned to this company" }, { status: 409 });
+    const existingNumber = company.phoneNumbers.find((p: any) => p.number === numTrimmed);
+    if (existingNumber) {
+      const newDirection = (existingNumber.direction && body.direction && existingNumber.direction !== body.direction) 
+        ? "BOTH" 
+        : (existingNumber.direction || body.direction || "BOTH");
+      const newChannels = body.channels !== undefined ? body.channels : existingNumber.channels;
+      
+      await prisma.phoneNumber.update({
+        where: { id: existingNumber.id },
+        data: { direction: newDirection, channels: newChannels }
+      });
+      return NextResponse.json({ success: true, updated: true });
     }
 
     // Generate required IDs
