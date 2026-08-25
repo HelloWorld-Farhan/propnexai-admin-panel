@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
 // Endpoint to receive Voicelink call events
 export async function POST(req: Request) {
@@ -23,13 +24,16 @@ export async function POST(req: Request) {
       }
     }
     
+    let phoneNumberId = undefined;
+    
     if (!companyId) {
       // Find company by matching outbound number (did_number)
-      const numberRecord = await prisma.assignedNumber.findFirst({
+      const numberRecord = await prisma.phoneNumber.findFirst({
         where: { number: { contains: (did_number || "").replace("+", "") } }
       });
       if (numberRecord) {
         companyId = numberRecord.companyId;
+        phoneNumberId = numberRecord.id;
       }
     }
     
@@ -49,45 +53,62 @@ export async function POST(req: Request) {
       let lead = await prisma.lead.findFirst({
         where: { phone: customer_number, companyId }
       });
-      if (!lead) {
+      
+      // Need a valid stage to create a lead
+      const defaultStage = await prisma.leadPipelineStage.findFirst({
+        where: { companyId, isDefault: true }
+      });
+      
+      if (!lead && defaultStage) {
         lead = await prisma.lead.create({
           data: {
-            name,
+            firstName: name,
             phone: customer_number,
             companyId,
-            status: "NEW"
+            stageId: defaultStage.id
           }
         });
       }
-      leadId = lead.id;
+      if (lead) {
+        leadId = lead.id;
+      }
     }
+
+    // Generate random IDs for the call log
+    const randomId = crypto.randomBytes(4).toString("hex").toUpperCase();
+    const callLogIdStr = `CL${randomId}`;
+    const publicIdStr = `v1.PNX.CP000000.${callLogIdStr}`; // Mock public ID
 
     // Create call log
     await prisma.callLog.create({
       data: {
         companyId,
         leadId,
-        assignedNumberId: undefined, // Optionally link if we have the ID
+        phoneNumberId: phoneNumberId,
         direction: "OUTBOUND",
         status: status === "completed" || status === "answered" ? "COMPLETED" : "FAILED",
         durationSeconds: duration ? parseInt(duration, 10) : 0,
         recordingUrl: payload.recording_url || null,
-        transcript: payload.transcript || null,
-        voicelinkCallId: call_id,
-        startedAt: new Date()
+        providerCallId: call_id,
+        startedAt: new Date(),
+        callLogId: callLogIdStr,
+        publicId: publicIdStr,
+        creditsUsed: 1
       }
     });
 
     // 2. Deduct credit
-    // Only deduct credit if the call was actually answered/completed and has a duration, 
-    // or deduct 1 credit per call regardless. Let's deduct 1 credit.
-    await prisma.company.update({
-      where: { id: companyId },
-      data: {
-        creditsRemaining: { decrement: 1 },
-        creditsUsed: { increment: 1 }
-      }
-    });
+    // Update credit balance
+    const creditBalance = await prisma.creditBalance.findUnique({ where: { companyId } });
+    if (creditBalance) {
+      await prisma.creditBalance.update({
+        where: { companyId },
+        data: {
+          creditsRemaining: { decrement: 1 },
+          creditsUsed: { increment: 1 }
+        }
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Call logged and credit deducted" });
   } catch (error: any) {

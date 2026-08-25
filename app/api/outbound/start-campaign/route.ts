@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCompanyById } from "@/server/repositories/company.repository";
+import { getCompanyById } from "@/src/server/repositories/company.repository";
 import { prisma } from "@/lib/prisma";
 
 const VOICELINK_API_URL = "https://app.voicelink.co.in/api";
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
-    if (company.creditsRemaining < leads.length) {
+    if ((company.creditBalance?.creditsRemaining || 0) < leads.length) {
       return NextResponse.json(
         { error: "Insufficient credits to start campaign for these leads." },
         { status: 400 }
@@ -30,8 +30,8 @@ export async function POST(req: Request) {
     }
 
     // Get assigned outbound number
-    const outboundNumber = company.assignedNumbers.find(
-      (n) => n.direction === "OUTBOUND" || n.direction === "BOTH"
+    const outboundNumber = (company.phoneNumbers || []).find(
+      (n: any) => n.direction === "OUTBOUND" || n.direction === "BOTH"
     );
 
     if (!outboundNumber) {
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        did_number: outboundNumber.phoneNumber.replace("+", ""),
+        did_number: outboundNumber.number.replace("+", ""),
         call_limit: company.channels || 1, // Default to 1 channel if not set
         leads: formattedLeads,
       }),
