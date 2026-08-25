@@ -76,6 +76,7 @@ export async function POST(
         phoneNumberId,
         publicId,
         assignedParentTenantId: company.parentCompanyId,
+        direction: body.direction || null,
       } as any,
     });
 

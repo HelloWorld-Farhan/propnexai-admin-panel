@@ -21,11 +21,13 @@ export function AddNumberDialog({
   companyId,
   companyName,
   onSuccess,
+  direction,
   triggerLabel = "Add Number",
   triggerVariant = "outline",
 }: {
   companyId: string;
   companyName: string;
+  direction?: "INBOUND" | "OUTBOUND" | null;
   onSuccess: () => void;
   triggerLabel?: string;
   triggerVariant?: "outline" | "ghost" | "default" | "secondary";
@@ -46,7 +48,7 @@ export function AddNumberDialog({
       const res = await fetch(`/api/companies/${companyId}/number`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newNumber }),
+        body: JSON.stringify({ newNumber, direction }),
       });
 
       const data = await res.json();

@@ -127,7 +127,7 @@ export async function listCompaniesForAdmin() {
         include: { user: { select: { email: true } } },
       },
       phoneNumbers: {
-        select: { number: true }, // fetch ALL numbers (no take:1)
+        select: { number: true, direction: true }, // fetch ALL numbers (no take:1)
       },
     },
   });
@@ -164,7 +164,9 @@ export async function listCompaniesForAdmin() {
         : (company.contact?.email ?? "—"),
       lowCredit: totalCredits < threshold,
       assignedNumber: (company as any).phoneNumbers?.[0]?.number || null, // legacy: first number
-      assignedNumbers: ((company as any).phoneNumbers || []).map((p: any) => p.number).filter(Boolean), // ALL numbers
+      assignedNumbers: ((company as any).phoneNumbers || []), // Return the full array with direction
+      inboundNumbers: ((company as any).phoneNumbers || []).filter((p: any) => p.direction === "INBOUND").map((p: any) => p.number),
+      outboundNumbers: ((company as any).phoneNumbers || []).filter((p: any) => p.direction === "OUTBOUND").map((p: any) => p.number),
     };
   });
 }
@@ -207,7 +209,7 @@ export async function getCompanyById(id: string) {
       members: {
         where: { role: "OWNER", status: "ACTIVE" },
         take: 1,
-        include: { user: { select: { email: true, firstName: true, lastName: true } } },
+        include: { user: { select: { email: true, firstName: true, lastName: true, phone: true } } },
       },
       childCompanies: {
         orderBy: { createdAt: "desc" },

@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type CompanyOption = {
   id: string;
@@ -44,7 +45,8 @@ export type PhoneNumberRow = {
   campaignId: string | null;
   inboundAgentId: string | null;
   outboundAgentId: string | null;
-  company: { id: string; name: string; slug: string; cli: string };
+  direction: "INBOUND" | "OUTBOUND" | null;
+  company: { id: string; name: string; slug: string; cli: string; parentCompanyId: string | null; };
   campaign: { id: string; name: string; resourceKey: string } | null;
   inboundAgent: { id: string; name: string } | null;
   outboundAgent: { id: string; name: string } | null;
@@ -54,13 +56,13 @@ export type PhoneNumberRow = {
 type NumberFormState = {
   number: string;
   companyId: string;
-  campaignId: string;
+  direction: "INBOUND" | "OUTBOUND" | "none";
 };
 
 const EMPTY_FORM: NumberFormState = {
   number: "",
   companyId: "",
-  campaignId: "none",
+  direction: "INBOUND",
 };
 
 function toNullableId(value: string): string | null {
@@ -106,7 +108,12 @@ export function NumbersManager({
       header: "Company",
       cell: ({ row }) => (
         <div>
-          <p className="font-medium">{row.original.company?.name ?? "Unknown Company"}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">{row.original.company?.name ?? "Unknown Company"}</p>
+            {row.original.company?.parentCompanyId && (
+              <Badge variant="outline" className="text-[10px] h-5">Sub-Company</Badge>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">
             {row.original.company?.cli ?? ""}
           </p>
@@ -114,20 +121,14 @@ export function NumbersManager({
       ),
     },
     {
-      id: "campaign",
-      accessorFn: (row) => row.campaign?.name ?? "",
-      header: "Campaign",
-      cell: ({ row }) =>
-        row.original.campaign ? (
-          <div>
-            <p className="font-medium">{row.original.campaign.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {row.original.campaign.resourceKey}
-            </p>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">Unassigned</span>
-        ),
+      id: "direction",
+      accessorFn: (row) => row.direction ?? "Unassigned",
+      header: "Direction",
+      cell: ({ row }) => (
+        <Badge variant="secondary">
+          {row.original.direction || "Unassigned"}
+        </Badge>
+      ),
     },
     {
       id: "actions",
@@ -173,7 +174,7 @@ export function NumbersManager({
     setForm({
       number: row.number,
       companyId: row.companyId,
-      campaignId: row.campaignId ?? "none",
+      direction: row.direction ?? "INBOUND",
     });
     setOpen(true);
   }
@@ -182,7 +183,6 @@ export function NumbersManager({
     setForm((prev) => ({
       ...prev,
       companyId,
-      campaignId: "none",
     }));
   }
 
@@ -200,7 +200,7 @@ export function NumbersManager({
 
     const assignmentPayload = {
       companyId: form.companyId,
-      campaignId: toNullableId(form.campaignId),
+      direction: form.direction,
     };
 
     const res = await fetch(
@@ -295,24 +295,19 @@ export function NumbersManager({
               </div>
 
               <div className="space-y-2">
-                <Label>Campaign</Label>
+                <Label>Direction</Label>
                 <Select
-                  value={form.campaignId}
-                  onValueChange={(value) =>
-                    setForm((prev) => ({ ...prev, campaignId: value }))
+                  value={form.direction}
+                  onValueChange={(value: "INBOUND" | "OUTBOUND") =>
+                    setForm((prev) => ({ ...prev, direction: value }))
                   }
-                  disabled={!selectedCompany}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select campaign" />
+                    <SelectValue placeholder="Select direction" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Unassigned</SelectItem>
-                    {(selectedCompany?.campaigns ?? []).map((campaign) => (
-                      <SelectItem key={campaign.id} value={campaign.id}>
-                        {campaign.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="INBOUND">Inbound</SelectItem>
+                    <SelectItem value="OUTBOUND">Outbound</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -344,12 +339,28 @@ export function NumbersManager({
         </DialogContent>
       </Dialog>
 
-      <DataTable
-        columns={columns}
-        data={numbers}
-        searchKeys={["number", "company", "campaign"]}
-        searchPlaceholder="Search service numbers, companies, campaigns..."
-      />
+      <Tabs defaultValue="inbound" className="w-full">
+        <TabsList>
+          <TabsTrigger value="inbound">Inbound</TabsTrigger>
+          <TabsTrigger value="outbound">Outbound</TabsTrigger>
+        </TabsList>
+        <TabsContent value="inbound" className="mt-4">
+          <DataTable
+            columns={columns}
+            data={numbers.filter(n => n.direction !== "OUTBOUND")}
+            searchKeys={["number", "company", "campaign"]}
+            searchPlaceholder="Search inbound numbers, companies..."
+          />
+        </TabsContent>
+        <TabsContent value="outbound" className="mt-4">
+          <DataTable
+            columns={columns}
+            data={numbers.filter(n => n.direction === "OUTBOUND")}
+            searchKeys={["number", "company", "campaign"]}
+            searchPlaceholder="Search outbound numbers, companies..."
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

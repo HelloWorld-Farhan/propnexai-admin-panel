@@ -133,7 +133,7 @@ type CompanyData = {
     execution: { status: string } | null;
   }>;
   members: Array<{
-    user: { email: string; firstName: string | null; lastName: string | null };
+    user: { email: string; firstName: string | null; lastName: string | null; phone: string | null };
   }>;
 };
 
@@ -550,8 +550,9 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                   <div className="space-y-2">
                     <Label>Name</Label>
                     <Input
-                      value={contact.name}
-                      onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                      value={linkedOwnerName || contact.name}
+                      readOnly
+                      disabled
                     />
                   </div>
                   <div className="space-y-2">
@@ -574,14 +575,10 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                   <div className="space-y-2">
                     <Label>Personal Login Phone Number</Label>
                     <Input
-                      value={contact.phone ?? ""}
-                      onChange={(e) => setContact({ ...contact, phone: e.target.value })}
+                      value={linkedOwner?.phone ?? contact.phone ?? ""}
+                      readOnly
+                      disabled
                     />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Button onClick={saveContact} disabled={saving}>
-                      Save contact
-                    </Button>
                   </div>
                 </>
               ) : (

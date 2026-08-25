@@ -13,6 +13,7 @@ import { CreditBreakdown } from "@/components/admin/credit-breakdown";
 import { DeleteCompanyDialog } from "@/components/admin/delete-company-dialog";
 import { AddNumberDialog } from "@/components/admin/add-number-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 export type CompanyRow = {
@@ -31,8 +32,8 @@ export type CompanyRow = {
   agentsAllocated: number;
   pocEmail: string;
   lowCredit: boolean;
-  assignedNumber: string | null;
-  assignedNumbers: string[]; // ALL assigned numbers
+  inboundNumbers?: string[];
+  outboundNumbers?: string[];
   childCompanyCount: number;
   unverifiedChildCompanyCount: number;
 };
@@ -52,20 +53,17 @@ function MaskedNumber({ num }: { num: string }) {
   );
 }
 
-// Inline refresh-aware number cell
-function AssignedNumberCell({ row, onRefresh }: { row: CompanyRow; onRefresh: () => void }) {
-  const allNums = row.assignedNumbers?.length ? row.assignedNumbers : row.assignedNumber ? [row.assignedNumber] : [];
-
+function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row: CompanyRow; direction: "INBOUND" | "OUTBOUND"; nums: string[]; onRefresh: () => void }) {
   return (
     <div className="flex flex-col gap-1 min-w-[120px]">
-      {allNums.length === 0 ? (
+      {nums.length === 0 ? (
         <span className="text-destructive font-medium text-xs">Unassigned</span>
       ) : (
         <div className="flex flex-wrap items-center gap-1">
-          {allNums.map((num, i) => (
+          {nums.map((num, i) => (
             <span key={i} className="flex items-center">
               <MaskedNumber num={num} />
-              {i < allNums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
+              {i < nums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
             </span>
           ))}
         </div>
@@ -74,8 +72,9 @@ function AssignedNumberCell({ row, onRefresh }: { row: CompanyRow; onRefresh: ()
         <AddNumberDialog
           companyId={row.id}
           companyName={row.name}
+          direction={direction}
           onSuccess={onRefresh}
-          triggerLabel={allNums.length === 0 ? "Assign" : "+ Number"}
+          triggerLabel={nums.length === 0 ? "Assign" : "+ Number"}
           triggerVariant="ghost"
         />
       </div>
@@ -94,19 +93,10 @@ export function CompaniesTable({
   // Local state to trigger re-fetch after number assignment
   const [rows, setRows] = useState<CompanyRow[]>(companies);
 
-  function refreshRow(companyId: string, newNumber: string) {
-    setRows((prev) =>
-      prev.map((c) =>
-        c.id === companyId
-          ? {
-              ...c,
-              assignedNumber: c.assignedNumber || newNumber,
-              assignedNumbers: [...(c.assignedNumbers || []), newNumber],
-            }
-          : c
-      )
-    );
-  }
+    function refreshRow(companyId: string, newNumber: string) {
+      // Actually we just refresh from server
+      router.refresh();
+    }
 
   const columns: ColumnDef<CompanyRow>[] = [
     {
@@ -152,13 +142,42 @@ export function CompaniesTable({
       ),
     },
     {
-      accessorKey: "assignedNumber",
-      header: "Assigned Number",
+      accessorKey: "inboundNumber",
+      header: "Inbound Number",
       cell: ({ row }) => (
-        <AssignedNumberCell
+        <DirectionalNumberCell
           row={row.original}
+          direction="INBOUND"
+          nums={row.original.inboundNumbers || []}
           onRefresh={() => router.refresh()}
         />
+      ),
+    },
+    {
+      accessorKey: "outboundNumber",
+      header: "Outbound Number",
+      cell: ({ row }) => (
+        <DirectionalNumberCell
+          row={row.original}
+          direction="OUTBOUND"
+          nums={row.original.outboundNumbers || []}
+          onRefresh={() => router.refresh()}
+        />
+      ),
+    },
+    {
+      accessorKey: "channels",
+      header: "Channels",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-between min-w-[80px]">
+          <span className="font-medium text-sm">{formatNumber(row.original.totalChannels)}</span>
+          <div onClick={(e) => e.stopPropagation()}>
+             {/* Note: This button currently doesn't trigger anything specific for channels, it just redirects or opens a modal you can implement later */}
+             <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => window.location.href = `/companies/${row.original.id}?tab=channels`}>
+               <Plus className="h-3 w-3" />
+             </Button>
+          </div>
+        </div>
       ),
     },
     {
