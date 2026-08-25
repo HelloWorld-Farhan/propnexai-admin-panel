@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Copy, Pencil, Trash2, Plus, X } from "lucide-react";
+import { Check, Copy, Pencil, Trash2, Plus, X, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
@@ -13,6 +13,7 @@ import { AddNumberDialog } from "@/components/admin/add-number-dialog";
 import { EditChannelDialog } from "@/components/admin/edit-channel-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DirectionalNumberCell } from "@/components/admin/companies-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -672,28 +673,50 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                           <TableCell>
                             <div className="flex items-center justify-between min-w-[80px]">
                               <span className="font-medium text-sm">{formatNumber(totalChannels)}</span>
-                              <EditChannelDialog
-                                companyId={child.id}
-                                companyName={child.name}
-                                currentChannels={totalChannels}
-                              />
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-zinc-800">
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-1" align="end" sideOffset={8}>
+                                  <div className="flex flex-col gap-1">
+                                    <EditChannelDialog
+                                      companyId={child.id}
+                                      companyName={child.name}
+                                      currentChannels={totalChannels}
+                                    />
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span>{credits}</span>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                                title="Edit Credits"
-                                onClick={() => {
-                                  setEditCreditChild({ id: child.id, name: child.name });
-                                  setEditCreditAmount(credits.toString());
-                                }}
-                              >
-                                <Pencil className="size-3" />
-                              </Button>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:bg-zinc-800 shrink-0">
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-1" align="end" sideOffset={8}>
+                                  <div className="flex flex-col gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start font-normal text-xs h-7"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditCreditChild({ id: child.id, name: child.name });
+                                        setEditCreditAmount(credits.toString());
+                                      }}
+                                    >
+                                      Edit Credit Balance
+                                    </Button>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                             </div>
                           </TableCell>
                           <TableCell>
