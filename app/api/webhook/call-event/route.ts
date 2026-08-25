@@ -81,7 +81,9 @@ export async function POST(req: Request) {
     const existingPending = await prisma.callLog.findFirst({
       where: {
         companyId,
-        receiverNumber: customer_number,
+        lead: {
+          phone: customer_number
+        },
         status: { in: ["PENDING", "QUEUED", "DISPATCHING"] }
       },
       orderBy: { startedAt: 'desc' }

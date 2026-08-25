@@ -103,30 +103,53 @@ export async function POST(req: Request) {
 
     // 5. Create PENDING CallLogs for the UI to display immediately
     try {
-      await prisma.callLog.createMany({
-        data: formattedLeads.map((lead: any) => {
+      const defaultStage = await prisma.leadPipelineStage.findFirst({
+        where: { companyId, isDefault: true }
+      });
+      
+      const callLogsToCreate = [];
+      
+      for (const lead of leads) {
+        let dbLead = await prisma.lead.findFirst({
+          where: { companyId, phone: lead.phone }
+        });
+        
+        if (!dbLead && defaultStage) {
+          dbLead = await prisma.lead.create({
+            data: {
+              firstName: lead.name || "Unknown",
+              phone: lead.phone,
+              companyId,
+              stageId: defaultStage.id
+            }
+          });
+        }
+        
+        if (dbLead) {
           const randomId = crypto.randomBytes(4).toString("hex").toUpperCase();
           const callLogIdStr = `CL${randomId}`;
-          const publicIdStr = `v1.PNX.CP000000.${callLogIdStr}`; // Mock public ID
+          const publicIdStr = `v1.PNX.CP000000.${callLogIdStr}`;
           
-          return {
+          callLogsToCreate.push({
             companyId,
             phoneNumberId: outboundNumber.id,
+            leadId: dbLead.id,
             direction: "OUTBOUND",
             status: "PENDING",
-            callerNumber: outboundNumber.number,
-            receiverNumber: lead.customer_number,
             callLogId: callLogIdStr,
             publicId: publicIdStr,
             startedAt: new Date(),
             durationSeconds: 0,
             creditsUsed: 0
-          };
-        })
-      });
+          });
+        }
+      }
+      
+      if (callLogsToCreate.length > 0) {
+        await prisma.callLog.createMany({ data: callLogsToCreate });
+      }
     } catch (dbError) {
       console.error("Failed to insert pending call logs:", dbError);
-      // We don't fail the whole request if this fails, the campaign is already started.
     }
 
     return NextResponse.json({
