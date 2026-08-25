@@ -628,6 +628,12 @@ export function NumberNotification() {
                     <div className="flex justify-between items-start">
                       <div className="flex flex-col gap-1 overflow-hidden">
                         <p className="truncate text-sm font-medium">{req.company?.name || req.email}</p>
+                        {req.message?.includes("OUTBOUND") && (
+                          <span className="w-fit text-[10px] font-bold text-red-500 uppercase border border-red-500 rounded px-1">Outbound Request</span>
+                        )}
+                        {req.message?.includes("INBOUND") && (
+                          <span className="w-fit text-[10px] font-bold text-red-500 uppercase border border-red-500 rounded px-1">Inbound Request</span>
+                        )}
                         <p className="truncate text-xs text-muted-foreground">{req.email}</p>
                         <p className="text-[10px] text-muted-foreground">
                           {new Date(req.createdAt).toLocaleDateString()} - {new Date(req.createdAt).toLocaleTimeString()}
