@@ -4,6 +4,17 @@ import { prisma } from "@/lib/prisma";
 
 const VOICELINK_API_URL = "https://app.voicelink.co.in/api";
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -93,12 +104,23 @@ export async function POST(req: Request) {
       success: true,
       message: "Campaign started successfully",
       voicelinkResponse: addLeadData,
+    }, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      }
     });
   } catch (error: any) {
     console.error("Start campaign error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to start campaign" },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+        }
+      }
     );
   }
 }
