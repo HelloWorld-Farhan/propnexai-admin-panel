@@ -484,10 +484,11 @@ export async function updatePhoneNumberForAdmin(
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            type: "subcompany_approved",
+            type: "subcompany_approved", // We can keep this or use number_assigned depending on the script
             email: user.email,
             subcompanyName: fullCompany.name,
             assignedNumber: result.number || "Pending",
+            direction: result.direction || "INBOUND",
             credits: fullCompany.creditBalance?.creditsRemaining || 0
           }),
         }).catch(err => console.error("Failed to send number assignment webhook:", err));
