@@ -488,7 +488,7 @@ export async function updatePhoneNumberForAdmin(
             email: user.email,
             subcompanyName: fullCompany.name,
             assignedNumber: result.number || "Pending",
-            direction: result.direction || "INBOUND",
+            direction: (result as any).direction || "INBOUND",
             credits: fullCompany.creditBalance?.creditsRemaining || 0
           }),
         }).catch(err => console.error("Failed to send number assignment webhook:", err));
