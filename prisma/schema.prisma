@@ -742,6 +742,7 @@ model PhoneNumber {
   /// Full external ID (e.g. v1.PNX.CP000001.PH000001).
   publicId           String
   number             String
+  channels           Int?
   label              String?
   provider           TelephonyProvider
   campaignId         String?           @db.ObjectId

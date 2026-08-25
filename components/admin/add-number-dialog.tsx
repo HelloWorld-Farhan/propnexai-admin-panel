@@ -32,6 +32,7 @@ export function AddNumberDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [newNumber, setNewNumber] = useState("");
+  const [channels, setChannels] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   async function handleAdd(e: React.FormEvent) {
@@ -46,7 +47,11 @@ export function AddNumberDialog({
       const res = await fetch(`/api/companies/${companyId}/number`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newNumber, direction }),
+        body: JSON.stringify({ 
+          newNumber, 
+          direction,
+          channels: channels ? parseInt(channels, 10) : undefined 
+        }),
       });
 
       const data = await res.json();
@@ -58,6 +63,7 @@ export function AddNumberDialog({
       toast.success(`Number added to ${companyName}`);
       setOpen(false);
       setNewNumber("");
+      setChannels("");
       onSuccess();
     } catch (err: any) {
       toast.error(err.message);
@@ -105,6 +111,18 @@ export function AddNumberDialog({
               <p className="text-xs text-muted-foreground">
                 Enter the full number including country code (no spaces or dashes required).
               </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-channels">Channels (Optional)</Label>
+              <Input
+                id="add-channels"
+                type="number"
+                min="0"
+                placeholder="e.g. 5"
+                value={channels}
+                onChange={(e) => setChannels(e.target.value)}
+                disabled={loading}
+              />
             </div>
           </div>
 

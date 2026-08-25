@@ -14,8 +14,8 @@ export async function PUT(
     const { name, totalChannels, inboundNumbers, outboundNumbers } = body as {
       name: string;
       totalChannels: number;
-      inboundNumbers: string[];
-      outboundNumbers: string[];
+      inboundNumbers: { number: string; channels: number | null }[];
+      outboundNumbers: { number: string; channels: number | null }[];
     };
 
     if (!name || !name.trim()) {
@@ -31,8 +31,8 @@ export async function PUT(
       return NextResponse.json({ error: "Company not found" }, { status: 404 });
     }
 
-    const cleanedInbounds = inboundNumbers.map(n => n.trim()).filter(n => n.length > 0);
-    const cleanedOutbounds = outboundNumbers.map(n => n.trim()).filter(n => n.length > 0);
+    const cleanedInbounds = inboundNumbers.filter(n => n.number.trim().length > 0);
+    const cleanedOutbounds = outboundNumbers.filter(n => n.number.trim().length > 0);
 
     const result = await prisma.$transaction(async (tx) => {
       // 1. Update company name
@@ -62,17 +62,24 @@ export async function PUT(
       // 3. Process Inbound Numbers
       const existingInbounds = company.phoneNumbers.filter(p => p.direction === "INBOUND");
       const existingInboundSet = new Set(existingInbounds.map(p => p.number));
-      const newInboundSet = new Set(cleanedInbounds);
+      const newInboundMap = new Map(cleanedInbounds.map(n => [n.number.trim(), n.channels]));
 
       // Delete removed inbounds
       for (const p of existingInbounds) {
-        if (!newInboundSet.has(p.number)) {
+        if (!newInboundMap.has(p.number)) {
           await tx.phoneNumber.delete({ where: { id: p.id } });
+        } else {
+          // Update channels if exists
+          await tx.phoneNumber.update({
+            where: { id: p.id },
+            data: { channels: newInboundMap.get(p.number) }
+          });
         }
       }
 
       // Create added inbounds
-      for (const number of cleanedInbounds) {
+      for (const item of cleanedInbounds) {
+        const number = item.number.trim();
         if (!existingInboundSet.has(number)) {
           const phoneNumberId = await allocatePhoneNumberEntityId(tx as any, id);
           const publicId = generatePublicId(company.name.substring(0, 3).toUpperCase(), "UNASSIGNED", phoneNumberId);
@@ -86,6 +93,7 @@ export async function PUT(
               publicId,
               assignedParentTenantId: company.parentCompanyId,
               direction: "INBOUND",
+              channels: item.channels
             } as any,
           });
         }
@@ -94,17 +102,24 @@ export async function PUT(
       // 4. Process Outbound Numbers
       const existingOutbounds = company.phoneNumbers.filter(p => p.direction === "OUTBOUND");
       const existingOutboundSet = new Set(existingOutbounds.map(p => p.number));
-      const newOutboundSet = new Set(cleanedOutbounds);
+      const newOutboundMap = new Map(cleanedOutbounds.map(n => [n.number.trim(), n.channels]));
 
       // Delete removed outbounds
       for (const p of existingOutbounds) {
-        if (!newOutboundSet.has(p.number)) {
+        if (!newOutboundMap.has(p.number)) {
           await tx.phoneNumber.delete({ where: { id: p.id } });
+        } else {
+          // Update channels if exists
+          await tx.phoneNumber.update({
+            where: { id: p.id },
+            data: { channels: newOutboundMap.get(p.number) }
+          });
         }
       }
 
       // Create added outbounds
-      for (const number of cleanedOutbounds) {
+      for (const item of cleanedOutbounds) {
+        const number = item.number.trim();
         if (!existingOutboundSet.has(number)) {
           const phoneNumberId = await allocatePhoneNumberEntityId(tx as any, id);
           const publicId = generatePublicId(company.name.substring(0, 3).toUpperCase(), "UNASSIGNED", phoneNumberId);
@@ -118,6 +133,7 @@ export async function PUT(
               publicId,
               assignedParentTenantId: company.parentCompanyId,
               direction: "OUTBOUND",
+              channels: item.channels
             } as any,
           });
         }

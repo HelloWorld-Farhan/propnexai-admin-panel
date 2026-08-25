@@ -34,8 +34,8 @@ export type CompanyRow = {
   agentsAllocated: number;
   pocEmail: string;
   lowCredit: boolean;
-  inboundNumbers?: string[];
-  outboundNumbers?: string[];
+  inboundNumbers?: { number: string; channels: number | null }[];
+  outboundNumbers?: { number: string; channels: number | null }[];
   childCompanyCount: number;
   unverifiedChildCompanyCount: number;
 };
@@ -55,16 +55,17 @@ export function MaskedNumber({ num }: { num: string }) {
   );
 }
 
-export function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row: CompanyRow; direction: "INBOUND" | "OUTBOUND"; nums: string[]; onRefresh: () => void }) {
+export function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row: CompanyRow; direction: "INBOUND" | "OUTBOUND"; nums: { number: string; channels: number | null }[]; onRefresh: () => void }) {
   return (
     <div className="flex flex-col gap-1 min-w-[120px]">
       {nums.length === 0 ? (
         <span className="text-destructive font-medium text-xs mt-1">Unassigned</span>
       ) : (
         <div className="flex flex-wrap items-center gap-1 mt-1">
-          {nums.map((num, i) => (
+          {nums.map((item, i) => (
             <span key={i} className="flex items-center">
-              <MaskedNumber num={num} />
+              <MaskedNumber num={item.number} />
+              {item.channels != null && <span className="text-[10px] text-muted-foreground ml-1 bg-muted px-1 rounded">({item.channels})</span>}
               {i < nums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
             </span>
           ))}
@@ -194,27 +195,7 @@ export function CompaniesTable({
         />
       ),
     },
-    {
-      accessorKey: "channels",
-      header: "Channels",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-between min-w-[80px]">
-          <span className="font-medium text-sm">{formatNumber(row.original.totalChannels)}</span>
-          <div onClick={(e) => e.stopPropagation()}>
-             <EditChannelDialog
-               companyId={row.original.id}
-               companyName={row.original.name}
-               currentChannels={row.original.totalChannels}
-               customTrigger={
-                 <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground shrink-0" title="Edit Channels">
-                   <Pencil className="h-3 w-3" />
-                 </Button>
-               }
-             />
-          </div>
-        </div>
-      ),
-    },
+
     {
       accessorKey: "status",
       header: "Status",

@@ -127,7 +127,7 @@ export async function listCompaniesForAdmin() {
         include: { user: { select: { email: true } } },
       },
       phoneNumbers: {
-        select: { number: true, direction: true }, // fetch ALL numbers (no take:1)
+        select: { number: true, direction: true, channels: true }, // fetch ALL numbers (no take:1)
       },
     },
   });
@@ -165,8 +165,8 @@ export async function listCompaniesForAdmin() {
       lowCredit: totalCredits < threshold,
       assignedNumber: (company as any).phoneNumbers?.[0]?.number || null, // legacy: first number
       assignedNumbers: ((company as any).phoneNumbers || []), // Return the full array with direction
-      inboundNumbers: ((company as any).phoneNumbers || []).filter((p: any) => p.direction === "INBOUND").map((p: any) => p.number),
-      outboundNumbers: ((company as any).phoneNumbers || []).filter((p: any) => p.direction === "OUTBOUND").map((p: any) => p.number),
+      inboundNumbers: ((company as any).phoneNumbers || []).filter((p: any) => p.direction === "INBOUND").map((p: any) => ({ number: p.number, channels: p.channels })),
+      outboundNumbers: ((company as any).phoneNumbers || []).filter((p: any) => p.direction === "OUTBOUND").map((p: any) => ({ number: p.number, channels: p.channels })),
     };
   });
 }
@@ -214,7 +214,7 @@ export async function getCompanyById(id: string) {
       childCompanies: {
         orderBy: { createdAt: "desc" },
         include: { 
-          phoneNumbers: { select: { number: true, direction: true } },
+          phoneNumbers: { select: { number: true, direction: true, channels: true } },
           creditBalance: { select: { creditsRemaining: true } },
           setupConfig: true
         },

@@ -77,6 +77,7 @@ export async function POST(
         publicId,
         assignedParentTenantId: company.parentCompanyId,
         direction: body.direction || null,
+        channels: body.channels !== undefined ? body.channels : null,
       } as any,
     });
 
