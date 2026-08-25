@@ -39,7 +39,7 @@ export type CompanyRow = {
 };
 
 // Masked number display: shows •••last3, hover reveals full
-function MaskedNumber({ num }: { num: string }) {
+export function MaskedNumber({ num }: { num: string }) {
   const last3 = num.replace(/\s/g, "").slice(-3);
   return (
     <span
@@ -53,7 +53,7 @@ function MaskedNumber({ num }: { num: string }) {
   );
 }
 
-function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row: CompanyRow; direction: "INBOUND" | "OUTBOUND"; nums: string[]; onRefresh: () => void }) {
+export function DirectionalNumberCell({ row, direction, nums, onRefresh }: { row: CompanyRow; direction: "INBOUND" | "OUTBOUND"; nums: string[]; onRefresh: () => void }) {
   return (
     <div className="flex flex-col gap-1 min-w-[120px]">
       {nums.length === 0 ? (
@@ -105,12 +105,12 @@ export function CompaniesTable({
       cell: ({ row }) => (
         <div>
           <div className="flex items-center gap-2">
-            <p className="font-medium">{row.original.name}</p>
+            <p className="font-medium">MainCompany({row.original.name})</p>
             <Badge variant="outline" className="flex items-center gap-1 whitespace-nowrap text-[10px] h-5 cursor-pointer hover:bg-muted" onClick={(e) => {
               e.stopPropagation();
               window.location.href = `/companies/${row.original.id}?tab=sub-companies`;
             }}>
-              Sub-Comp({row.original.childCompanyCount}) <span>&rarr;</span>
+              {row.original.childCompanyCount} Sub-Companies <span>&rarr;</span>
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">{row.original.slug}</p>

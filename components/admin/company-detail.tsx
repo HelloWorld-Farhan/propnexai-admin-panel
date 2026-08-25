@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Copy, Pencil, Trash2 } from "lucide-react";
+import { Check, Copy, Pencil, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddCreditDialog } from "@/components/admin/add-credit-dialog";
@@ -12,6 +12,7 @@ import { VerifySubCompanyDialog } from "@/components/admin/verify-sub-company-di
 import { AddNumberDialog } from "@/components/admin/add-number-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DirectionalNumberCell } from "@/components/admin/companies-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -621,7 +622,9 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Assigned Number</TableHead>
+                      <TableHead>Inbound Number</TableHead>
+                      <TableHead>Outbound Number</TableHead>
+                      <TableHead>Channels</TableHead>
                       <TableHead>Credits</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Created At</TableHead>
@@ -631,36 +634,39 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                   <TableBody>
                     {liveCompany.childCompanies.map((child: any) => {
                       const isVerified = child.status === "ACTIVE";
-                      // Show ALL assigned numbers, masked: last 3 digits visible
-                      const allNums: string[] = (child.phoneNumbers || []).map((p: any) => p.number).filter(Boolean);
-                      const assignedNum = allNums[0] || "—";
+                      const inboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "INBOUND").map((p: any) => p.number);
+                      const outboundNums = (child.phoneNumbers || []).filter((p: any) => p.direction === "OUTBOUND").map((p: any) => p.number);
+                      const assignedNum = inboundNums[0] || outboundNums[0] || "—";
+                      const totalChannels = child.setupConfig?.totalChannels || 0;
                       const credits = child.creditBalance?.creditsRemaining ?? 0;
                       return (
                         <TableRow key={child.id}>
                           <TableCell className="font-medium">{child.name}</TableCell>
                           <TableCell>
-                            {allNums.length === 0 ? (
-                              <span className="text-muted-foreground text-xs italic">Not Assigned</span>
-                            ) : (
-                              <div className="flex flex-wrap items-center gap-1">
-                                {allNums.map((num, i) => {
-                                  const last3 = num.replace(/\s/g, "").slice(-3);
-                                  return (
-                                    <span key={i} className="flex items-center">
-                                      <span
-                                        title={num}
-                                        className="inline-flex items-center gap-1 font-mono text-xs cursor-default group"
-                                      >
-                                        <span className="size-1.5 rounded-full bg-green-500 shrink-0" />
-                                        <span className="group-hover:hidden font-medium">•••{last3}</span>
-                                        <span className="hidden group-hover:inline font-medium text-primary">{num}</span>
-                                      </span>
-                                      {i < allNums.length - 1 && <span className="text-muted-foreground ml-0.5">,</span>}
-                                    </span>
-                                  );
-                                })}
+                            <DirectionalNumberCell
+                              row={{ id: child.id, name: child.name } as any}
+                              direction="INBOUND"
+                              nums={inboundNums}
+                              onRefresh={() => router.refresh()}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <DirectionalNumberCell
+                              row={{ id: child.id, name: child.name } as any}
+                              direction="OUTBOUND"
+                              nums={outboundNums}
+                              onRefresh={() => router.refresh()}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-between min-w-[80px]">
+                              <span className="font-medium text-sm">{formatNumber(totalChannels)}</span>
+                              <div onClick={(e) => e.stopPropagation()}>
+                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => window.location.href = `/companies/${child.id}?tab=channels`}>
+                                   <Plus className="h-3 w-3" />
+                                 </Button>
                               </div>
-                            )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -688,7 +694,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1 flex-wrap">
                               {/* Verify button — only for un-verified or no number assigned yet */}
-                              {(child.status !== "ACTIVE" || allNums.length === 0) && (
+                              {(child.status !== "ACTIVE" || (inboundNums.length + outboundNums.length) === 0) && (
                                 <VerifySubCompanyDialog
                                   subCompanyId={child.id}
                                   subCompanyName={child.name}
@@ -705,7 +711,7 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                                 triggerVariant="ghost"
                               />
                               {/* Show 'Verified' label if active and has number */}
-                              {isVerified && allNums.length > 0 && child.status === "ACTIVE" && (
+                              {isVerified && (inboundNums.length + outboundNums.length) > 0 && child.status === "ACTIVE" && (
                                 <span className="text-xs font-medium text-green-600">✓ Verified</span>
                               )}
                               <Button

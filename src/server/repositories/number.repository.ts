@@ -336,7 +336,7 @@ export async function updatePhoneNumberForAdmin(
     nextCampaignId,
   );
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     let phoneNumberId = existing.phoneNumberId;
     let publicId = existing.publicId;
 
@@ -464,6 +464,40 @@ export async function updatePhoneNumberForAdmin(
 
     return updatedNumber;
   });
+
+  if (companyChanged && nextCompanyId) {
+    try {
+      const fullCompany = await prisma.company.findUnique({
+        where: { id: nextCompanyId as string },
+        include: {
+          members: {
+            where: { role: "OWNER", status: "ACTIVE" },
+            include: { user: true }
+          },
+          creditBalance: true
+        }
+      });
+      const user = fullCompany?.members?.[0]?.user;
+      if (user && user.email) {
+        const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+        fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "subcompany_approved",
+            email: user.email,
+            subcompanyName: fullCompany.name,
+            assignedNumber: result.number || "Pending",
+            credits: fullCompany.creditBalance?.creditsRemaining || 0
+          }),
+        }).catch(err => console.error("Failed to send number assignment webhook:", err));
+      }
+    } catch (e) {
+      console.error("Failed to process number assignment webhook:", e);
+    }
+  }
+
+  return result;
 }
 
 export async function deletePhoneNumberForAdmin(id: string) {

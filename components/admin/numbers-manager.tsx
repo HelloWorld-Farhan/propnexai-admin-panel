@@ -109,10 +109,13 @@ export function NumbersManager({
       cell: ({ row }) => (
         <div>
           <div className="flex items-center gap-2">
-            <p className="font-medium">{row.original.company?.name ?? "Unknown Company"}</p>
-            {row.original.company?.parentCompanyId && (
-              <Badge variant="outline" className="text-[10px] h-5">Sub-Company</Badge>
-            )}
+            <p className="font-medium">
+              {row.original.company
+                ? row.original.company.parentCompanyId
+                  ? `SubCompany(${row.original.company.name})`
+                  : `MainCompany(${row.original.company.name})`
+                : "Unknown Company"}
+            </p>
           </div>
           <p className="text-xs text-muted-foreground">
             {row.original.company?.cli ?? ""}

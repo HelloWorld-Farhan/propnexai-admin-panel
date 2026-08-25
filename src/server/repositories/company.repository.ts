@@ -214,8 +214,9 @@ export async function getCompanyById(id: string) {
       childCompanies: {
         orderBy: { createdAt: "desc" },
         include: { 
-          phoneNumbers: { select: { number: true } },
-          creditBalance: { select: { creditsRemaining: true } }
+          phoneNumbers: { select: { number: true, direction: true } },
+          creditBalance: { select: { creditsRemaining: true } },
+          setupConfig: true
         },
       },
     },
@@ -287,27 +288,6 @@ export async function deleteCompanyById(id: string) {
         );
       }
 
-      // Unassign phone numbers (if any) and suffix them to prevent ID collision in the unassigned pool
-      const phoneNumbers = await tx.phoneNumber.findMany({ 
-        where: { companyId: id },
-        select: { id: true, phoneNumberId: true, publicId: true, number: true }
-      });
-      if (phoneNumbers.length > 0) {
-        await Promise.all(
-          phoneNumbers.map((phone) =>
-            tx.phoneNumber.update({
-              where: { id: phone.id },
-              data: {
-                companyId: null,
-                assignedParentTenantId: parentId,
-                phoneNumberId: `${phone.phoneNumberId}-sub-${id.slice(-4)}`,
-                publicId: `${phone.publicId}-sub-${id.slice(-4)}`,
-                number: `${phone.number}-sub-${id.slice(-4)}`,
-              }
-            })
-          )
-        );
-      }
 
       // --- Continue Hard Deletion (leaves first, then company) ---
       
