@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCompanyById } from "@/server/repositories/company.repository";
-import { prisma } from "@/server/db";
+import { prisma } from "@/lib/prisma";
 
 const VOICELINK_API_URL = "https://app.voicelink.co.in/api";
 

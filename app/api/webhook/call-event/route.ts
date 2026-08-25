@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/server/db";
+import { prisma } from "@/lib/prisma";
 
 // Endpoint to receive Voicelink call events
 export async function POST(req: Request) {
