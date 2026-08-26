@@ -61,6 +61,7 @@ export async function POST(req: Request) {
     const didNumber = outboundNumber.number.replace("+", "");
     const mainServerUrl = process.env.MAIN_SERVER_URL || "http://200.234.34.240:3002"; // Fallback to Hostinger IP
     
+    let addLeadData = null;
     try {
       console.log(`Forwarding ${leads.length} leads to Hostinger server to bypass firewall...`);
       const res = await axios.post(`${mainServerUrl}/api/obd/voicelink/add-leads`, {
@@ -74,7 +75,8 @@ export async function POST(req: Request) {
         }
       });
       
-      console.log("Hostinger successfully processed Voicelink requests:", res.data);
+      addLeadData = res.data;
+      console.log("Hostinger successfully processed Voicelink requests:", addLeadData);
     } catch (err: any) {
       console.error("Failed to forward leads to Hostinger:", err.message);
       throw err;
