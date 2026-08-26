@@ -73,27 +73,32 @@ export async function POST(req: Request) {
       throw new Error("Invalid authentication response from Voicelink");
     }
 
-    // 3. Format leads for Voicelink Bulk API
-    const formattedLeads = leads.map((lead: any) => ({
-      customer_number: lead.phone,
-      country_code: "91",
-      custom_parameters: JSON.stringify({ name: lead.name, companyId }),
-    }));
+    // 3 & 4. Send leads to Voicelink one by one using the exact working payload
+    const didNumber = outboundNumber.number.replace("+", "");
+    const responses = await Promise.all(
+      leads.map(async (lead: any) => {
+        try {
+          const res = await axios.post(`${VOICELINK_API_URL}/v1/add_lead`, {
+            did_number: didNumber,
+            customer_number: lead.phone,
+            country_code: "91",
+            custom_parameters: JSON.stringify({ name: lead.name, companyId })
+          }, {
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+              Authorization: `Bearer ${token}`,
+            }
+          });
+          return res.data;
+        } catch (err: any) {
+          console.error(`Failed to add lead ${lead.phone}:`, err.response?.data || err.message);
+          throw err;
+        }
+      })
+    );
 
-    // 4. Send leads to Voicelink
-    const addLeadRes = await axios.post(`${VOICELINK_API_URL}/v1/add_lead`, {
-      did_number: outboundNumber.number.replace("+", ""),
-      call_limit: Math.max(1, Math.floor(Number(company.channels || 1))), // Ensure it's an integer >= 1
-      leads: formattedLeads,
-    }, {
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        Authorization: `Bearer ${token}`,
-      }
-    });
-
-    const addLeadData = addLeadRes.data;
+    const addLeadData = responses[0]; // Just pass back the first response for logging
 
     // 5. Create PENDING CallLogs for the UI to display immediately
     try {
