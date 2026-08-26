@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Authenticate with Voicelink
-    const loginRes = await fetch(`${VOICELINK_API_URL}/auth/login`, {
+    const loginRes = await fetch(`${VOICELINK_API_URL}/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
