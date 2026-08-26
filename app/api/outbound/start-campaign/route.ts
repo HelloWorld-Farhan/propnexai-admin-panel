@@ -3,6 +3,7 @@ import { getCompanyById } from "@/src/server/repositories/company.repository";
 import { prisma } from "@/lib/prisma";
 import { CallDirection, CallStatus } from "@prisma/client";
 import crypto from "crypto";
+import axios from "axios";
 
 const VOICELINK_API_URL = "https://app.voicelink.co.in/api";
 export const preferredRegion = 'bom1';
@@ -56,24 +57,17 @@ export async function POST(req: Request) {
     }
 
     // 2. Authenticate with Voicelink
-    const loginRes = await fetch(`${VOICELINK_API_URL}/v1/auth/login`, {
-      method: "POST",
+    const loginRes = await axios.post(`${VOICELINK_API_URL}/v1/auth/login`, {
+      username: "propnex",
+      password: "PropnexAi2025@#",
+    }, {
       headers: { 
         "Content-Type": "application/json",
         "Accept": "application/json"
       },
-      body: JSON.stringify({
-        username: "propnex",
-        password: "PropnexAi2025@#",
-      }),
     });
 
-    if (!loginRes.ok) {
-      throw new Error("Failed to authenticate with Voicelink");
-    }
-
-    const loginData = await loginRes.json();
-    const token = loginData.data?.access_token;
+    const token = loginRes.data?.data?.access_token || loginRes.data?.access_token;
 
     if (!token) {
       throw new Error("Invalid authentication response from Voicelink");
@@ -86,26 +80,19 @@ export async function POST(req: Request) {
     }));
 
     // 4. Send leads to Voicelink
-    const addLeadRes = await fetch(`${VOICELINK_API_URL}/v1/add_lead`, {
-      method: "POST",
+    const addLeadRes = await axios.post(`${VOICELINK_API_URL}/v1/add_lead`, {
+      did_number: outboundNumber.number.replace("+", ""),
+      call_limit: Math.max(1, Math.floor(Number(company.channels || 1))), // Ensure it's an integer >= 1
+      leads: formattedLeads,
+    }, {
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
         Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        did_number: outboundNumber.number.replace("+", ""),
-        call_limit: Math.max(1, Math.floor(Number(company.channels || 1))), // Ensure it's an integer >= 1
-        leads: formattedLeads,
-      }),
+      }
     });
 
-    if (!addLeadRes.ok) {
-      const errorText = await addLeadRes.text();
-      throw new Error(`Voicelink API error: ${errorText}`);
-    }
-
-    const addLeadData = await addLeadRes.json();
+    const addLeadData = addLeadRes.data;
 
     // 5. Create PENDING CallLogs for the UI to display immediately
     try {
@@ -170,8 +157,15 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error("Start campaign error:", error);
+    
+    // Check if it's an axios error with a response
+    const errorMessage = error.response?.data?.message 
+      || error.response?.data 
+      || error.message 
+      || "Failed to start campaign";
+
     return NextResponse.json(
-      { error: error.message || "Failed to start campaign" },
+      { error: typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage) },
       { 
         status: 500,
         headers: {
