@@ -5,6 +5,7 @@ import { CallDirection, CallStatus } from "@prisma/client";
 import crypto from "crypto";
 
 const VOICELINK_API_URL = "https://app.voicelink.co.in/api";
+export const preferredRegion = 'bom1';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
