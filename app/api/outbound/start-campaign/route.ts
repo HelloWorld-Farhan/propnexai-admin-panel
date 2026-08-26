@@ -107,20 +107,32 @@ export async function POST(req: Request) {
       if (callLogsToCreate.length > 0) {
         await prisma.callLog.createMany({ data: callLogsToCreate as any });
       }
-    } catch (dbError) {
-      console.error("Failed to insert pending call logs:", dbError);
-    }
 
-    return NextResponse.json({
-      success: true,
-      message: "Campaign initialized in database. Frontend must now trigger Voicelink API.",
-      didNumber: didNumber,
-    }, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-      }
-    });
+      return NextResponse.json({
+        success: true,
+        message: "Campaign started successfully.",
+        didNumber: didNumber,
+        channels: typeof (company as any).channels === "number" ? (company as any).channels : 1
+      }, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+        }
+      });
+    } catch (dbError: any) {
+      console.error("Database error creating call logs:", dbError);
+      return NextResponse.json({
+        success: true,
+        message: "Campaign started (DB logging failed).",
+        didNumber: didNumber,
+        channels: typeof (company as any).channels === "number" ? (company as any).channels : 1
+      }, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+        }
+      });
+    }
   } catch (error: any) {
     console.error("Start campaign error:", error);
     
