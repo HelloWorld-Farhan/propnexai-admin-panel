@@ -56,49 +56,29 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Authenticate with Voicelink
-    const loginRes = await axios.post(`${VOICELINK_API_URL}/v1/auth/login`, {
-      username: "propnex",
-      password: "PropnexAi2025@#",
-    }, {
-      headers: { 
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-    });
-
-    const token = loginRes.data?.data?.access_token || loginRes.data?.access_token;
-
-    if (!token) {
-      throw new Error("Invalid authentication response from Voicelink");
-    }
-
-    // 3 & 4. Send leads to Voicelink one by one using the exact working payload
+    // 3 & 4. Send leads to our own Hostinger server (propnexai-main-server)
+    // which is not blocked by Voicelink's firewall.
     const didNumber = outboundNumber.number.replace("+", "");
-    const responses = await Promise.all(
-      leads.map(async (lead: any) => {
-        try {
-          const res = await axios.post(`${VOICELINK_API_URL}/v1/add_lead`, {
-            did_number: didNumber,
-            customer_number: lead.phone,
-            country_code: "91",
-            custom_parameters: JSON.stringify({ name: lead.name, companyId })
-          }, {
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-              Authorization: `Bearer ${token}`,
-            }
-          });
-          return res.data;
-        } catch (err: any) {
-          console.error(`Failed to add lead ${lead.phone}:`, err.response?.data || err.message);
-          throw err;
+    const mainServerUrl = process.env.MAIN_SERVER_URL || "http://200.234.34.240:3002"; // Fallback to Hostinger IP
+    
+    try {
+      console.log(`Forwarding ${leads.length} leads to Hostinger server to bypass firewall...`);
+      const res = await axios.post(`${mainServerUrl}/api/obd/voicelink/add-leads`, {
+        leads,
+        didNumber,
+        companyId,
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
         }
-      })
-    );
-
-    const addLeadData = responses[0]; // Just pass back the first response for logging
+      });
+      
+      console.log("Hostinger successfully processed Voicelink requests:", res.data);
+    } catch (err: any) {
+      console.error("Failed to forward leads to Hostinger:", err.message);
+      throw err;
+    }
 
     // 5. Create PENDING CallLogs for the UI to display immediately
     try {
