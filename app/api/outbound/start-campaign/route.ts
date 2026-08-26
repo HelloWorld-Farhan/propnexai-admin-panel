@@ -94,7 +94,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         did_number: outboundNumber.number.replace("+", ""),
-        call_limit: Math.max(1, parseInt(company.channels || "1", 10)), // Ensure it's an integer >= 1
+        call_limit: Math.max(1, Math.floor(Number(company.channels || 1))), // Ensure it's an integer >= 1
         leads: formattedLeads,
       }),
     });
