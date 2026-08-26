@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     // 3 & 4. Send leads to our own Hostinger server (propnexai-main-server)
     // which is not blocked by Voicelink's firewall.
     const didNumber = outboundNumber.number.replace("+", "");
-    const mainServerUrl = process.env.MAIN_SERVER_URL || "http://200.234.34.240:3002"; // Fallback to Hostinger IP
+    const mainServerUrl = "http://200.234.34.240:3001"; // Hardcoded to 3001 as requested
     
     let addLeadData = null;
     try {
