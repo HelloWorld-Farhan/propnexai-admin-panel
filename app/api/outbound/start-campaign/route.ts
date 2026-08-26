@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username: "propnex",
-        password: "PropnexAi2025@#*",
+        password: "PropnexAi2025@#",
       }),
     });
 
