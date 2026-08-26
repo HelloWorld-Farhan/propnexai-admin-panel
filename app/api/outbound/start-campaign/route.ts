@@ -76,6 +76,7 @@ export async function POST(req: Request) {
     // 3. Format leads for Voicelink Bulk API
     const formattedLeads = leads.map((lead: any) => ({
       customer_number: lead.phone,
+      country_code: "91",
       custom_parameters: JSON.stringify({ name: lead.name, companyId }),
     }));
 
