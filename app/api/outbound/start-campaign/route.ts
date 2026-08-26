@@ -57,7 +57,10 @@ export async function POST(req: Request) {
     // 2. Authenticate with Voicelink
     const loginRes = await fetch(`${VOICELINK_API_URL}/v1/auth/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
       body: JSON.stringify({
         username: "propnex",
         password: "PropnexAi2025@#",
@@ -86,6 +89,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
