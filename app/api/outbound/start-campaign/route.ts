@@ -112,7 +112,7 @@ export async function POST(req: Request) {
         success: true,
         message: "Campaign started successfully.",
         didNumber: didNumber,
-        channels: typeof (company as any).channels === "number" ? (company as any).channels : 1
+        channels: typeof outboundNumber.channels === "number" ? outboundNumber.channels : 1
       }, {
         headers: {
           "Access-Control-Allow-Origin": "*",
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
         success: true,
         message: "Campaign started (DB logging failed).",
         didNumber: didNumber,
-        channels: typeof (company as any).channels === "number" ? (company as any).channels : 1
+        channels: typeof outboundNumber.channels === "number" ? outboundNumber.channels : 1
       }, {
         headers: {
           "Access-Control-Allow-Origin": "*",
