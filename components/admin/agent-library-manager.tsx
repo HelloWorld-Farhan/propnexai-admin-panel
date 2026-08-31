@@ -5,6 +5,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/admin/data-table";
+import { Loader2 } from "lucide-react";
+import { AdminVoiceAudioPlayer } from "./voice-audio-player";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +71,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const columns: ColumnDef<AgentEntry>[] = [
@@ -90,12 +93,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
         const url = row.original.demoAudioUrl;
         if (!url) return <span className="text-muted-foreground">—</span>;
         return (
-          <audio 
-            controls 
-            src={getPlayableAudioUrl(url)} 
-            className="h-9 w-[200px]"
-            preload="metadata"
-          />
+          <AdminVoiceAudioPlayer src={url} />
         );
       },
     },
@@ -342,11 +340,14 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                       }}
                     />
                     <div className="relative">
-                      <Button type="button" variant="secondary" className="w-[100px]">Upload</Button>
+                      <Button type="button" variant="secondary" className="w-[100px]" disabled={isUploading}>
+                        {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Upload"}
+                      </Button>
                       <input 
                         type="file" 
                         accept="audio/*,video/mp4" 
                         className="absolute inset-0 opacity-0 cursor-pointer"
+                        disabled={isUploading}
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
@@ -356,10 +357,10 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                             return;
                           }
                           
+                          setIsUploading(true);
                           const reader = new FileReader();
                           reader.onload = async (ev) => {
                             const base64Data = (ev.target?.result as string).split(",")[1];
-                            const toastId = toast.loading("Uploading to Google Drive...");
                             try {
                               const res = await fetch("/api/upload-audio", {
                                 method: "POST",
@@ -374,9 +375,11 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                               const data = await res.json();
                               setForm({ ...form, demoAudioUrl: data.url });
                               if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
-                              toast.success("Uploaded successfully!", { id: toastId });
+                              toast.success("Uploaded successfully!");
                             } catch (err) {
-                              toast.error("Upload failed", { id: toastId });
+                              toast.error("Upload failed");
+                            } finally {
+                              setIsUploading(false);
                             }
                           };
                           reader.readAsDataURL(file);
@@ -391,8 +394,8 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
             </div>
             
             <div className="flex justify-end pt-2">
-              <Button onClick={handleSave} disabled={saving} className="bg-emerald-500 hover:bg-emerald-600 text-white">
-                {saving ? "Saving..." : "Save"}
+              <Button onClick={handleSave} disabled={saving} className="bg-emerald-500 hover:bg-emerald-600 text-white min-w-[80px]">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
               </Button>
             </div>
           </DialogContent>
