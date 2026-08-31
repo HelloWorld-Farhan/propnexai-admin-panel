@@ -33,7 +33,10 @@ export async function POST(req: Request) {
       throw new Error(data.message || "Unknown error from Apps Script");
     }
 
-    return NextResponse.json({ url: data.url });
+    // Apps Script 'ok(m)' puts the payload inside the 'message' property
+    const finalUrl = data.message?.url || data.url; 
+
+    return NextResponse.json({ url: finalUrl });
   } catch (error) {
     console.error("Audio upload error:", error);
     return NextResponse.json(
