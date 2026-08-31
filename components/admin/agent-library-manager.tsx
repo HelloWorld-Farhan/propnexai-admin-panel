@@ -218,18 +218,18 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label>Slug</Label>
-                  <Input
-                    value={form.slug}
-                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                    disabled={!!editingId}
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label>Name (Card Heading)</Label>
                   <Input
                     value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      if (!editingId) {
+                        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                        setForm({ ...form, name, slug });
+                      } else {
+                        setForm({ ...form, name });
+                      }
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
