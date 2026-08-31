@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/admin/data-table";
-import { Loader2 } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
 import { AdminVoiceAudioPlayer } from "./voice-audio-player";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,9 @@ type AgentEntry = {
   bestFor: string;
   demoAudioUrl: string;
   isPublished: boolean;
+  assignedByName?: string | null;
+  assignedByEmail?: string | null;
+  assignedByPhone?: string | null;
 };
 
 const emptyForm = {
@@ -76,14 +79,35 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
 
   const columns: ColumnDef<AgentEntry>[] = [
     { accessorKey: "name", header: "Name" },
-    { accessorKey: "category", header: "Work" },
+    { 
+      accessorKey: "category", 
+      header: "Work",
+      cell: ({ row }) => (
+        <div className="flex flex-col gap-0.5">
+          <span>{row.original.category}</span>
+          <span className="text-xs text-muted-foreground">
+            {row.original.bestFor} | {row.original.language}
+          </span>
+        </div>
+      )
+    },
     {
       accessorKey: "isPublished",
       header: "Active",
       cell: ({ row }) => (
-        <Badge variant={row.original.isPublished ? "success" : "secondary"}>
-          {row.original.isPublished ? "Yes" : "No"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={row.original.isPublished ? "success" : "secondary"}>
+            {row.original.isPublished ? "Yes" : "No"}
+          </Badge>
+          {row.original.isPublished && row.original.assignedByEmail && (
+            <div 
+              title={`Assigned by: ${row.original.assignedByName || "User"}\nEmail: ${row.original.assignedByEmail}\nPhone: ${row.original.assignedByPhone || "N/A"}`}
+              className="text-zinc-400 hover:text-white transition-colors cursor-help"
+            >
+              <Info className="h-4 w-4" />
+            </div>
+          )}
+        </div>
       ),
     },
     {
@@ -91,9 +115,13 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
       header: "Voice Link",
       cell: ({ row }) => {
         const url = row.original.demoAudioUrl;
+        const voiceChar = row.original.voice?.toLowerCase().startsWith('m') ? '(M)' : row.original.voice?.toLowerCase().startsWith('f') ? '(F)' : '';
         if (!url) return <span className="text-muted-foreground">—</span>;
         return (
-          <AdminVoiceAudioPlayer src={url} />
+          <div className="flex items-center gap-2">
+            {voiceChar && <span className="text-sm text-zinc-400">{voiceChar}</span>}
+            <AdminVoiceAudioPlayer src={url} />
+          </div>
         );
       },
     },
@@ -272,13 +300,21 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
 
                 <div className="space-y-2">
                   <Label>Voice</Label>
-                  <Input
-                    value={form.voice}
-                    onChange={(e) => {
-                      setForm({ ...form, voice: e.target.value });
+                  <Select
+                    value={form.voice || ""}
+                    onValueChange={(value) => {
+                      setForm({ ...form, voice: value });
                       if (errors.voice) setErrors({ ...errors, voice: "" });
                     }}
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select voice" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
                   {errors.voice && <p className="text-sm text-red-500">{errors.voice}</p>}
                 </div>
 
@@ -401,7 +437,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={entries} searchKey="name" searchPlaceholder="Search agents..." />
+      <DataTable columns={columns} data={entries} searchKeys={["name", "category", "profile"]} searchPlaceholder="Search agents..." />
 
       <Dialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
         <DialogContent>

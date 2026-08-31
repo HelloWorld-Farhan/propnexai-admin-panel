@@ -955,6 +955,11 @@ model AgentLibraryEntry {
   isPublished           Boolean   @default(true)
   sortOrder             Int       @default(0)
   totalVoices           Int       @default(10)
+  
+  assignedByName        String?
+  assignedByEmail       String?
+  assignedByPhone       String?
+
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
