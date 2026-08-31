@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,9 +54,20 @@ const emptyForm = {
   isPublished: true,
 };
 
+function getPlayableAudioUrl(url: string) {
+  if (!url) return "";
+  const driveRegex = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
+  const match = url.match(driveRegex);
+  if (match && match[1]) {
+    return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+  }
+  return url;
+}
+
 export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -80,14 +92,12 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
         const url = row.original.demoAudioUrl;
         if (!url) return <span className="text-muted-foreground">—</span>;
         return (
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline max-w-[150px] truncate block"
-          >
-            {url}
-          </a>
+          <audio 
+            controls 
+            src={getPlayableAudioUrl(url)} 
+            className="h-9 w-[200px]"
+            preload="metadata"
+          />
         );
       },
     },
@@ -111,7 +121,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
             variant="destructive"
             onClick={(e) => {
               e.stopPropagation();
-              void handleDelete(row.original.id);
+              setDeleteId(row.original.id);
             }}
           >
             Delete
@@ -182,15 +192,17 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
     router.refresh();
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this library entry?")) return;
-    const res = await fetch(`/api/agents?id=${id}`, { method: "DELETE" });
+  async function handleDeleteConfirm() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/agents?id=${deleteId}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      return toast.error(data.error ?? "Failed to delete");
+      toast.error(data.error ?? "Failed to delete");
+    } else {
+      toast.success("Agent deleted");
+      router.refresh();
     }
-    toast.success("Agent deleted");
-    router.refresh();
+    setDeleteId(null);
   }
 
   return (
@@ -341,8 +353,6 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                           const file = e.target.files?.[0];
                           if (!file) return;
                           
-                          // Google Apps Script and Next.js Serverless have payload limits. 
-                          // Base64 adds 33% overhead, so limit to 5MB max (mostly for audio).
                           if (file.size > 5 * 1024 * 1024) {
                             toast.error("File is too large. Please upload a file smaller than 5MB.");
                             return;
@@ -391,6 +401,21 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
         </Dialog>
       </div>
       <DataTable columns={columns} data={entries} searchKey="name" searchPlaceholder="Search agents..." />
+
+      <Dialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Agent</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-zinc-400">Are you sure you want to delete this agent? This action cannot be undone.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
