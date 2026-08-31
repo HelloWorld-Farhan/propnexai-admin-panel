@@ -54,15 +54,16 @@ const emptyForm = {
   isPublished: true,
 };
 
-function getPlayableAudioUrl(url: string) {
+const getPlayableAudioUrl = (url: string) => {
   if (!url) return "";
   const driveRegex = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
   const match = url.match(driveRegex);
   if (match && match[1]) {
-    return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+    // Add &confirm=t to bypass virus scan warnings for slightly larger files
+    return `https://drive.google.com/uc?export=download&id=${match[1]}&confirm=t`;
   }
   return url;
-}
+};
 
 export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
   const router = useRouter();
