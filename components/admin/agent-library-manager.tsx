@@ -209,14 +209,14 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
           <DialogTrigger asChild>
             <Button onClick={openCreate}>Add agent</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingId ? "Edit library agent" : "Add library agent"}
               </DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="space-y-2">
                   <Label>Slug</Label>
                   <Input
@@ -303,27 +303,27 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
+              <div className="space-y-3">
+                <div className="space-y-1">
                   <Label>Profile</Label>
                   <Textarea
-                    className="h-20"
+                    className="h-16 min-h-[64px]"
                     value={form.profile}
                     onChange={(e) => setForm({ ...form, profile: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label>Sample prompt</Label>
                   <Textarea
-                    className="h-20"
+                    className="h-16 min-h-[64px]"
                     value={form.samplePrompt}
                     onChange={(e) => setForm({ ...form, samplePrompt: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label>Default first message</Label>
                   <Textarea
-                    className="h-20"
+                    className="h-16 min-h-[64px]"
                     value={form.defaultFirstMessage}
                     onChange={(e) =>
                       setForm({ ...form, defaultFirstMessage: e.target.value })
@@ -366,7 +366,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                               setForm({ ...form, demoAudioUrl: data.url });
                               toast.success("Uploaded successfully!", { id: toastId });
                             } catch (err) {
-                              toast.error("Failed to upload audio", { id: toastId });
+                              toast.error("Upload failed", { id: toastId });
                             }
                           };
                           reader.readAsDataURL(file);
@@ -377,8 +377,9 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end mt-4">
-              <Button onClick={handleSave} disabled={saving}>
+            
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSave} disabled={saving} className="bg-emerald-500 hover:bg-emerald-600 text-white">
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>
