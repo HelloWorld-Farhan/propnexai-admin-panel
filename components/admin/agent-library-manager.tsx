@@ -83,17 +83,12 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
       accessorKey: "category", 
       header: "Work",
       cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5">
-          <span>{row.original.category}</span>
-          <span className="text-xs text-muted-foreground">
-            {row.original.bestFor} | {row.original.language}
-          </span>
-        </div>
+        <span>{row.original.category}</span>
       )
     },
     {
       accessorKey: "isPublished",
-      header: "Active",
+      header: "Status",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <Badge variant={row.original.isPublished ? "success" : "secondary"}>
@@ -124,6 +119,16 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
           </div>
         );
       },
+    },
+    {
+      accessorKey: "bestFor",
+      header: "Best For",
+      cell: ({ row }) => <span>{row.original.bestFor || "Inbound"}</span>
+    },
+    {
+      accessorKey: "language",
+      header: "Language",
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.language || "English"}</span>
     },
     {
       id: "actions",
@@ -218,7 +223,10 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
 
   async function handleDeleteConfirm() {
     if (!deleteId) return;
-    const res = await fetch(`/api/agents?id=${deleteId}`, { method: "DELETE" });
+    const targetId = deleteId;
+    setDeleteId(null);
+
+    const res = await fetch(`/api/agents?id=${targetId}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       toast.error(data.error ?? "Failed to delete");
@@ -226,7 +234,6 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
       toast.success("Agent deleted");
       router.refresh();
     }
-    setDeleteId(null);
   }
 
   return (
@@ -319,7 +326,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Active Status</Label>
+                  <Label>Status</Label>
                   <Select
                     value={form.isPublished ? "yes" : "no"}
                     onValueChange={(value) =>
@@ -437,7 +444,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={entries} searchKeys={["name", "category", "profile"]} searchPlaceholder="Search agents..." />
+      <DataTable columns={columns} data={entries} searchKeys={["name", "category", "profile"]} searchPlaceholder="Search by name or work..." />
 
       <Dialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
         <DialogContent>
