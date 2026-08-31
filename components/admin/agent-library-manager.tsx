@@ -56,11 +56,8 @@ const emptyForm = {
 
 const getPlayableAudioUrl = (url: string) => {
   if (!url) return "";
-  const driveRegex = /drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/;
-  const match = url.match(driveRegex);
-  if (match && match[1]) {
-    // Add &confirm=t to bypass virus scan warnings for slightly larger files
-    return `https://drive.google.com/uc?export=download&id=${match[1]}&confirm=t`;
+  if (url.includes("drive.google.com")) {
+    return `/api/audio-proxy?url=${encodeURIComponent(url)}`;
   }
   return url;
 };
@@ -354,8 +351,8 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                           const file = e.target.files?.[0];
                           if (!file) return;
                           
-                          if (file.size > 5 * 1024 * 1024) {
-                            toast.error("File is too large. Please upload a file smaller than 5MB.");
+                          if (file.size > 50 * 1024 * 1024) {
+                            toast.error("File is too large. Please upload a file smaller than 50MB.");
                             return;
                           }
                           
@@ -387,7 +384,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">Uploads must be smaller than 5MB.</p>
+                  <p className="text-xs text-muted-foreground">Uploads must be smaller than 50MB.</p>
                   {errors.demoAudioUrl && <p className="text-sm text-red-500">{errors.demoAudioUrl}</p>}
                 </div>
               </div>
