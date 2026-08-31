@@ -40,6 +40,7 @@ type AgentEntry = {
   demoAudioUrl: string;
   isPublished: boolean;
   sortOrder: number;
+  totalVoices: number;
   _count: { deployedAgents: number };
 };
 
@@ -56,6 +57,7 @@ const emptyForm = {
   demoAudioUrl: "",
   isPublished: true,
   sortOrder: 0,
+  totalVoices: 10,
 };
 
 export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
@@ -83,9 +85,19 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
       ),
     },
     {
-      id: "deployed",
-      header: "Deployed",
+      id: "totalVoices",
+      header: "Total Voices",
+      cell: ({ row }) => row.original.totalVoices,
+    },
+    {
+      id: "assigned",
+      header: "Assigned",
       cell: ({ row }) => row.original._count.deployedAgents,
+    },
+    {
+      id: "available",
+      header: "Available",
+      cell: ({ row }) => row.original.totalVoices - row.original._count.deployedAgents,
     },
     {
       id: "actions",
@@ -145,6 +157,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
       demoAudioUrl: entry.demoAudioUrl ?? "",
       isPublished: entry.isPublished,
       sortOrder: entry.sortOrder,
+      totalVoices: entry.totalVoices ?? 10,
     });
     setOpen(true);
   }
@@ -196,98 +209,80 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
           <DialogTrigger asChild>
             <Button onClick={openCreate}>Add agent</Button>
           </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingId ? "Edit library agent" : "Add library agent"}
               </DialogTitle>
             </DialogHeader>
-            <div className="grid gap-3">
-              <div className="space-y-2">
-                <Label>Slug</Label>
-                <Input
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  disabled={!!editingId}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Name</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Profile</Label>
-                <Textarea
-                  value={form.profile}
-                  onChange={(e) => setForm({ ...form, profile: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Input
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Use cases (comma-separated)</Label>
-                <Input
-                  value={form.useCases}
-                  onChange={(e) => setForm({ ...form, useCases: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Default type</Label>
-                <Select
-                  value={form.defaultType}
-                  onValueChange={(value) => setForm({ ...form, defaultType: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="INBOUND">INBOUND</SelectItem>
-                    <SelectItem value="OUTBOUND">OUTBOUND</SelectItem>
-                    <SelectItem value="HYBRID">HYBRID</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Sample prompt</Label>
-                <Textarea
-                  value={form.samplePrompt}
-                  onChange={(e) => setForm({ ...form, samplePrompt: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Default first message</Label>
-                <Textarea
-                  value={form.defaultFirstMessage}
-                  onChange={(e) =>
-                    setForm({ ...form, defaultFirstMessage: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Demo audio URL</Label>
-                <Input
-                  value={form.demoAudioUrl}
-                  onChange={(e) => setForm({ ...form, demoAudioUrl: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Sort order</Label>
+                  <Label>Slug</Label>
                   <Input
-                    type="number"
-                    value={form.sortOrder}
-                    onChange={(e) =>
-                      setForm({ ...form, sortOrder: Number(e.target.value) })
-                    }
+                    value={form.slug}
+                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                    disabled={!!editingId}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Input
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Use cases (comma-separated)</Label>
+                  <Input
+                    value={form.useCases}
+                    onChange={(e) => setForm({ ...form, useCases: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Default type</Label>
+                  <Select
+                    value={form.defaultType}
+                    onValueChange={(value) => setForm({ ...form, defaultType: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="INBOUND">INBOUND</SelectItem>
+                      <SelectItem value="OUTBOUND">OUTBOUND</SelectItem>
+                      <SelectItem value="HYBRID">HYBRID</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Total Voices</Label>
+                    <Input
+                      type="number"
+                      value={form.totalVoices}
+                      onChange={(e) =>
+                        setForm({ ...form, totalVoices: Number(e.target.value) })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sort order</Label>
+                    <Input
+                      type="number"
+                      value={form.sortOrder}
+                      onChange={(e) =>
+                        setForm({ ...form, sortOrder: Number(e.target.value) })
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Published</Label>
@@ -307,6 +302,82 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                   </Select>
                 </div>
               </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Profile</Label>
+                  <Textarea
+                    className="h-20"
+                    value={form.profile}
+                    onChange={(e) => setForm({ ...form, profile: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sample prompt</Label>
+                  <Textarea
+                    className="h-20"
+                    value={form.samplePrompt}
+                    onChange={(e) => setForm({ ...form, samplePrompt: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Default first message</Label>
+                  <Textarea
+                    className="h-20"
+                    value={form.defaultFirstMessage}
+                    onChange={(e) =>
+                      setForm({ ...form, defaultFirstMessage: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Demo audio URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={form.demoAudioUrl}
+                      onChange={(e) => setForm({ ...form, demoAudioUrl: e.target.value })}
+                    />
+                    <div className="relative">
+                      <Button type="button" variant="secondary" className="w-[100px]">Upload</Button>
+                      <input 
+                        type="file" 
+                        accept="audio/*,video/mp4" 
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          const reader = new FileReader();
+                          reader.onload = async (ev) => {
+                            const base64Data = (ev.target?.result as string).split(",")[1];
+                            const toastId = toast.loading("Uploading to Google Drive...");
+                            try {
+                              const res = await fetch("/api/upload-audio", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ 
+                                  fileData: base64Data, 
+                                  fileName: file.name,
+                                  mimeType: file.type 
+                                })
+                              });
+                              if (!res.ok) throw new Error("Upload failed");
+                              const data = await res.json();
+                              setForm({ ...form, demoAudioUrl: data.url });
+                              toast.success("Uploaded successfully!", { id: toastId });
+                            } catch (err) {
+                              toast.error("Failed to upload audio", { id: toastId });
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end mt-4">
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? "Saving..." : "Save"}
               </Button>
