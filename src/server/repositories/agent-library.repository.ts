@@ -23,6 +23,10 @@ export type AgentLibraryInput = {
   name: string;
   profile: string;
   category: string;
+  tone?: string;
+  language?: string;
+  voice?: string;
+  bestFor?: string;
   useCases: string[];
   defaultType: AgentType;
   estimatedSetupMinutes: number;

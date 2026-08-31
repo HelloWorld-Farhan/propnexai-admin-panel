@@ -32,16 +32,12 @@ type AgentEntry = {
   name: string;
   profile: string;
   category: string;
-  useCases: string[];
-  defaultType: string;
-  estimatedSetupMinutes: number;
-  samplePrompt: string;
-  defaultFirstMessage: string;
+  tone: string;
+  language: string;
+  voice: string;
+  bestFor: string;
   demoAudioUrl: string;
   isPublished: boolean;
-  sortOrder: number;
-  totalVoices: number;
-  _count: { deployedAgents: number };
 };
 
 const emptyForm = {
@@ -49,15 +45,12 @@ const emptyForm = {
   name: "",
   profile: "",
   category: "",
-  useCases: "",
-  defaultType: "INBOUND",
-  estimatedSetupMinutes: 5,
-  samplePrompt: "",
-  defaultFirstMessage: "",
+  tone: "",
+  language: "",
+  voice: "",
+  bestFor: "",
   demoAudioUrl: "",
   isPublished: true,
-  sortOrder: 0,
-  totalVoices: 10,
 };
 
 export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
@@ -66,18 +59,14 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const columns: ColumnDef<AgentEntry>[] = [
     { accessorKey: "name", header: "Name" },
-    { accessorKey: "slug", header: "Slug" },
-    { accessorKey: "category", header: "Category" },
-  {
-      accessorKey: "defaultType",
-      header: "Type",
-    },
+    { accessorKey: "category", header: "Work" },
     {
       accessorKey: "isPublished",
-      header: "Published",
+      header: "Active",
       cell: ({ row }) => (
         <Badge variant={row.original.isPublished ? "success" : "secondary"}>
           {row.original.isPublished ? "Yes" : "No"}
@@ -85,19 +74,22 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
       ),
     },
     {
-      id: "totalVoices",
-      header: "Total Voices",
-      cell: ({ row }) => row.original.totalVoices,
-    },
-    {
-      id: "assigned",
-      header: "Assigned",
-      cell: ({ row }) => row.original._count.deployedAgents,
-    },
-    {
-      id: "available",
-      header: "Available",
-      cell: ({ row }) => row.original.totalVoices - row.original._count.deployedAgents,
+      accessorKey: "demoAudioUrl",
+      header: "Voice Link",
+      cell: ({ row }) => {
+        const url = row.original.demoAudioUrl;
+        if (!url) return <span className="text-muted-foreground">—</span>;
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline max-w-[150px] truncate block"
+          >
+            {url}
+          </a>
+        );
+      },
     },
     {
       id: "actions",
@@ -132,52 +124,51 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
   function openCreate() {
     setEditingId(null);
     setForm(emptyForm);
+    setErrors({});
     setOpen(true);
   }
 
-  function openEdit(entry: AgentEntry & {
-    profile?: string;
-    useCases?: string[];
-    samplePrompt?: string;
-    defaultFirstMessage?: string;
-    demoAudioUrl?: string;
-    estimatedSetupMinutes?: number;
-  }) {
+  function openEdit(entry: AgentEntry) {
     setEditingId(entry.id);
     setForm({
       slug: entry.slug,
       name: entry.name,
       profile: entry.profile ?? "",
       category: entry.category,
-      useCases: (entry.useCases ?? []).join(", "),
-      defaultType: entry.defaultType,
-      estimatedSetupMinutes: entry.estimatedSetupMinutes ?? 5,
-      samplePrompt: entry.samplePrompt ?? "",
-      defaultFirstMessage: entry.defaultFirstMessage ?? "",
+      tone: entry.tone ?? "",
+      language: entry.language ?? "",
+      voice: entry.voice ?? "",
+      bestFor: entry.bestFor ?? "",
       demoAudioUrl: entry.demoAudioUrl ?? "",
       isPublished: entry.isPublished,
-      sortOrder: entry.sortOrder,
-      totalVoices: entry.totalVoices ?? 10,
     });
+    setErrors({});
     setOpen(true);
   }
 
-  async function handleSave() {
-    setSaving(true);
-    const payload = {
-      ...form,
-      useCases: form.useCases
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      estimatedSetupMinutes: Number(form.estimatedSetupMinutes),
-      sortOrder: Number(form.sortOrder),
-    };
+  function validateForm() {
+    const newErrors: Record<string, string> = {};
+    if (!form.name.trim()) newErrors.name = "Name cannot be empty";
+    if (!form.category.trim()) newErrors.category = "Company Occupation cannot be empty";
+    if (!form.profile.trim()) newErrors.profile = "Company Info cannot be empty";
+    if (!form.tone.trim()) newErrors.tone = "Tone cannot be empty";
+    if (!form.language.trim()) newErrors.language = "Language cannot be empty";
+    if (!form.voice.trim()) newErrors.voice = "Voice cannot be empty";
+    if (!form.bestFor.trim()) newErrors.bestFor = "Best for cannot be empty";
+    if (!form.demoAudioUrl.trim()) newErrors.demoAudioUrl = "You must provide a link or upload an audio recording";
 
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
+  async function handleSave() {
+    if (!validateForm()) return;
+
+    setSaving(true);
     const res = await fetch("/api/agents", {
       method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editingId ? { id: editingId, ...payload } : payload),
+      body: JSON.stringify(editingId ? { id: editingId, ...form } : form),
     });
     setSaving(false);
 
@@ -218,7 +209,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label>Name (Card Heading)</Label>
+                  <Label>Name of Company</Label>
                   <Input
                     value={form.name}
                     onChange={(e) => {
@@ -229,63 +220,62 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                       } else {
                         setForm({ ...form, name });
                       }
+                      if (errors.name) setErrors({ ...errors, name: "" });
                     }}
                   />
+                  {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
                 </div>
+                
                 <div className="space-y-2">
-                  <Label>Category (Bottom Left Box)</Label>
+                  <Label>Company Occupation</Label>
                   <Input
                     value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, category: e.target.value });
+                      if (errors.category) setErrors({ ...errors, category: "" });
+                    }}
                   />
+                  {errors.category && <p className="text-sm text-red-500">{errors.category}</p>}
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Use cases (Card Subheading, comma-separated)</Label>
+                  <Label>Tone</Label>
                   <Input
-                    value={form.useCases}
-                    onChange={(e) => setForm({ ...form, useCases: e.target.value })}
+                    value={form.tone}
+                    onChange={(e) => {
+                      setForm({ ...form, tone: e.target.value });
+                      if (errors.tone) setErrors({ ...errors, tone: "" });
+                    }}
                   />
+                  {errors.tone && <p className="text-sm text-red-500">{errors.tone}</p>}
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Default type (Bottom Right Box)</Label>
-                  <Select
-                    value={form.defaultType}
-                    onValueChange={(value) => setForm({ ...form, defaultType: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="INBOUND">INBOUND</SelectItem>
-                      <SelectItem value="OUTBOUND">OUTBOUND</SelectItem>
-                      <SelectItem value="HYBRID">HYBRID</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Language</Label>
+                  <Input
+                    value={form.language}
+                    onChange={(e) => {
+                      setForm({ ...form, language: e.target.value });
+                      if (errors.language) setErrors({ ...errors, language: "" });
+                    }}
+                  />
+                  {errors.language && <p className="text-sm text-red-500">{errors.language}</p>}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Total Voices</Label>
-                    <Input
-                      type="number"
-                      value={form.totalVoices}
-                      onChange={(e) =>
-                        setForm({ ...form, totalVoices: Number(e.target.value) })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Sort order</Label>
-                    <Input
-                      type="number"
-                      value={form.sortOrder}
-                      onChange={(e) =>
-                        setForm({ ...form, sortOrder: Number(e.target.value) })
-                      }
-                    />
-                  </div>
-                </div>
+
                 <div className="space-y-2">
-                  <Label>Published</Label>
+                  <Label>Voice</Label>
+                  <Input
+                    value={form.voice}
+                    onChange={(e) => {
+                      setForm({ ...form, voice: e.target.value });
+                      if (errors.voice) setErrors({ ...errors, voice: "" });
+                    }}
+                  />
+                  {errors.voice && <p className="text-sm text-red-500">{errors.voice}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Active Status</Label>
                   <Select
                     value={form.isPublished ? "yes" : "no"}
                     onValueChange={(value) =>
@@ -305,37 +295,41 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
 
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label>Profile / Info (Card Description)</Label>
+                  <Label>Company Info</Label>
                   <Textarea
-                    className="h-16 min-h-[64px]"
+                    className="h-32 min-h-[128px]"
                     value={form.profile}
-                    onChange={(e) => setForm({ ...form, profile: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, profile: e.target.value });
+                      if (errors.profile) setErrors({ ...errors, profile: "" });
+                    }}
                   />
+                  {errors.profile && <p className="text-sm text-red-500">{errors.profile}</p>}
                 </div>
+
                 <div className="space-y-1">
-                  <Label>Sample prompt</Label>
+                  <Label>Best For</Label>
                   <Textarea
-                    className="h-16 min-h-[64px]"
-                    value={form.samplePrompt}
-                    onChange={(e) => setForm({ ...form, samplePrompt: e.target.value })}
+                    className="h-24 min-h-[96px]"
+                    value={form.bestFor}
+                    onChange={(e) => {
+                      setForm({ ...form, bestFor: e.target.value });
+                      if (errors.bestFor) setErrors({ ...errors, bestFor: "" });
+                    }}
                   />
+                  {errors.bestFor && <p className="text-sm text-red-500">{errors.bestFor}</p>}
                 </div>
-                <div className="space-y-1">
-                  <Label>Default first message</Label>
-                  <Textarea
-                    className="h-16 min-h-[64px]"
-                    value={form.defaultFirstMessage}
-                    onChange={(e) =>
-                      setForm({ ...form, defaultFirstMessage: e.target.value })
-                    }
-                  />
-                </div>
+
                 <div className="space-y-2">
-                  <Label>Demo audio URL</Label>
+                  <Label>Demo audio URL (Link or Upload)</Label>
                   <div className="flex gap-2">
                     <Input
                       value={form.demoAudioUrl}
-                      onChange={(e) => setForm({ ...form, demoAudioUrl: e.target.value })}
+                      placeholder="https://..."
+                      onChange={(e) => {
+                        setForm({ ...form, demoAudioUrl: e.target.value });
+                        if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
+                      }}
                     />
                     <div className="relative">
                       <Button type="button" variant="secondary" className="w-[100px]">Upload</Button>
@@ -350,7 +344,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                           // Google Apps Script and Next.js Serverless have payload limits. 
                           // Base64 adds 33% overhead, so limit to 5MB max (mostly for audio).
                           if (file.size > 5 * 1024 * 1024) {
-                            toast.error("File is too large. Please upload an audio file smaller than 5MB.");
+                            toast.error("File is too large. Please upload a file smaller than 5MB.");
                             return;
                           }
                           
@@ -371,6 +365,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                               if (!res.ok) throw new Error("Upload failed");
                               const data = await res.json();
                               setForm({ ...form, demoAudioUrl: data.url });
+                              if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
                               toast.success("Uploaded successfully!", { id: toastId });
                             } catch (err) {
                               toast.error("Upload failed", { id: toastId });
@@ -381,6 +376,8 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                       />
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">Uploads must be smaller than 5MB.</p>
+                  {errors.demoAudioUrl && <p className="text-sm text-red-500">{errors.demoAudioUrl}</p>}
                 </div>
               </div>
             </div>
