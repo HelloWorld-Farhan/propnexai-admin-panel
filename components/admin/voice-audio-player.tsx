@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause, ExternalLink } from "lucide-react";
@@ -88,6 +88,10 @@ export function AdminVoiceAudioPlayer({
     } else {
       try {
         setError(false);
+        // Pause all other audio elements on the page
+        document.querySelectorAll("audio").forEach((a) => {
+          if (a !== el) a.pause();
+        });
         await el.play();
         setIsPlaying(true);
       } catch (e) {
@@ -121,36 +125,21 @@ export function AdminVoiceAudioPlayer({
     <div className={cn("flex items-center gap-2", className)}>
       <audio ref={audioRef} src={audioSrc} preload="metadata" className="hidden" />
       
-      {/* Player Box */}
-      <div className="flex items-center gap-2 rounded-full bg-[#161719] border border-white/10 p-1 pr-3 w-[160px]">
-        <button
-          onClick={toggle}
-          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
-        >
-          {isPlaying ? (
-            <Pause className="size-3 fill-current" />
-          ) : (
-            <Play className="size-3 fill-current ml-0.5" />
-          )}
-        </button>
-
-        <div className="flex flex-1 flex-col justify-center">
-          <div className="text-[10px] tabular-nums text-white/90 text-center font-medium">
-            {error ? "Error" : `${fmt(current)} / ${duration ? fmt(duration) : "0:00"}`}
-          </div>
-        </div>
-      </div>
-
-      {/* External Link */}
-      <a 
-        href={src}
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="flex size-7 items-center justify-center rounded-md bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
-        title="Open exact link"
+      {/* Simple Player matching UI */}
+      <button
+        onClick={toggle}
+        className="flex items-center justify-center text-zinc-300 hover:text-white transition-colors"
       >
-        <ExternalLink className="size-3.5" />
-      </a>
+        {isPlaying ? (
+          <Pause className="size-4" />
+        ) : (
+          <Play className="size-4" />
+        )}
+      </button>
+
+      <div className="text-xs tabular-nums text-zinc-300 font-medium">
+        {error ? "Error" : `${fmt(current)} / ${duration ? fmt(duration) : "0:00"}`}
+      </div>
     </div>
   );
 }
