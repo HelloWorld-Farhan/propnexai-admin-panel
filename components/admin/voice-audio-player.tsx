@@ -140,6 +140,23 @@ export function AdminVoiceAudioPlayer({
       <div className="text-xs tabular-nums text-zinc-300 font-medium">
         {error ? "Error" : `${fmt(current)} / ${duration ? fmt(duration) : "0:00"}`}
       </div>
+
+      <a 
+        href={(function getPreviewUrl(url: string) {
+          if (!url) return "";
+          const match = url.match(/(?:id=|d\/)([a-zA-Z0-9_-]+)/);
+          if (match && url.includes("drive.google.com")) {
+            return `https://drive.google.com/file/d/${match[1]}/view`;
+          }
+          return url;
+        })(src)}
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="flex size-7 items-center justify-center rounded-md bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors ml-2"
+        title="Preview original file"
+      >
+        <ExternalLink className="size-3.5" />
+      </a>
     </div>
   );
 }
