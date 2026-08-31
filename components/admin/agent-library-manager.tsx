@@ -226,28 +226,28 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Name</Label>
+                  <Label>Name (Card Heading)</Label>
                   <Input
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Category</Label>
+                  <Label>Category (Bottom Left Box)</Label>
                   <Input
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Use cases (comma-separated)</Label>
+                  <Label>Use cases (Card Subheading, comma-separated)</Label>
                   <Input
                     value={form.useCases}
                     onChange={(e) => setForm({ ...form, useCases: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Default type</Label>
+                  <Label>Default type (Bottom Right Box)</Label>
                   <Select
                     value={form.defaultType}
                     onValueChange={(value) => setForm({ ...form, defaultType: value })}
@@ -305,7 +305,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
 
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label>Profile</Label>
+                  <Label>Profile / Info (Card Description)</Label>
                   <Textarea
                     className="h-16 min-h-[64px]"
                     value={form.profile}
