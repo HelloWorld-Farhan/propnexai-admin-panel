@@ -347,6 +347,13 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                           const file = e.target.files?.[0];
                           if (!file) return;
                           
+                          // Google Apps Script and Next.js Serverless have payload limits. 
+                          // Base64 adds 33% overhead, so limit to 5MB max (mostly for audio).
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error("File is too large. Please upload an audio file smaller than 5MB.");
+                            return;
+                          }
+                          
                           const reader = new FileReader();
                           reader.onload = async (ev) => {
                             const base64Data = (ev.target?.result as string).split(",")[1];
