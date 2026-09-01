@@ -75,6 +75,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const columns: ColumnDef<AgentEntry>[] = [
@@ -206,7 +207,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
     setSaving(true);
     const dataToSend = {
       ...form,
-      slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+      slug: form.slug || (form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.random().toString(36).substring(2, 6))
     };
     const res = await fetch("/api/agents", {
       method: editingId ? "PUT" : "POST",
@@ -262,7 +263,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                     onChange={(e) => {
                       const name = e.target.value;
                       if (!editingId) {
-                        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + "-" + Math.random().toString(36).substring(2, 6);
                         setForm({ ...form, name, slug });
                       } else {
                         setForm({ ...form, name });
@@ -388,7 +389,12 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                     />
                     <div className="relative">
                       <Button type="button" variant="secondary" className="w-[100px]" disabled={isUploading}>
-                        {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Upload"}
+                        {isUploading ? (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-xs">{uploadProgress}%</span>
+                          </div>
+                        ) : "Upload"}
                       </Button>
                       <input 
                         type="file" 
@@ -405,6 +411,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                           }
                           
                           setIsUploading(true);
+                          setUploadProgress(0);
                           const reader = new FileReader();
                           reader.onload = async (ev) => {
                             const base64Data = (ev.target?.result as string).split(",")[1];
@@ -413,28 +420,50 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                               const { url: webhookUrl } = await urlRes.json();
                               if (!webhookUrl) throw new Error("Webhook URL not found");
 
-                              const res = await fetch(webhookUrl, {
-                                method: "POST",
-                                headers: { "Content-Type": "text/plain" },
-                                body: JSON.stringify({ 
-                                  type: "upload_agent_audio",
-                                  fileData: base64Data, 
-                                  fileName: file.name,
-                                  mimeType: file.type 
-                                })
-                              });
-                              if (!res.ok) throw new Error("Upload failed");
-                              const data = await res.json();
-                              if (data.status === "error") throw new Error(data.message);
-                              
-                              const finalUrl = data.message?.url || data.url;
-                              setForm({ ...form, demoAudioUrl: finalUrl });
-                              if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
-                              toast.success("Uploaded successfully!");
+                              const xhr = new XMLHttpRequest();
+                              xhr.open("POST", webhookUrl);
+                              xhr.setRequestHeader("Content-Type", "text/plain");
+
+                              xhr.upload.onprogress = (event) => {
+                                if (event.lengthComputable) {
+                                  const percent = Math.round((event.loaded / event.total) * 100);
+                                  setUploadProgress(percent);
+                                }
+                              };
+
+                              xhr.onload = () => {
+                                setIsUploading(false);
+                                if (xhr.status >= 200 && xhr.status < 300) {
+                                  try {
+                                    const data = JSON.parse(xhr.responseText);
+                                    if (data.status === "error") throw new Error(data.message);
+                                    
+                                    const finalUrl = data.message?.url || data.url;
+                                    setForm({ ...form, demoAudioUrl: finalUrl });
+                                    if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
+                                    toast.success("Uploaded successfully!");
+                                  } catch (err) {
+                                    toast.error("Upload failed");
+                                  }
+                                } else {
+                                  toast.error("Upload failed");
+                                }
+                              };
+
+                              xhr.onerror = () => {
+                                setIsUploading(false);
+                                toast.error("Upload failed");
+                              };
+
+                              xhr.send(JSON.stringify({ 
+                                type: "upload_agent_audio",
+                                fileData: base64Data, 
+                                fileName: file.name,
+                                mimeType: file.type 
+                              }));
                             } catch (err) {
-                              toast.error("Upload failed");
-                            } finally {
                               setIsUploading(false);
+                              toast.error("Upload failed");
                             }
                           };
                           reader.readAsDataURL(file);
