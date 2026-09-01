@@ -339,23 +339,6 @@ export async function updateCredits(
   } else {
     // ── DEDUCTION ───────────────────────────────────────────────────────
     const cutAmount = Math.abs(delta);
-    const mainCreditsRemaining = Math.max(0, existingBalance?.creditsRemaining || 0);
-    const mainCut = Math.min(cutAmount, mainCreditsRemaining);
-    const remainder = cutAmount - mainCut;
-
-    // Figure out sub-companies BEFORE entering transaction
-    let childIds: string[] = [];
-    if (remainder > 0) {
-      const children = await prisma.company.findMany({
-        where: { parentCompanyId: companyId, status: { not: "SUSPENDED" } },
-        select: { id: true },
-      });
-      childIds = children.map((c) => c.id);
-    }
-
-    const subCutPerChild = childIds.length > 0
-      ? Number((remainder / childIds.length).toFixed(4))
-      : 0;
 
     // ── DEDUCTION: absolute SET (not relative decrement) ───────────────────
     // Reading CURRENT balance from DB right now (freshest possible read)
@@ -395,7 +378,7 @@ export async function updateCredits(
 
     // Re-fetch childIds based on remainder (only needed if mainCut exhausted balance)
     if (remainder > 0) {
-      const freshChildren = childIds.length > 0 ? childIds : (await prisma.company.findMany({
+      const freshChildren = (await prisma.company.findMany({
         where: { parentCompanyId: companyId, status: { not: "SUSPENDED" } },
         select: { id: true },
       })).map((c) => c.id);
@@ -434,27 +417,26 @@ export async function updateCredits(
 
     // ── SIDE EFFECTS outside transaction ─────────────────────────────────
     // Log CreditUsage for main company
-    if (mainCut > 0) {
+    if (actualMainCut > 0) {
       await prisma.creditUsage.create({
         data: {
           companyId,
-          amount: mainCut,
+          amount: actualMainCut,
           reason: "MANUAL_ADJUSTMENT",
-          description: `Admin deducted ${mainCut}`,
+          description: `Admin deducted ${actualMainCut}`,
         },
       }).catch(console.error);
     }
 
     // Log CreditUsage for each sub-company
-    for (const childId of childIds) {
-      if (subCutPerChild > 0) {
-        affectedSubCompanies.push({ id: childId, subCut: subCutPerChild });
+    for (const { id: childId, subCut } of affectedSubCompanies) {
+      if (subCut > 0) {
         await prisma.creditUsage.create({
           data: {
             companyId: childId,
-            amount: subCutPerChild,
+            amount: subCut,
             reason: "MANUAL_ADJUSTMENT",
-            description: `Admin deducted ${subCutPerChild} (Cascaded from Parent)`,
+            description: `Admin deducted ${subCut} (Cascaded from Parent)`,
           },
         }).catch(console.error);
       }
