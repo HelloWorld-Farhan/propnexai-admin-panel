@@ -422,7 +422,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
 
                               // Simulate progress since fetch doesn't support real upload progress
                               // and XHR has CORS issues with Google Apps Script redirects.
-                              const durationMs = Math.max(2000, (file.size / (1024 * 1024)) * 800); // ~1.25MB/s
+                              const durationMs = Math.max(4000, (file.size / (1024 * 1024)) * 1200); // ~0.8MB/s
                               const intervalMs = 100;
                               const step = 100 / (durationMs / intervalMs);
                               let currentProgress = 0;
@@ -455,9 +455,12 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                               setForm({ ...form, demoAudioUrl: finalUrl });
                               if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
                               toast.success("Uploaded successfully!");
+                              
+                              setTimeout(() => {
+                                setIsUploading(false);
+                              }, 800);
                             } catch (err) {
                               toast.error("Upload failed");
-                            } finally {
                               setIsUploading(false);
                             }
                           };
