@@ -982,6 +982,15 @@ export function AgentLibraryNotification() {
                       {notif.data?.userEmail && (
                         <p className="text-[11px] text-muted-foreground/70">{notif.data.userEmail}</p>
                       )}
+                      {notif.user?.phone && (
+                        <p className="text-[11px] text-muted-foreground/70">Phone: {notif.user.phone}</p>
+                      )}
+                      {notif.company?.slug && (
+                        <p className="text-[11px] text-muted-foreground/70">Slug: {notif.company.slug}</p>
+                      )}
+                      {notif.data?.agentId && (
+                        <p className="text-[10px] text-muted-foreground/50">Agent ID: {notif.data.agentId}</p>
+                      )}
                       <p className="text-[10px] text-muted-foreground/70 mt-0.5">
                         {new Date(notif.createdAt).toLocaleDateString()} — {new Date(notif.createdAt).toLocaleTimeString()}
                       </p>
