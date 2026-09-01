@@ -49,7 +49,7 @@ export function ApprovalNotification() {
 
   async function fetchPending() {
     try {
-      const res = await fetch("/api/pending-approvals");
+      const res = await fetch(`/api/pending-approvals?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setPending(data.pending);
@@ -314,7 +314,7 @@ export function CreditNotification() {
 
   async function fetchRequests() {
     try {
-      const res = await fetch("/api/credit-requests");
+      const res = await fetch(`/api/credit-requests?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setPending(data.requests);
@@ -539,7 +539,7 @@ export function NumberNotification() {
 
   async function fetchRequests() {
     try {
-      const res = await fetch("/api/number-requests");
+      const res = await fetch(`/api/number-requests?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setPending(data.requests);
@@ -735,7 +735,7 @@ export function SubCompanyNotification() {
 
   async function fetchPending() {
     try {
-      const res = await fetch("/api/sub-company-verifications");
+      const res = await fetch(`/api/sub-company-verifications?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setPendingCount(data.count);
@@ -837,7 +837,7 @@ export function GeneralNotification() {
 
   async function fetchNotifications() {
     try {
-      const res = await fetch("/api/notifications");
+      const res = await fetch(`/api/notifications?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         setNotifications(data.notifications || []);
@@ -921,7 +921,7 @@ export function AgentLibraryNotification() {
 
   async function fetchNotifications() {
     try {
-      const res = await fetch("/api/notifications");
+      const res = await fetch(`/api/notifications?t=${Date.now()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
         // Only show agent library assignment request notifications
