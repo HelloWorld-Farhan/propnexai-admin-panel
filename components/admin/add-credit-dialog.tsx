@@ -32,10 +32,10 @@ export function AddCreditDialog({
 
   async function addCredits(e: React.FormEvent) {
     e.preventDefault();
-    const amount = Number.parseInt(creditAmount, 10);
+    const amount = Number.parseFloat(creditAmount);
     
-    if (!Number.isFinite(amount) || amount < 5000) {
-      return toast.error("Minimum credit top-up is 5000");
+    if (!Number.isFinite(amount) || amount < 0.01) {
+      return toast.error("Minimum credit top-up is 0.01");
     }
     
     setSaving(true);
@@ -82,7 +82,8 @@ export function AddCreditDialog({
               <Label>Amount</Label>
               <Input
                 type="number"
-                min={5000}
+                min={0.01}
+                step="0.01"
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(e.target.value)}
                 placeholder="e.g. 5000"

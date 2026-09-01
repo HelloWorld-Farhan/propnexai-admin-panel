@@ -5,7 +5,7 @@ import { requireAdminSession } from "@/lib/auth/server-session";
 import { addCredits } from "@/src/server/repositories/setup.repository";
 
 const schema = z.object({
-  amount: z.number().int().min(5000, "Minimum credit top-up is 5000"),
+  amount: z.number().min(0.01, "Minimum credit top-up is 0.01"),
   description: z.string().min(1),
 });
 

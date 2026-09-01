@@ -5,7 +5,7 @@ import { requireAdminSession } from "@/lib/auth/server-session";
 import { updateCredits } from "@/src/server/repositories/setup.repository";
 
 const schema = z.object({
-  delta: z.number().int(),
+  delta: z.number(),
   description: z.string().min(1),
 });
 
