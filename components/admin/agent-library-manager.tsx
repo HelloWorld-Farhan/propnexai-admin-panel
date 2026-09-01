@@ -204,10 +204,14 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
     if (!validateForm()) return;
 
     setSaving(true);
+    const dataToSend = {
+      ...form,
+      slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    };
     const res = await fetch("/api/agents", {
       method: editingId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editingId ? { id: editingId, ...form } : form),
+      body: JSON.stringify(editingId ? { id: editingId, ...dataToSend } : dataToSend),
     });
     setSaving(false);
 
@@ -405,10 +409,15 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                           reader.onload = async (ev) => {
                             const base64Data = (ev.target?.result as string).split(",")[1];
                             try {
-                              const res = await fetch("/api/upload-audio", {
+                              const urlRes = await fetch("/api/upload-audio");
+                              const { url: webhookUrl } = await urlRes.json();
+                              if (!webhookUrl) throw new Error("Webhook URL not found");
+
+                              const res = await fetch(webhookUrl, {
                                 method: "POST",
-                                headers: { "Content-Type": "application/json" },
+                                headers: { "Content-Type": "text/plain" },
                                 body: JSON.stringify({ 
+                                  type: "upload_agent_audio",
                                   fileData: base64Data, 
                                   fileName: file.name,
                                   mimeType: file.type 
@@ -416,7 +425,10 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                               });
                               if (!res.ok) throw new Error("Upload failed");
                               const data = await res.json();
-                              setForm({ ...form, demoAudioUrl: data.url });
+                              if (data.status === "error") throw new Error(data.message);
+                              
+                              const finalUrl = data.message?.url || data.url;
+                              setForm({ ...form, demoAudioUrl: finalUrl });
                               if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
                               toast.success("Uploaded successfully!");
                             } catch (err) {
