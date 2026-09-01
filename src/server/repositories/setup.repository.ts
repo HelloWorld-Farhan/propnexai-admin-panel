@@ -217,102 +217,83 @@ export async function addCredits(
 ) {
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { parentCompanyId: true, name: true }
+    select: { parentCompanyId: true, name: true, members: { include: { user: true } } }
   });
   
   if (!company) throw new Error("Company not found");
-  
-  const targetCompanyId = companyId;
 
-  return prisma.$transaction(async (tx) => {
-    const balance = await tx.creditBalance.upsert({
-      where: { companyId: targetCompanyId },
-      create: {
-        companyId: targetCompanyId,
-        creditsRemaining: amount,
-        creditsUsed: 0,
-      },
-      update: {
-        creditsRemaining: { increment: amount },
-      },
-    });
-
-    await tx.creditUsage.create({
-      data: {
-        companyId: targetCompanyId,
-        amount,
-        reason: "MANUAL_ADJUSTMENT",
-        description,
-      },
-    });
-
-    try {
-      await prisma.$runCommandRaw({
-        insert: "BillingHistory",
-        documents: [
-          {
-            companyId: { $oid: targetCompanyId },
-            date: { $date: new Date().toISOString() },
-            description: description || "Credit Top-up via Admin",
-            type: "Top-up",
-            credits: amount,
-            amount: 0,
-            status: "Completed",
-          }
-        ]
-      });
-
-      // Fire and forget notification
-      notificationService.sendCreditUpdateEmail({
-        companyName: company.name || targetCompanyId,
-        amount,
-        newBalance: balance.creditsRemaining,
-        type: "TOP_UP"
-      }).catch(console.error);
-
-      return balance;
-    } catch (err) {
-      console.error("Failed to insert into BillingHistory:", err);
-    }
-
-    // Resolve any pending Credit Requests for this company
-    await tx.supportRequest.updateMany({
-      where: {
-        companyId,
-        reason: "BILLING_CREDITS",
-        status: "NEW"
-      },
-      data: { status: "RESOLVED" }
-    });
-
-    // Send webhook for credit update
-    try {
-      const company = await tx.company.findUnique({
-        where: { id: companyId },
-        include: { members: { include: { user: true } } }
-      });
-      if (company && company.members.length > 0) {
-        const user = company.members[0].user;
-        if (user && user.email) {
-          const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
-          fetch(webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "credit_added",
-              email: user.email,
-              name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
-              amount: amount,
-            }),
-          }).catch(err => console.error("Failed to send credit added webhook:", err));
-        }
-      }
-    } catch (e) {
-      console.error("Failed to process credit webhook:", e);
-    }
-
-    return balance;
+  // ── Core write: just the balance update, no raw commands ─────────────
+  const balance = await prisma.creditBalance.upsert({
+    where: { companyId },
+    create: {
+      companyId,
+      creditsRemaining: amount,
+      creditsUsed: 0,
+    },
+    update: {
+      creditsRemaining: { increment: amount },
+    },
   });
+
+  // ── Side effects (all outside any transaction) ────────────────────────
+  // CreditUsage log
+  await prisma.creditUsage.create({
+    data: { companyId, amount, reason: "MANUAL_ADJUSTMENT", description },
+  }).catch(console.error);
+
+  // Resolve pending credit support requests
+  await prisma.supportRequest.updateMany({
+    where: { companyId, reason: "BILLING_CREDITS", status: "NEW" },
+    data: { status: "RESOLVED" },
+  }).catch(console.error);
+
+  // BillingHistory (raw command — must be outside transaction)
+  try {
+    await prisma.$runCommandRaw({
+      insert: "BillingHistory",
+      documents: [{
+        companyId: { $oid: companyId },
+        date: { $date: new Date().toISOString() },
+        description: description || "Credit Top-up via Admin",
+        type: "Top-up",
+        credits: amount,
+        amount: 0,
+        status: "Completed",
+      }]
+    });
+  } catch (err) {
+    console.error("Failed to insert into BillingHistory:", err);
+  }
+
+  // Email notification
+  notificationService.sendCreditUpdateEmail({
+    companyName: company.name || companyId,
+    amount,
+    newBalance: balance.creditsRemaining,
+    type: "TOP_UP",
+  }).catch(console.error);
+
+  // Google Sheets webhook
+  try {
+    const user = company.members?.[0]?.user;
+    if (user?.email) {
+      const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "credit_added",
+          email: user.email,
+          name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
+          amount,
+        }),
+      }).catch(err => console.error("Failed to send credit added webhook:", err));
+    }
+  } catch (e) {
+    console.error("Failed to process credit webhook:", e);
+  }
+
+  return balance;
 }
 
 export async function updateCredits(
