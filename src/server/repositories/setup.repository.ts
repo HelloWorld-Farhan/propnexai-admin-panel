@@ -320,241 +320,223 @@ export async function updateCredits(
   delta: number,
   description: string,
 ) {
+  if (delta === 0) return null;
+
   const company = await prisma.company.findUnique({
     where: { id: companyId },
     select: { parentCompanyId: true, name: true }
   });
   
   if (!company) throw new Error("Company not found");
-  
-  const targetCompanyId = companyId;
 
-  const result = await prisma.$transaction(async (tx) => {
-    if (delta === 0) return null;
+  // Read current balance BEFORE transaction
+  const existingBalance = await prisma.creditBalance.findUnique({
+    where: { companyId }
+  });
 
-    let targetCompanyBalance = await tx.creditBalance.findUnique({
-      where: { companyId: targetCompanyId }
+  let finalBalance: any;
+  const affectedSubCompanies: { id: string; subCut: number }[] = [];
+
+  if (delta > 0) {
+    // ── ADDITION ────────────────────────────────────────────────────────
+    finalBalance = await prisma.creditBalance.upsert({
+      where: { companyId },
+      create: { companyId, creditsRemaining: delta, creditsUsed: 0 },
+      update: { creditsRemaining: { increment: delta } },
     });
 
-    // Handle additions normally
-    if (delta > 0) {
-      const balance = await tx.creditBalance.upsert({
-        where: { companyId: targetCompanyId },
-        create: {
-          companyId: targetCompanyId,
-          creditsRemaining: delta,
-          creditsUsed: 0,
-        },
-        update: {
-          creditsRemaining: { increment: delta },
-        },
-      });
+    // Log CreditUsage (non-transactional, best-effort)
+    await prisma.creditUsage.create({
+      data: {
+        companyId,
+        amount: delta,
+        reason: "MANUAL_ADJUSTMENT",
+        description: `Admin added ${delta}`,
+      },
+    }).catch(console.error);
 
-      await tx.creditUsage.create({
-        data: {
-          companyId: targetCompanyId,
-          amount: delta,
-          reason: "MANUAL_ADJUSTMENT",
-          description: `Admin added ${delta}`,
-        },
-      });
-
-      try {
-        await tx.$runCommandRaw({
-          insert: "BillingHistory",
-          documents: [{
-            companyId: { $oid: targetCompanyId },
-            date: { $date: new Date().toISOString() },
-            description: description || "Credit Set via Admin",
-            type: "Top-up",
-            credits: delta,
-            amount: 0,
-            status: "Completed",
-          }]
-        });
-      } catch (err) {
-        console.error("Failed to insert into BillingHistory:", err);
-      }
-
-      return balance;
-    }
-
-    // Handle deductions (delta < 0)
+  } else {
+    // ── DEDUCTION ───────────────────────────────────────────────────────
     const cutAmount = Math.abs(delta);
-    const mainCreditsRemaining = Math.max(0, targetCompanyBalance?.creditsRemaining || 0);
-    
-    // How much the main company can absorb
+    const mainCreditsRemaining = Math.max(0, existingBalance?.creditsRemaining || 0);
     const mainCut = Math.min(cutAmount, mainCreditsRemaining);
     const remainder = cutAmount - mainCut;
 
-    // 1. Process Main Company Cut
-    let finalMainBalance;
-    if (mainCut > 0) {
-      finalMainBalance = await tx.creditBalance.update({
-        where: { companyId: targetCompanyId },
-        data: {
-          creditsRemaining: { decrement: mainCut },
-          creditsUsed: { increment: mainCut },
-        },
+    // Figure out sub-companies BEFORE entering transaction
+    let childIds: string[] = [];
+    if (remainder > 0) {
+      const children = await prisma.company.findMany({
+        where: { parentCompanyId: companyId, status: { not: "SUSPENDED" } },
+        select: { id: true },
       });
+      childIds = children.map((c) => c.id);
+    }
 
-      await tx.creditUsage.create({
+    const subCutPerChild = childIds.length > 0
+      ? Number((remainder / childIds.length).toFixed(4))
+      : 0;
+
+    // ── CORE TRANSACTION: only pure Prisma model writes ─────────────────
+    const txResult = await prisma.$transaction(async (tx) => {
+      // 1. Deduct from main company
+      let mainBalance;
+      if (mainCut > 0) {
+        mainBalance = await tx.creditBalance.update({
+          where: { companyId },
+          data: {
+            creditsRemaining: { decrement: mainCut },
+            creditsUsed: { increment: mainCut },
+          },
+        });
+      } else if (remainder > 0 && childIds.length === 0) {
+        // Main has 0 balance and no sub-companies — force main negative
+        mainBalance = await tx.creditBalance.update({
+          where: { companyId },
+          data: {
+            creditsRemaining: { decrement: cutAmount },
+            creditsUsed: { increment: cutAmount },
+          },
+        });
+      } else {
+        mainBalance = existingBalance;
+      }
+
+      // 2. Deduct evenly from sub-companies if there is remainder
+      if (subCutPerChild > 0 && childIds.length > 0) {
+        for (const childId of childIds) {
+          await tx.creditBalance.upsert({
+            where: { companyId: childId },
+            create: {
+              companyId: childId,
+              creditsRemaining: -subCutPerChild,
+              creditsUsed: subCutPerChild,
+            },
+            update: {
+              creditsRemaining: { decrement: subCutPerChild },
+              creditsUsed: { increment: subCutPerChild },
+            },
+          });
+        }
+      }
+
+      return mainBalance;
+    });
+
+    finalBalance = txResult;
+
+    // ── SIDE EFFECTS outside transaction ─────────────────────────────────
+    // Log CreditUsage for main company
+    if (mainCut > 0) {
+      await prisma.creditUsage.create({
         data: {
-          companyId: targetCompanyId,
+          companyId,
           amount: mainCut,
           reason: "MANUAL_ADJUSTMENT",
           description: `Admin deducted ${mainCut}`,
         },
-      });
-    } else {
-      // Main company had no positive balance to absorb — balance stays the same
-      finalMainBalance = targetCompanyBalance || await tx.creditBalance.findUnique({
-        where: { companyId: targetCompanyId }
-      });
+      }).catch(console.error);
     }
 
-    // 2. Process Sub-Companies Cut if there is a remainder
-    if (remainder > 0) {
-      const childCompanies = await tx.company.findMany({
-        where: { parentCompanyId: targetCompanyId, status: { not: "SUSPENDED" } },
-        select: { id: true }
-      });
-
-      if (childCompanies.length > 0) {
-        // Divide remainder evenly
-        const subCut = Number((remainder / childCompanies.length).toFixed(4));
-        
-        for (const child of childCompanies) {
-          await tx.creditBalance.upsert({
-            where: { companyId: child.id },
-            create: {
-              companyId: child.id,
-              creditsRemaining: -subCut,
-              creditsUsed: subCut,
-            },
-            update: {
-              creditsRemaining: { decrement: subCut },
-              creditsUsed: { increment: subCut },
-            },
-          });
-
-          await tx.creditUsage.create({
-            data: {
-              companyId: child.id,
-              amount: subCut,
-              reason: "MANUAL_ADJUSTMENT",
-              description: `Admin deducted ${subCut} (Cascaded from Parent)`,
-            },
-          });
-          
-          try {
-            await tx.$runCommandRaw({
-              insert: "BillingHistory",
-              documents: [{
-                companyId: { $oid: child.id },
-                date: { $date: new Date().toISOString() },
-                description: description || "Credit Cut Cascaded from Parent via Admin",
-                type: "Deduction",
-                credits: -subCut,
-                amount: 0,
-                status: "Completed",
-              }]
-            });
-          } catch (err) { console.error("Failed BillingHistory for sub-company:", err); }
-        }
-      } else {
-        // No child companies to absorb the remainder! 
-        // We must force the Main company to absorb the remainder (go negative)
-        finalMainBalance = await tx.creditBalance.update({
-          where: { companyId: targetCompanyId },
+    // Log CreditUsage for each sub-company
+    for (const childId of childIds) {
+      if (subCutPerChild > 0) {
+        affectedSubCompanies.push({ id: childId, subCut: subCutPerChild });
+        await prisma.creditUsage.create({
           data: {
-            creditsRemaining: { decrement: remainder },
-            creditsUsed: { increment: remainder },
-          },
-        });
-
-        await tx.creditUsage.create({
-          data: {
-            companyId: targetCompanyId,
-            amount: remainder,
+            companyId: childId,
+            amount: subCutPerChild,
             reason: "MANUAL_ADJUSTMENT",
-            description: `Admin deducted ${remainder} (Forced Negative)`,
+            description: `Admin deducted ${subCutPerChild} (Cascaded from Parent)`,
           },
-        });
+        }).catch(console.error);
       }
     }
 
-    // Insert BillingHistory for Main Company
+    // Resolve any billing support requests
+    await prisma.supportRequest.updateMany({
+      where: { companyId, reason: "BILLING_CREDITS", status: "NEW" },
+      data: { status: "RESOLVED" },
+    }).catch(console.error);
+  }
+
+  // ── BillingHistory (raw command, always outside transaction) ────────────
+  try {
+    await prisma.$runCommandRaw({
+      insert: "BillingHistory",
+      documents: [{
+        companyId: { $oid: companyId },
+        date: { $date: new Date().toISOString() },
+        description: description || "Credit Set via Admin",
+        type: delta < 0 ? "Deduction" : "Top-up",
+        credits: delta,
+        amount: 0,
+        status: "Completed",
+      }]
+    });
+  } catch (err) {
+    console.error("Failed to insert into BillingHistory:", err);
+  }
+
+  // BillingHistory for each affected sub-company
+  for (const sub of affectedSubCompanies) {
     try {
-      await tx.$runCommandRaw({
+      await prisma.$runCommandRaw({
         insert: "BillingHistory",
-        documents: [
-          {
-            companyId: { $oid: targetCompanyId },
-            date: { $date: new Date().toISOString() },
-            description: description || "Credit Set via Admin",
-            type: "Deduction",
-            credits: -mainCut,
-            amount: 0,
-            status: "Completed",
-          }
-        ]
+        documents: [{
+          companyId: { $oid: sub.id },
+          date: { $date: new Date().toISOString() },
+          description: description || "Credit Cut Cascaded from Parent via Admin",
+          type: "Deduction",
+          credits: -sub.subCut,
+          amount: 0,
+          status: "Completed",
+        }]
       });
     } catch (err) {
-      console.error("Failed to insert into BillingHistory:", err);
+      console.error("Failed BillingHistory for sub-company:", err);
     }
+  }
 
-    // Send email notification outside transaction - non-blocking
-    notificationService.sendCreditUpdateEmail({
-      companyName: company.name || targetCompanyId,
-      amount: Math.abs(delta),
-      newBalance: finalMainBalance?.creditsRemaining || 0,
-      type: "DEDUCTION"
-    }).catch(console.error);
-    
-    await tx.supportRequest.updateMany({
-      where: {
-        companyId,
-        reason: "BILLING_CREDITS",
-        status: "NEW"
-      },
-      data: { status: "RESOLVED" }
+  // ── Email notification ──────────────────────────────────────────────────
+  notificationService.sendCreditUpdateEmail({
+    companyName: company.name || companyId,
+    amount: Math.abs(delta),
+    newBalance: finalBalance?.creditsRemaining || 0,
+    type: delta < 0 ? "DEDUCTION" : "TOP_UP",
+  }).catch(console.error);
+
+  // ── Webhook to Google Sheets ────────────────────────────────────────────
+  try {
+    const fullCompany = await prisma.company.findUnique({
+      where: { id: companyId },
+      include: { members: { include: { user: true } } }
     });
-
-    try {
-      const fullCompany = await tx.company.findUnique({
-        where: { id: companyId },
-        include: { members: { include: { user: true } } }
-      });
-      if (fullCompany && fullCompany.members.length > 0) {
-        const user = fullCompany.members[0].user;
-        if (user && user.email) {
-          const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
-          fetch(webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "credit_added",
-              email: user.email,
-              name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
-              amount: Math.abs(delta),
-            }),
-          }).catch(err => console.error("Failed to send credit added webhook:", err));
-        }
+    if (fullCompany && fullCompany.members.length > 0) {
+      const user = fullCompany.members[0].user;
+      if (user && user.email) {
+        const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+        fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "credit_added",
+            email: user.email,
+            name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
+            amount: Math.abs(delta),
+          }),
+        }).catch(err => console.error("Failed to send credit added webhook:", err));
       }
-    } catch (e) {
-      console.error("Failed to process credit webhook:", e);
     }
+  } catch (e) {
+    console.error("Failed to process credit webhook:", e);
+  }
 
-    return finalMainBalance;
-  });
-
-  // Fire-and-forget: trigger voice web sync so the credits widget
-  // shows the new balance immediately when the user opens the dashboard.
+  // ── Trigger voice web sync ─────────────────────────────────────────────
   try {
     const voiceWebUrl = process.env.VOICE_WEB_URL || "https://www.propnexai.com";
     fetch(`${voiceWebUrl}/api/internal-sync-credits`, { method: "GET" }).catch(() => {});
   } catch (_) {}
 
-  return result;
+  return finalBalance;
 }
+
