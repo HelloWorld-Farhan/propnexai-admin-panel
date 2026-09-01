@@ -1012,7 +1012,6 @@ export function AdminNotifications() {
       <NumberNotification />
       <SubCompanyNotification />
       <AgentLibraryNotification />
-      <GeneralNotification />
     </div>
   );
 }
