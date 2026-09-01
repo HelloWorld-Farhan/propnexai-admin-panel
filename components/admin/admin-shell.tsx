@@ -9,7 +9,7 @@ import {
   LifeBuoy,
   LogOut,
   Phone,
-  Radio,
+  ClipboardList,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { AdminNotifications } from "./notification-bell";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/companies", label: "Companies", icon: Building2 },
-  { href: "/channels", label: "Channels", icon: Radio },
+  { href: "/channels", label: "Form Info", icon: ClipboardList },
   { href: "/numbers", label: "Numbers", icon: Phone },
   { href: "/agents", label: "Agent Library", icon: Bot },
   { href: "/support", label: "Support", icon: LifeBuoy },

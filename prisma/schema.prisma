@@ -1792,3 +1792,16 @@ model CampaignInvitation {
 
   @@index([companyId])
 }
+
+model FormSubmission {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  formType  String   // "DEMO_CALL" or "PARTNER_APP"
+  name      String
+  email     String
+  phone     String
+  company   String?
+  industry  String?
+  clients   String?  // For Partner App
+  volume    String?  // For Partner App
+  createdAt DateTime @default(now())
+}
