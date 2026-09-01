@@ -825,6 +825,89 @@ export function SubCompanyNotification() {
   );
 }
 
+export function GeneralNotification() {
+  const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function fetchNotifications() {
+    try {
+      const res = await fetch("/api/notifications");
+      const data = await res.json();
+      if (data.success) {
+        setNotifications(data.notifications || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleDismiss(id: string) {
+    try {
+      const res = await fetch(`/api/notifications/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
+          <Bell className="size-5" />
+          {notifications.length > 0 && (
+            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+              {notifications.length}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0">
+        <div className="border-b p-3">
+          <h4 className="font-medium leading-none">Notifications</h4>
+          <p className="text-sm text-muted-foreground mt-1">System alerts and requests</p>
+        </div>
+        <div className="max-h-[300px] overflow-y-auto">
+          {notifications.length === 0 ? (
+            <p className="p-4 text-center text-sm text-muted-foreground">No new notifications.</p>
+          ) : (
+            <div className="flex flex-col">
+              {notifications.map((notif) => (
+                <div key={notif.id} className="flex flex-col border-b p-3 last:border-0 gap-1 relative group hover:bg-muted/50 transition-colors">
+                  <div className="flex justify-between items-start pr-6">
+                    <div className="flex flex-col gap-0.5 overflow-hidden">
+                      <p className="truncate text-sm font-semibold">{notif.title}</p>
+                      <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap">{notif.body}</p>
+                      <p className="text-[10px] text-muted-foreground/70 mt-1">
+                        {new Date(notif.createdAt).toLocaleDateString()} - {new Date(notif.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDismiss(notif.id)}
+                    className="absolute right-3 top-3 text-red-500/70 hover:text-red-500 transition-colors"
+                    title="Dismiss"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function AdminNotifications() {
   return (
     <div className="flex items-center gap-2">
@@ -832,6 +915,7 @@ export function AdminNotifications() {
       <CreditNotification />
       <NumberNotification />
       <SubCompanyNotification />
+      <GeneralNotification />
     </div>
   );
 }
