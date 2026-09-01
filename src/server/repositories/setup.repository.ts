@@ -357,53 +357,49 @@ export async function updateCredits(
       ? Number((remainder / childIds.length).toFixed(4))
       : 0;
 
-    // ── CORE TRANSACTION: only pure Prisma model writes ─────────────────
-    const txResult = await prisma.$transaction(async (tx) => {
-      // 1. Deduct from main company
-      let mainBalance;
-      if (mainCut > 0) {
-        mainBalance = await tx.creditBalance.update({
-          where: { companyId },
-          data: {
-            creditsRemaining: { decrement: mainCut },
-            creditsUsed: { increment: mainCut },
+    // ── DEDUCTION: direct writes, NO transaction wrapper ────────────────
+    // (MongoDB $transaction with Prisma can silently roll back)
+    let mainBalance = existingBalance;
+    if (mainCut > 0) {
+      console.log(`[updateCredits] Deducting ${mainCut} from company ${companyId}`);
+      mainBalance = await prisma.creditBalance.update({
+        where: { companyId },
+        data: {
+          creditsRemaining: { decrement: mainCut },
+          creditsUsed: { increment: mainCut },
+        },
+      });
+      console.log(`[updateCredits] After deduction: creditsRemaining=${mainBalance.creditsRemaining}`);
+    } else if (remainder > 0 && childIds.length === 0) {
+      // Main has 0 balance and no sub-companies — force main negative
+      mainBalance = await prisma.creditBalance.update({
+        where: { companyId },
+        data: {
+          creditsRemaining: { decrement: cutAmount },
+          creditsUsed: { increment: cutAmount },
+        },
+      });
+    }
+
+    // Deduct evenly from sub-companies if there is remainder
+    if (subCutPerChild > 0 && childIds.length > 0) {
+      for (const childId of childIds) {
+        await prisma.creditBalance.upsert({
+          where: { companyId: childId },
+          create: {
+            companyId: childId,
+            creditsRemaining: -subCutPerChild,
+            creditsUsed: subCutPerChild,
+          },
+          update: {
+            creditsRemaining: { decrement: subCutPerChild },
+            creditsUsed: { increment: subCutPerChild },
           },
         });
-      } else if (remainder > 0 && childIds.length === 0) {
-        // Main has 0 balance and no sub-companies — force main negative
-        mainBalance = await tx.creditBalance.update({
-          where: { companyId },
-          data: {
-            creditsRemaining: { decrement: cutAmount },
-            creditsUsed: { increment: cutAmount },
-          },
-        });
-      } else {
-        mainBalance = existingBalance;
       }
+    }
 
-      // 2. Deduct evenly from sub-companies if there is remainder
-      if (subCutPerChild > 0 && childIds.length > 0) {
-        for (const childId of childIds) {
-          await tx.creditBalance.upsert({
-            where: { companyId: childId },
-            create: {
-              companyId: childId,
-              creditsRemaining: -subCutPerChild,
-              creditsUsed: subCutPerChild,
-            },
-            update: {
-              creditsRemaining: { decrement: subCutPerChild },
-              creditsUsed: { increment: subCutPerChild },
-            },
-          });
-        }
-      }
-
-      return mainBalance;
-    });
-
-    finalBalance = txResult;
+    finalBalance = mainBalance;
 
     // ── SIDE EFFECTS outside transaction ─────────────────────────────────
     // Log CreditUsage for main company

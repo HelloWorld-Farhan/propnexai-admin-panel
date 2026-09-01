@@ -18,7 +18,12 @@ export async function PUT(
     await requireAdminSession();
     const { id } = await params;
     const body = schema.parse(await request.json());
+    
+    console.log(`[credits/update] PUT called: companyId=${id}, delta=${body.delta}`);
+    
     const balance = await updateCredits(id, body.delta, body.description);
+    
+    console.log(`[credits/update] updateCredits returned: creditsRemaining=${balance?.creditsRemaining}`);
     
     // Invalidate the companies page to ensure fresh data
     // Use 'layout' type to properly handle the (admin) route group
@@ -30,7 +35,7 @@ export async function PUT(
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    console.error("Update credits error:", error);
+    console.error("[credits/update] ERROR:", error);
     return NextResponse.json({ error: error.message || "Failed to update credits" }, { status: 500 });
   }
 }
