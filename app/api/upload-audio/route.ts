@@ -2,7 +2,23 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    let bodyText = "";
+    if (req.body) {
+      const reader = req.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          bodyText += decoder.decode(value, { stream: true });
+        }
+      }
+      bodyText += decoder.decode();
+    } else {
+      bodyText = await req.text();
+    }
+
+    const body = JSON.parse(bodyText);
     const webhookUrl = process.env.APPS_SCRIPT_WEBHOOK_URL;
     
     if (!webhookUrl) {
