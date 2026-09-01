@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/server-session";
+import { revalidatePath } from "next/cache";
 import { updateCredits } from "@/src/server/repositories/setup.repository";
 
 const schema = z.object({
@@ -18,6 +19,11 @@ export async function PUT(
     const { id } = await params;
     const body = schema.parse(await request.json());
     const balance = await updateCredits(id, body.delta, body.description);
+    
+    // Invalidate the companies page to ensure fresh data
+    revalidatePath("/companies");
+    revalidatePath(`/companies/${id}`);
+    
     return NextResponse.json(balance);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
