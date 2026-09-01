@@ -420,50 +420,45 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                               const { url: webhookUrl } = await urlRes.json();
                               if (!webhookUrl) throw new Error("Webhook URL not found");
 
-                              const xhr = new XMLHttpRequest();
-                              xhr.open("POST", webhookUrl);
-                              xhr.setRequestHeader("Content-Type", "text/plain");
+                              // Simulate progress since fetch doesn't support real upload progress
+                              // and XHR has CORS issues with Google Apps Script redirects.
+                              const durationMs = Math.max(2000, (file.size / (1024 * 1024)) * 800); // ~1.25MB/s
+                              const intervalMs = 100;
+                              const step = 100 / (durationMs / intervalMs);
+                              let currentProgress = 0;
+                              const timer = setInterval(() => {
+                                currentProgress += step;
+                                if (currentProgress > 95) currentProgress = 95;
+                                setUploadProgress(Math.floor(currentProgress));
+                              }, intervalMs);
 
-                              xhr.upload.onprogress = (event) => {
-                                if (event.lengthComputable) {
-                                  const percent = Math.round((event.loaded / event.total) * 100);
-                                  setUploadProgress(percent);
-                                }
-                              };
-
-                              xhr.onload = () => {
-                                setIsUploading(false);
-                                if (xhr.status >= 200 && xhr.status < 300) {
-                                  try {
-                                    const data = JSON.parse(xhr.responseText);
-                                    if (data.status === "error") throw new Error(data.message);
-                                    
-                                    const finalUrl = data.message?.url || data.url;
-                                    setForm({ ...form, demoAudioUrl: finalUrl });
-                                    if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
-                                    toast.success("Uploaded successfully!");
-                                  } catch (err) {
-                                    toast.error("Upload failed");
-                                  }
-                                } else {
-                                  toast.error("Upload failed");
-                                }
-                              };
-
-                              xhr.onerror = () => {
-                                setIsUploading(false);
-                                toast.error("Upload failed");
-                              };
-
-                              xhr.send(JSON.stringify({ 
-                                type: "upload_agent_audio",
-                                fileData: base64Data, 
-                                fileName: file.name,
-                                mimeType: file.type 
-                              }));
+                              const res = await fetch(webhookUrl, {
+                                method: "POST",
+                                headers: { "Content-Type": "text/plain" },
+                                body: JSON.stringify({ 
+                                  type: "upload_agent_audio",
+                                  fileData: base64Data, 
+                                  fileName: file.name,
+                                  mimeType: file.type 
+                                })
+                              });
+                              
+                              clearInterval(timer);
+                              
+                              if (!res.ok) throw new Error("Upload failed");
+                              const data = await res.json();
+                              if (data.status === "error") throw new Error(data.message);
+                              
+                              setUploadProgress(100);
+                              
+                              const finalUrl = data.message?.url || data.url;
+                              setForm({ ...form, demoAudioUrl: finalUrl });
+                              if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
+                              toast.success("Uploaded successfully!");
                             } catch (err) {
-                              setIsUploading(false);
                               toast.error("Upload failed");
+                            } finally {
+                              setIsUploading(false);
                             }
                           };
                           reader.readAsDataURL(file);
