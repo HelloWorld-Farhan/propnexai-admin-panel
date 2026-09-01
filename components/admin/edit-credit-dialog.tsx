@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Pencil, TrendingDown, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { TrendingDown, Minus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -26,17 +26,16 @@ export function EditCreditDialog({
   currentCredits: number;
 }) {
   const [open, setOpen] = useState(false);
-  const [creditAmount, setCreditAmount] = useState("");
-  const [creditDescription, setCreditDescription] = useState("Admin credit override");
+  const [deductAmount, setDeductAmount] = useState("");
+  const [creditDescription, setCreditDescription] = useState("Admin manual deduction");
   const [saving, setSaving] = useState(false);
 
-  const newAmount = Number.parseFloat(creditAmount);
-  const isValidAmount = !isNaN(newAmount) && newAmount >= 0 && creditAmount.trim() !== "";
-  const diff = isValidAmount ? newAmount - currentCredits : null;
+  const amountToDeduct = Number.parseFloat(deductAmount);
+  const isValidAmount = !isNaN(amountToDeduct) && amountToDeduct > 0 && deductAmount.trim() !== "";
 
-  async function editCredits(e: React.FormEvent) {
+  async function deductCredits(e: React.FormEvent) {
     e.preventDefault();
-    if (!isValidAmount) return toast.error("Please enter a valid credit amount");
+    if (!isValidAmount) return toast.error("Please enter a valid deduction amount");
 
     setSaving(true);
     try {
@@ -44,7 +43,7 @@ export function EditCreditDialog({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          delta: Number((diff || 0).toFixed(4)),
+          delta: -Number(amountToDeduct.toFixed(4)),
           description: creditDescription,
         }),
       });
@@ -54,18 +53,11 @@ export function EditCreditDialog({
         throw new Error(errorData.error || "Failed to update credits");
       }
 
-      if (diff !== null && diff < 0) {
-        toast.success(`Credits reduced by ${Math.abs(diff).toLocaleString()} → now ${newAmount.toLocaleString()} for ${companyName}`);
-      } else if (diff !== null && diff > 0) {
-        toast.success(`Credits increased by ${diff.toLocaleString()} → now ${newAmount.toLocaleString()} for ${companyName}`);
-      } else {
-        toast.success(`Credits unchanged at ${newAmount.toLocaleString()} for ${companyName}`);
-      }
+      toast.success(`Successfully deducted ${amountToDeduct.toLocaleString()} credits from ${companyName}`);
 
       setOpen(false);
-      setCreditAmount("");
+      setDeductAmount("");
       // Use full page reload to bypass Next.js RSC cache entirely
-      // router.refresh() can serve stale data from the RSC cache
       window.location.reload();
     } catch (err: any) {
       toast.error(err.message || "Failed to update credits");
@@ -80,7 +72,7 @@ export function EditCreditDialog({
         open={open}
         onOpenChange={(v) => {
           setOpen(v);
-          if (!v) setCreditAmount("");
+          if (!v) setDeductAmount("");
         }}
       >
         <DialogTrigger asChild>
@@ -88,61 +80,39 @@ export function EditCreditDialog({
             variant="outline"
             size="icon"
             className="h-6 w-6 shrink-0 rounded-full bg-background ml-1"
-            title="Override Credits"
+            title="Deduct Credits"
           >
-            <Pencil className="h-3 w-3" />
+            <Minus className="h-3 w-3" />
           </Button>
         </DialogTrigger>
         <DialogContent onClick={(e) => e.stopPropagation()}>
           <DialogHeader>
-            <DialogTitle>Override Credits — {companyName}</DialogTitle>
+            <DialogTitle>Deduct Credits — {companyName}</DialogTitle>
             <DialogDescription>
-              Set the exact credit balance for this company. The difference will be reflected immediately. Sub-companies are <strong>not</strong> affected.
+              Enter the amount of credits to deduct. This will first deduct from the main company. If the main company runs out, the remainder will be split across its sub-companies.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={editCredits} className="space-y-4">
-            {/* Current balance display */}
-            <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm">
-              <span className="text-muted-foreground">Current balance:</span>{" "}
-              <span className="font-semibold tabular-nums">{currentCredits.toLocaleString()}</span>
-            </div>
-
+          <form onSubmit={deductCredits} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-credit-amount">New Exact Credit Balance</Label>
+              <Label htmlFor="deduct-credit-amount">Amount to Deduct</Label>
               <Input
-                id="edit-credit-amount"
+                id="deduct-credit-amount"
                 type="number"
                 min={0}
                 step="any"
-                placeholder={`e.g. ${currentCredits}`}
-                value={creditAmount}
-                onChange={(e) => setCreditAmount(e.target.value)}
+                placeholder="e.g. 350"
+                value={deductAmount}
+                onChange={(e) => setDeductAmount(e.target.value)}
                 required
               />
             </div>
 
             {/* Live diff preview */}
-            {isValidAmount && diff !== null && (
-              <div
-                className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium ${
-                  diff < 0
-                    ? "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400"
-                    : diff > 0
-                    ? "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400"
-                    : "border-border bg-muted/40 text-muted-foreground"
-                }`}
-              >
-                {diff < 0 ? (
-                  <TrendingDown className="h-4 w-4 shrink-0" />
-                ) : diff > 0 ? (
-                  <TrendingUp className="h-4 w-4 shrink-0" />
-                ) : null}
-                {diff < 0
-                  ? `Will cut ${Math.abs(diff).toLocaleString()} credits (${currentCredits.toLocaleString()} → ${newAmount.toLocaleString()})`
-                  : diff > 0
-                  ? `Will add ${diff.toLocaleString()} credits (${currentCredits.toLocaleString()} → ${newAmount.toLocaleString()})`
-                  : "No change in balance"}
+            {isValidAmount && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+                <TrendingDown className="h-4 w-4 shrink-0" />
+                Will deduct {amountToDeduct.toLocaleString()} credits from {companyName} and its sub-companies.
               </div>
             )}
 
@@ -160,13 +130,13 @@ export function EditCreditDialog({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => { setOpen(false); setCreditAmount(""); }}
+                onClick={() => { setOpen(false); setDeductAmount(""); }}
                 disabled={saving}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving || !isValidAmount}>
-                {saving ? "Saving…" : diff !== null && diff < 0 ? `Cut to ${newAmount.toLocaleString()}` : `Set to ${isValidAmount ? newAmount.toLocaleString() : "—"}`}
+              <Button type="submit" variant="destructive" disabled={saving || !isValidAmount}>
+                {saving ? "Deducting…" : isValidAmount ? `Deduct ${amountToDeduct.toLocaleString()}` : "Deduct"}
               </Button>
             </div>
           </form>
