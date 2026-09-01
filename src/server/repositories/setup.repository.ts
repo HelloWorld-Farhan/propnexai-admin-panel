@@ -360,7 +360,7 @@ export async function updateCredits(
       });
 
       try {
-        await prisma.$runCommandRaw({
+        await tx.$runCommandRaw({
           insert: "BillingHistory",
           documents: [{
             companyId: { $oid: targetCompanyId },
@@ -380,48 +380,37 @@ export async function updateCredits(
     }
 
     // Handle deductions (delta < 0)
-    let cutAmount = Math.abs(delta);
-    let mainCreditsRemaining = targetCompanyBalance?.creditsRemaining || 0;
+    const cutAmount = Math.abs(delta);
+    const mainCreditsRemaining = Math.max(0, targetCompanyBalance?.creditsRemaining || 0);
     
-    // Calculate how much the Main company can absorb
-    let mainCut = Math.min(cutAmount, Math.max(0, mainCreditsRemaining));
-    // If the main company's balance is negative, it absorbs 0. If it has enough, it absorbs all.
-    // Wait, if the main company doesn't have enough, we cut what it has, and pass the remainder to sub-companies.
-    // What if we just allow the main company to absorb what it can?
-    // Actually, if cutAmount > mainCreditsRemaining, mainCut = mainCreditsRemaining.
-    // BUT what if mainCreditsRemaining < 0? mainCut = 0.
-    let remainder = cutAmount - mainCut;
+    // How much the main company can absorb
+    const mainCut = Math.min(cutAmount, mainCreditsRemaining);
+    const remainder = cutAmount - mainCut;
 
     // 1. Process Main Company Cut
     let finalMainBalance;
-    if (mainCut > 0 || remainder === 0) {
-      // If we are cutting from main, or the entire cut is 0 (shouldn't happen), or we are just forcing an update
-      finalMainBalance = await tx.creditBalance.upsert({
+    if (mainCut > 0) {
+      finalMainBalance = await tx.creditBalance.update({
         where: { companyId: targetCompanyId },
-        create: {
-          companyId: targetCompanyId,
-          creditsRemaining: -mainCut, // If there was no balance, creating it with the cut
-          creditsUsed: mainCut,
-        },
-        update: {
+        data: {
           creditsRemaining: { decrement: mainCut },
           creditsUsed: { increment: mainCut },
         },
       });
 
-      if (mainCut > 0) {
-        await tx.creditUsage.create({
-          data: {
-            companyId: targetCompanyId,
-            amount: mainCut,
-            reason: "MANUAL_ADJUSTMENT",
-            description: `Admin deducted ${mainCut}`,
-          },
-        });
-      }
+      await tx.creditUsage.create({
+        data: {
+          companyId: targetCompanyId,
+          amount: mainCut,
+          reason: "MANUAL_ADJUSTMENT",
+          description: `Admin deducted ${mainCut}`,
+        },
+      });
     } else {
-      // Main company had no positive balance to cut, its balance remains unchanged
-      finalMainBalance = targetCompanyBalance;
+      // Main company had no positive balance to absorb — balance stays the same
+      finalMainBalance = targetCompanyBalance || await tx.creditBalance.findUnique({
+        where: { companyId: targetCompanyId }
+      });
     }
 
     // 2. Process Sub-Companies Cut if there is a remainder
@@ -459,7 +448,7 @@ export async function updateCredits(
           });
           
           try {
-            await prisma.$runCommandRaw({
+            await tx.$runCommandRaw({
               insert: "BillingHistory",
               documents: [{
                 companyId: { $oid: child.id },
@@ -471,7 +460,7 @@ export async function updateCredits(
                 status: "Completed",
               }]
             });
-          } catch (err) {}
+          } catch (err) { console.error("Failed BillingHistory for sub-company:", err); }
         }
       } else {
         // No child companies to absorb the remainder! 
@@ -497,32 +486,31 @@ export async function updateCredits(
 
     // Insert BillingHistory for Main Company
     try {
-      await prisma.$runCommandRaw({
+      await tx.$runCommandRaw({
         insert: "BillingHistory",
         documents: [
           {
             companyId: { $oid: targetCompanyId },
             date: { $date: new Date().toISOString() },
             description: description || "Credit Set via Admin",
-            type: delta < 0 ? "Deduction" : "Top-up",
-            credits: delta < 0 ? -mainCut : delta, // Record what was actually cut from main
+            type: "Deduction",
+            credits: -mainCut,
             amount: 0,
             status: "Completed",
           }
         ]
       });
-      
-      // Email logic left as-is, just catching gracefully
-      notificationService.sendCreditUpdateEmail({
-        companyName: company.name || targetCompanyId,
-        amount: Math.abs(delta),
-        newBalance: finalMainBalance?.creditsRemaining || 0,
-        type: delta < 0 ? "DEDUCTION" : "TOP_UP"
-      }).catch(console.error);
-
     } catch (err) {
       console.error("Failed to insert into BillingHistory:", err);
     }
+
+    // Send email notification outside transaction - non-blocking
+    notificationService.sendCreditUpdateEmail({
+      companyName: company.name || targetCompanyId,
+      amount: Math.abs(delta),
+      newBalance: finalMainBalance?.creditsRemaining || 0,
+      type: "DEDUCTION"
+    }).catch(console.error);
     
     await tx.supportRequest.updateMany({
       where: {

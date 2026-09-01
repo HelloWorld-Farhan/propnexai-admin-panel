@@ -21,8 +21,9 @@ export async function PUT(
     const balance = await updateCredits(id, body.delta, body.description);
     
     // Invalidate the companies page to ensure fresh data
-    revalidatePath("/companies");
-    revalidatePath(`/companies/${id}`);
+    // Use 'layout' type to properly handle the (admin) route group
+    revalidatePath("/companies", "layout");
+    revalidatePath(`/companies/${id}`, "layout");
     
     return NextResponse.json(balance);
   } catch (error: any) {

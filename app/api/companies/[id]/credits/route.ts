@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/server-session";
+import { revalidatePath } from "next/cache";
 import { addCredits } from "@/src/server/repositories/setup.repository";
 
 const schema = z.object({
@@ -18,6 +19,8 @@ export async function POST(
     const { id } = await params;
     const body = schema.parse(await request.json());
     const balance = await addCredits(id, body.amount, body.description);
+    revalidatePath("/companies", "layout");
+    revalidatePath(`/companies/${id}`, "layout");
     return NextResponse.json(balance);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
