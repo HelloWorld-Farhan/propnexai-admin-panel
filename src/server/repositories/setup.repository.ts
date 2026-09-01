@@ -351,6 +351,7 @@ export async function updateCredits(
     const remainder = cutAmount - actualMainCut;
 
     const newRemaining = actualRemaining - actualMainCut;
+    const newUsed = actualUsed + actualMainCut;
 
     console.log(`[updateCredits] company=${companyId} actualRemaining=${actualRemaining} cutAmount=${cutAmount} actualMainCut=${actualMainCut} newRemaining=${newRemaining}`);
 
@@ -362,11 +363,11 @@ export async function updateCredits(
         create: {
           companyId,
           creditsRemaining: newRemaining,
-          creditsUsed: actualUsed,
+          creditsUsed: newUsed,
         },
         update: {
           creditsRemaining: newRemaining,
-          // DO NOT UPDATE creditsUsed. It must strictly equal sum(CallLog.creditsUsed)
+          creditsUsed: newUsed,
         },
       });
       console.log(`[updateCredits] After write: creditsRemaining=${mainBalance.creditsRemaining} creditsUsed=${mainBalance.creditsUsed}`);
@@ -393,10 +394,10 @@ export async function updateCredits(
           const childUsed = childBal?.creditsUsed ?? 0;
           await prisma.creditBalance.upsert({
             where: { companyId: childId },
-            create: { companyId: childId, creditsRemaining: -subCutEach, creditsUsed: 0 },
+            create: { companyId: childId, creditsRemaining: -subCutEach, creditsUsed: subCutEach },
             update: {
               creditsRemaining: childRemaining - subCutEach,
-              // DO NOT UPDATE creditsUsed
+              creditsUsed: childUsed + subCutEach,
             },
           });
           affectedSubCompanies.push({ id: childId, subCut: subCutEach });
@@ -405,8 +406,8 @@ export async function updateCredits(
         // No sub-companies: force main to go negative
         const forcedBal = await prisma.creditBalance.upsert({
           where: { companyId },
-          create: { companyId, creditsRemaining: actualRemaining - cutAmount, creditsUsed: actualUsed },
-          update: { creditsRemaining: actualRemaining - cutAmount },
+          create: { companyId, creditsRemaining: actualRemaining - cutAmount, creditsUsed: actualUsed + cutAmount },
+          update: { creditsRemaining: actualRemaining - cutAmount, creditsUsed: actualUsed + cutAmount },
         });
         mainBalance = forcedBal;
       }
