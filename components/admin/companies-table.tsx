@@ -130,7 +130,7 @@ export function CompaniesTable({
   const router = useRouter();
     function refreshRow(companyId: string, newNumber: string) {
       // Actually we just refresh from server
-      router.refresh();
+      window.location.reload();
     }
 
   const columns: ColumnDef<CompanyRow>[] = [
@@ -184,7 +184,7 @@ export function CompaniesTable({
           row={row.original}
           direction="INBOUND"
           nums={row.original.inboundNumbers || []}
-          onRefresh={() => router.refresh()}
+          onRefresh={() => window.location.reload()}
         />
       ),
     },

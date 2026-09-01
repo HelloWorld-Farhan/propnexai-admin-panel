@@ -357,45 +357,76 @@ export async function updateCredits(
       ? Number((remainder / childIds.length).toFixed(4))
       : 0;
 
-    // ── DEDUCTION: direct writes, NO transaction wrapper ────────────────
-    // (MongoDB $transaction with Prisma can silently roll back)
-    let mainBalance = existingBalance;
-    if (mainCut > 0) {
-      console.log(`[updateCredits] Deducting ${mainCut} from company ${companyId}`);
-      mainBalance = await prisma.creditBalance.update({
+    // ── DEDUCTION: absolute SET (not relative decrement) ───────────────────
+    // Reading CURRENT balance from DB right now (freshest possible read)
+    const dbBalance = await prisma.creditBalance.findUnique({ where: { companyId } });
+    const actualRemaining = dbBalance?.creditsRemaining ?? 0;
+    const actualUsed = dbBalance?.creditsUsed ?? 0;
+
+    // How much to actually cut from main (can't cut more than available)
+    const actualMainCut = Math.min(cutAmount, Math.max(0, actualRemaining));
+    const remainder = cutAmount - actualMainCut;
+
+    const newRemaining = actualRemaining - actualMainCut;
+    const newUsed = actualUsed + actualMainCut;
+
+    console.log(`[updateCredits] company=${companyId} actualRemaining=${actualRemaining} cutAmount=${cutAmount} actualMainCut=${actualMainCut} newRemaining=${newRemaining}`);
+
+    let mainBalance;
+    if (actualMainCut > 0 || !dbBalance) {
+      // Use upsert with ABSOLUTE values — no relative increment/decrement
+      mainBalance = await prisma.creditBalance.upsert({
         where: { companyId },
-        data: {
-          creditsRemaining: { decrement: mainCut },
-          creditsUsed: { increment: mainCut },
+        create: {
+          companyId,
+          creditsRemaining: newRemaining,
+          creditsUsed: newUsed,
+        },
+        update: {
+          creditsRemaining: newRemaining,
+          creditsUsed: newUsed,
         },
       });
-      console.log(`[updateCredits] After deduction: creditsRemaining=${mainBalance.creditsRemaining}`);
-    } else if (remainder > 0 && childIds.length === 0) {
-      // Main has 0 balance and no sub-companies — force main negative
-      mainBalance = await prisma.creditBalance.update({
-        where: { companyId },
-        data: {
-          creditsRemaining: { decrement: cutAmount },
-          creditsUsed: { increment: cutAmount },
-        },
-      });
+      console.log(`[updateCredits] After write: creditsRemaining=${mainBalance.creditsRemaining} creditsUsed=${mainBalance.creditsUsed}`);
+    } else {
+      mainBalance = dbBalance;
+      console.log(`[updateCredits] No main cut needed (balance already 0)`);
     }
 
-    // Deduct evenly from sub-companies if there is remainder
-    if (subCutPerChild > 0 && childIds.length > 0) {
-      for (const childId of childIds) {
-        await prisma.creditBalance.upsert({
-          where: { companyId: childId },
-          create: {
-            companyId: childId,
-            creditsRemaining: -subCutPerChild,
-            creditsUsed: subCutPerChild,
-          },
-          update: {
-            creditsRemaining: { decrement: subCutPerChild },
-            creditsUsed: { increment: subCutPerChild },
-          },
+    // Re-fetch childIds based on remainder (only needed if mainCut exhausted balance)
+    if (remainder > 0) {
+      const freshChildren = childIds.length > 0 ? childIds : (await prisma.company.findMany({
+        where: { parentCompanyId: companyId, status: { not: "SUSPENDED" } },
+        select: { id: true },
+      })).map((c) => c.id);
+
+      const subCutEach = freshChildren.length > 0
+        ? Number((remainder / freshChildren.length).toFixed(4))
+        : 0;
+
+      if (subCutEach > 0 && freshChildren.length > 0) {
+        for (const childId of freshChildren) {
+          const childBal = await prisma.creditBalance.findUnique({ where: { companyId: childId } });
+          const childRemaining = childBal?.creditsRemaining ?? 0;
+          const childUsed = childBal?.creditsUsed ?? 0;
+          await prisma.creditBalance.upsert({
+            where: { companyId: childId },
+            create: { companyId: childId, creditsRemaining: -subCutEach, creditsUsed: subCutEach },
+            update: {
+              creditsRemaining: childRemaining - subCutEach,
+              creditsUsed: childUsed + subCutEach,
+            },
+          });
+          affectedSubCompanies.push({ id: childId, subCut: subCutEach });
+        }
+      } else if (freshChildren.length === 0) {
+        // No sub-companies: force main to go negative
+        const forcedBal = await prisma.creditBalance.upsert({
+          where: { companyId },
+          create: { companyId, creditsRemaining: actualRemaining - cutAmount, creditsUsed: actualUsed + cutAmount },
+          update: { creditsRemaining: actualRemaining - cutAmount, creditsUsed: actualUsed + cutAmount },
         });
+        mainBalance = forcedBal;
       }
     }
 

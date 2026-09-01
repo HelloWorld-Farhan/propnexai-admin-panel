@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { Pencil, TrendingDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,7 +25,6 @@ export function EditCreditDialog({
   companyName: string;
   currentCredits: number;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [creditAmount, setCreditAmount] = useState("");
   const [creditDescription, setCreditDescription] = useState("Admin credit override");
@@ -66,7 +64,9 @@ export function EditCreditDialog({
 
       setOpen(false);
       setCreditAmount("");
-      router.refresh();
+      // Use full page reload to bypass Next.js RSC cache entirely
+      // router.refresh() can serve stale data from the RSC cache
+      window.location.reload();
     } catch (err: any) {
       toast.error(err.message || "Failed to update credits");
     } finally {
