@@ -238,7 +238,7 @@ export async function addCredits(
   // ── Side effects (all outside any transaction) ────────────────────────
   // CreditUsage log
   await prisma.creditUsage.create({
-    data: { companyId, amount, reason: "MANUAL_ADJUSTMENT", description },
+    data: { companyId, amount, reason: "PURCHASE", description },
   }).catch(console.error);
 
   // Resolve pending credit support requests
@@ -423,7 +423,7 @@ export async function updateCredits(
           companyId,
           amount: actualMainCut,
           reason: "MANUAL_ADJUSTMENT",
-          description: `Admin deducted ${actualMainCut}`,
+          description: description || `Admin deducted ${actualMainCut}`,
         },
       }).catch(console.error);
     }

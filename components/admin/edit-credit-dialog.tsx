@@ -27,7 +27,7 @@ export function EditCreditDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [deductAmount, setDeductAmount] = useState("");
-  const [creditDescription, setCreditDescription] = useState("Admin manual deduction");
+  const [creditDescription, setCreditDescription] = useState("Miscellaneous Fees");
   const [saving, setSaving] = useState(false);
 
   const amountToDeduct = Number.parseFloat(deductAmount);
