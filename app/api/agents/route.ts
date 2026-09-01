@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/server-session";
+import { prisma } from "@/lib/prisma";
 import {
   createAgentLibraryEntry,
   deleteAgentLibraryEntry,
@@ -60,8 +61,6 @@ export async function PUT(request: Request) {
     // If admin just set isPublished = true, auto-dismiss all pending notifications for this agent
     if (data.isPublished === true) {
       try {
-        const { PrismaClient } = await import("@prisma/client");
-        const prisma = new PrismaClient();
         await prisma.notification.updateMany({
           where: {
             type: "SYSTEM",
@@ -70,7 +69,6 @@ export async function PUT(request: Request) {
           },
           data: { readAt: new Date() },
         });
-        await prisma.$disconnect();
       } catch (e) {
         console.warn("Could not auto-dismiss agent notifications", e);
       }
