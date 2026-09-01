@@ -65,7 +65,10 @@ export async function PUT(request: Request) {
           where: {
             type: "SYSTEM",
             title: "Agent Assignment Request",
-            readAt: null,
+            OR: [
+              { readAt: null },
+              { readAt: { isSet: false } }
+            ],
           },
           data: { readAt: new Date() },
         });

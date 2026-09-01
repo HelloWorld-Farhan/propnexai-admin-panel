@@ -6,7 +6,10 @@ export async function GET(req: NextRequest) {
   try {
     const notifications = await prisma.notification.findMany({
       where: {
-        readAt: null,
+        OR: [
+          { readAt: null },
+          { readAt: { isSet: false } }
+        ]
       },
       orderBy: {
         createdAt: "desc"
