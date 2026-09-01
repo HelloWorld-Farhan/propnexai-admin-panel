@@ -57,6 +57,12 @@ export default function FormsPage() {
 
   useEffect(() => {
     fetchForms();
+    // Poll for new form submissions every 8 seconds to show them in real-time
+    const intervalId = setInterval(() => {
+      fetchForms();
+    }, 8000);
+    
+    return () => clearInterval(intervalId);
   }, [fetchForms]);
 
   async function handleDelete() {
