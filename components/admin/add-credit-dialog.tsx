@@ -82,8 +82,8 @@ export function AddCreditDialog({
               <Label>Amount</Label>
               <Input
                 type="number"
-                min={0.01}
-                step="0.01"
+                min={0}
+                step="any"
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(e.target.value)}
                 placeholder="e.g. 5000"

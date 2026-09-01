@@ -114,7 +114,7 @@ export function EditCreditDialog({
                 id="edit-credit-amount"
                 type="number"
                 min={0}
-                step="0.5"
+                step="any"
                 placeholder={`e.g. ${currentCredits}`}
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(e.target.value)}

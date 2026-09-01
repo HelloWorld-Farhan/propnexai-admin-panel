@@ -330,36 +330,172 @@ export async function updateCredits(
   const targetCompanyId = companyId;
 
   const result = await prisma.$transaction(async (tx) => {
-    // If delta is 0, we do nothing
     if (delta === 0) return null;
 
-    let creditsUsedIncrement = 0;
-    if (delta < 0) {
-      creditsUsedIncrement = Math.abs(delta);
+    let targetCompanyBalance = await tx.creditBalance.findUnique({
+      where: { companyId: targetCompanyId }
+    });
+
+    // Handle additions normally
+    if (delta > 0) {
+      const balance = await tx.creditBalance.upsert({
+        where: { companyId: targetCompanyId },
+        create: {
+          companyId: targetCompanyId,
+          creditsRemaining: delta,
+          creditsUsed: 0,
+        },
+        update: {
+          creditsRemaining: { increment: delta },
+        },
+      });
+
+      await tx.creditUsage.create({
+        data: {
+          companyId: targetCompanyId,
+          amount: delta,
+          reason: "MANUAL_ADJUSTMENT",
+          description: `Admin added ${delta}`,
+        },
+      });
+
+      try {
+        await prisma.$runCommandRaw({
+          insert: "BillingHistory",
+          documents: [{
+            companyId: { $oid: targetCompanyId },
+            date: { $date: new Date().toISOString() },
+            description: description || "Credit Set via Admin",
+            type: "Top-up",
+            credits: delta,
+            amount: 0,
+            status: "Completed",
+          }]
+        });
+      } catch (err) {
+        console.error("Failed to insert into BillingHistory:", err);
+      }
+
+      return balance;
     }
 
-    const balance = await tx.creditBalance.upsert({
-      where: { companyId: targetCompanyId },
-      create: {
-        companyId: targetCompanyId,
-        creditsRemaining: delta,
-        creditsUsed: 0,
-      },
-      update: {
-        creditsRemaining: { increment: delta },
-        creditsUsed: { increment: creditsUsedIncrement },
-      },
-    });
+    // Handle deductions (delta < 0)
+    let cutAmount = Math.abs(delta);
+    let mainCreditsRemaining = targetCompanyBalance?.creditsRemaining || 0;
+    
+    // Calculate how much the Main company can absorb
+    let mainCut = Math.min(cutAmount, Math.max(0, mainCreditsRemaining));
+    // If the main company's balance is negative, it absorbs 0. If it has enough, it absorbs all.
+    // Wait, if the main company doesn't have enough, we cut what it has, and pass the remainder to sub-companies.
+    // What if we just allow the main company to absorb what it can?
+    // Actually, if cutAmount > mainCreditsRemaining, mainCut = mainCreditsRemaining.
+    // BUT what if mainCreditsRemaining < 0? mainCut = 0.
+    let remainder = cutAmount - mainCut;
 
-    await tx.creditUsage.create({
-      data: {
-        companyId: targetCompanyId,
-        amount: Math.abs(delta),
-        reason: "MANUAL_ADJUSTMENT",
-        description: delta < 0 ? `Admin deducted ${Math.abs(delta)}` : `Admin added ${delta}`,
-      },
-    });
+    // 1. Process Main Company Cut
+    let finalMainBalance;
+    if (mainCut > 0 || remainder === 0) {
+      // If we are cutting from main, or the entire cut is 0 (shouldn't happen), or we are just forcing an update
+      finalMainBalance = await tx.creditBalance.upsert({
+        where: { companyId: targetCompanyId },
+        create: {
+          companyId: targetCompanyId,
+          creditsRemaining: -mainCut, // If there was no balance, creating it with the cut
+          creditsUsed: mainCut,
+        },
+        update: {
+          creditsRemaining: { decrement: mainCut },
+          creditsUsed: { increment: mainCut },
+        },
+      });
 
+      if (mainCut > 0) {
+        await tx.creditUsage.create({
+          data: {
+            companyId: targetCompanyId,
+            amount: mainCut,
+            reason: "MANUAL_ADJUSTMENT",
+            description: `Admin deducted ${mainCut}`,
+          },
+        });
+      }
+    } else {
+      // Main company had no positive balance to cut, its balance remains unchanged
+      finalMainBalance = targetCompanyBalance;
+    }
+
+    // 2. Process Sub-Companies Cut if there is a remainder
+    if (remainder > 0) {
+      const childCompanies = await tx.company.findMany({
+        where: { parentCompanyId: targetCompanyId, status: { not: "SUSPENDED" } },
+        select: { id: true }
+      });
+
+      if (childCompanies.length > 0) {
+        // Divide remainder evenly
+        const subCut = Number((remainder / childCompanies.length).toFixed(4));
+        
+        for (const child of childCompanies) {
+          await tx.creditBalance.upsert({
+            where: { companyId: child.id },
+            create: {
+              companyId: child.id,
+              creditsRemaining: -subCut,
+              creditsUsed: subCut,
+            },
+            update: {
+              creditsRemaining: { decrement: subCut },
+              creditsUsed: { increment: subCut },
+            },
+          });
+
+          await tx.creditUsage.create({
+            data: {
+              companyId: child.id,
+              amount: subCut,
+              reason: "MANUAL_ADJUSTMENT",
+              description: `Admin deducted ${subCut} (Cascaded from Parent)`,
+            },
+          });
+          
+          try {
+            await prisma.$runCommandRaw({
+              insert: "BillingHistory",
+              documents: [{
+                companyId: { $oid: child.id },
+                date: { $date: new Date().toISOString() },
+                description: description || "Credit Cut Cascaded from Parent via Admin",
+                type: "Deduction",
+                credits: -subCut,
+                amount: 0,
+                status: "Completed",
+              }]
+            });
+          } catch (err) {}
+        }
+      } else {
+        // No child companies to absorb the remainder! 
+        // We must force the Main company to absorb the remainder (go negative)
+        finalMainBalance = await tx.creditBalance.update({
+          where: { companyId: targetCompanyId },
+          data: {
+            creditsRemaining: { decrement: remainder },
+            creditsUsed: { increment: remainder },
+          },
+        });
+
+        await tx.creditUsage.create({
+          data: {
+            companyId: targetCompanyId,
+            amount: remainder,
+            reason: "MANUAL_ADJUSTMENT",
+            description: `Admin deducted ${remainder} (Forced Negative)`,
+          },
+        });
+      }
+    }
+
+    // Insert BillingHistory for Main Company
     try {
       await prisma.$runCommandRaw({
         insert: "BillingHistory",
@@ -369,23 +505,25 @@ export async function updateCredits(
             date: { $date: new Date().toISOString() },
             description: description || "Credit Set via Admin",
             type: delta < 0 ? "Deduction" : "Top-up",
-            credits: delta,
+            credits: delta < 0 ? -mainCut : delta, // Record what was actually cut from main
             amount: 0,
             status: "Completed",
           }
         ]
       });
+      
+      // Email logic left as-is, just catching gracefully
       notificationService.sendCreditUpdateEmail({
         companyName: company.name || targetCompanyId,
         amount: Math.abs(delta),
-        newBalance: balance.creditsRemaining,
+        newBalance: finalMainBalance?.creditsRemaining || 0,
         type: delta < 0 ? "DEDUCTION" : "TOP_UP"
       }).catch(console.error);
 
     } catch (err) {
       console.error("Failed to insert into BillingHistory:", err);
     }
-
+    
     await tx.supportRequest.updateMany({
       where: {
         companyId,
@@ -420,7 +558,7 @@ export async function updateCredits(
       console.error("Failed to process credit webhook:", e);
     }
 
-    return balance;
+    return finalMainBalance;
   });
 
   // Fire-and-forget: trigger voice web sync so the credits widget
