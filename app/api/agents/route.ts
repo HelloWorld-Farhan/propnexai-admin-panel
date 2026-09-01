@@ -56,6 +56,26 @@ export async function PUT(request: Request) {
       .parse(await request.json());
     const { id, ...data } = body;
     const entry = await updateAgentLibraryEntry(id, data);
+
+    // If admin just set isPublished = true, auto-dismiss all pending notifications for this agent
+    if (data.isPublished === true) {
+      try {
+        const { PrismaClient } = await import("@prisma/client");
+        const prisma = new PrismaClient();
+        await prisma.notification.updateMany({
+          where: {
+            type: "SYSTEM",
+            title: "Agent Assignment Request",
+            readAt: null,
+          },
+          data: { readAt: new Date() },
+        });
+        await prisma.$disconnect();
+      } catch (e) {
+        console.warn("Could not auto-dismiss agent notifications", e);
+      }
+    }
+
     return NextResponse.json(entry);
   } catch (error) {
     if (error instanceof z.ZodError) {
