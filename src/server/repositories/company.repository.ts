@@ -153,6 +153,7 @@ export async function listCompaniesForAdmin() {
       claimed: company.ownerUserId != null,
       createdAt: company.createdAt,
       creditsRemaining: totalCredits,
+      mainCredits: parentCredits,
       creditsUsed: company.creditBalance?.creditsUsed ?? 0,
       totalChannels: company.setupConfig?.totalChannels ?? 0,
       agentCount: company._count.aiAgents,

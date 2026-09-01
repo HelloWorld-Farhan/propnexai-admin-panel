@@ -29,6 +29,7 @@ export type CompanyRow = {
   claimed: boolean;
   createdAt: Date;
   creditsRemaining: number;
+  mainCredits: number;
   totalChannels: number;
   agentCount: number;
   agentsAllocated: number;
@@ -223,7 +224,7 @@ export function CompaniesTable({
       cell: ({ row }) => (
         <div className="flex flex-col gap-1 min-w-[100px]">
           <div className="flex items-center gap-2">
-            <span className="font-medium">{formatNumber(row.original.creditsRemaining)}</span>
+            <span className="font-medium" title="Total Credits (Main + Sub-Companies)">{formatNumber(row.original.creditsRemaining)}</span>
             {row.original.lowCredit && (
               <Badge variant="destructive" className="h-5 px-1.5 text-[10px] gap-1">
                 <AlertTriangle className="h-3 w-3" />
@@ -231,10 +232,15 @@ export function CompaniesTable({
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          {row.original.childCompanyCount > 0 && (
+            <div className="text-[10px] text-muted-foreground">
+              Main: {formatNumber(row.original.mainCredits)}
+            </div>
+          )}
+          <div className="flex items-center gap-1 mt-1">
             <CreditBreakdown companyId={row.original.id} />
             <AddCreditDialog companyId={row.original.id} companyName={row.original.name} />
-            <EditCreditDialog companyId={row.original.id} companyName={row.original.name} currentCredits={row.original.creditsRemaining} />
+            <EditCreditDialog companyId={row.original.id} companyName={row.original.name} currentCredits={row.original.mainCredits} />
           </div>
         </div>
       ),
