@@ -831,7 +831,7 @@ export function GeneralNotification() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
+    const interval = setInterval(fetchNotifications, 2000);
     return () => clearInterval(interval);
   }, []);
 
