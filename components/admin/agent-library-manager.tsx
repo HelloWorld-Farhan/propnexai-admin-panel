@@ -79,7 +79,15 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const columns: ColumnDef<AgentEntry>[] = [
-    { accessorKey: "name", header: "Name" },
+    { 
+      accessorKey: "name", 
+      header: "Name" 
+    },
+    {
+      accessorKey: "id",
+      header: "Agent ID",
+      cell: ({ row }) => <span className="text-[10px] text-muted-foreground font-mono">{row.original.id}</span>
+    },
     { 
       accessorKey: "category", 
       header: "Work",
@@ -483,7 +491,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={entries} searchKeys={["name", "category", "profile"]} searchPlaceholder="Search by name or work..." />
+      <DataTable columns={columns} data={entries} searchKeys={["name", "category", "profile", "id"]} searchPlaceholder="Search by name, ID or work..." />
 
       <Dialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
         <DialogContent>
