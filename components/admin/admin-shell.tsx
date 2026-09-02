@@ -10,11 +10,14 @@ import {
   LogOut,
   Phone,
   ClipboardList,
+  Menu,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AdminNotifications } from "./notification-bell";
+import { useState } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,6 +32,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
@@ -36,9 +41,26 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-        <div className="border-b border-sidebar-border px-4 py-5">
+    <div className="flex min-h-screen bg-background flex-col md:flex-row">
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-sidebar">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-bold uppercase tracking-widest text-primary">PropNex Admin</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <AdminNotifications />
+          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <aside className={cn(
+        "flex w-full md:w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-all",
+        mobileMenuOpen ? "block" : "hidden md:flex"
+      )}>
+        <div className="hidden md:block border-b border-sidebar-border px-4 py-5">
           <p className="text-xs font-medium uppercase tracking-widest text-primary">
             PropNex
           </p>
@@ -54,6 +76,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 prefetch={true}
+                onClick={() => setMobileMenuOpen(false)}
                 className={cn(
                   "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
                   active
@@ -79,13 +102,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-border px-6">
+        <header className="hidden md:flex h-14 items-center justify-between border-b border-border px-6">
           <p className="text-sm text-muted-foreground">
             Platform administration
           </p>
           <AdminNotifications />
         </header>
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

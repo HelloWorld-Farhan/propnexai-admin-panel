@@ -262,7 +262,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                 {editingId ? "Edit library agent" : "Add library agent"}
               </DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label>Name of Company</Label>
