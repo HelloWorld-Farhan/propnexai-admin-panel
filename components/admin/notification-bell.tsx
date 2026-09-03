@@ -648,23 +648,25 @@ export function NumberNotification() {
                     {/* Inline assign number input */}
                     {isAssigningThis ? (
                       <div className="flex flex-col gap-2">
-                        <input
-                          className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                          placeholder="e.g. 919429390765"
-                          value={assignNumber}
-                          onChange={(e) => setAssignNumber(e.target.value)}
-                          autoFocus
-                          onKeyDown={(e) => e.key === "Escape" && (setAssigningId(null), setAssignNumber(""), setAssignChannels("1"))}
-                        />
-                        <input
-                          type="number"
-                          min="1"
-                          className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                          placeholder="Channels (default: 1)"
-                          value={assignChannels}
-                          onChange={(e) => setAssignChannels(e.target.value)}
-                          onKeyDown={(e) => e.key === "Escape" && (setAssigningId(null), setAssignNumber(""), setAssignChannels("1"))}
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            className="w-2/3 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            placeholder="e.g. 919429390765"
+                            value={assignNumber}
+                            onChange={(e) => setAssignNumber(e.target.value)}
+                            autoFocus
+                            onKeyDown={(e) => e.key === "Escape" && (setAssigningId(null), setAssignNumber(""), setAssignChannels("1"))}
+                          />
+                          <input
+                            type="number"
+                            min="1"
+                            className="w-1/3 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            placeholder="Channels"
+                            value={assignChannels}
+                            onChange={(e) => setAssignChannels(e.target.value)}
+                            onKeyDown={(e) => e.key === "Escape" && (setAssigningId(null), setAssignNumber(""), setAssignChannels("1"))}
+                          />
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
