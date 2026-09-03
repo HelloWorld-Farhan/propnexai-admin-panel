@@ -526,9 +526,9 @@ export function NumberNotification() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<any[]>([]);
-  // Track which req is in "assign inline" mode
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [assignNumber, setAssignNumber] = useState("");
+  const [assignChannels, setAssignChannels] = useState("1");
   const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
@@ -576,7 +576,7 @@ export function NumberNotification() {
       const res = await fetch(`/api/companies/${companyId}/number`, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newNumber: assignNumber.trim() }),
+        body: JSON.stringify({ newNumber: assignNumber.trim(), channels: parseInt(assignChannels) || 1 }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to assign number");
@@ -584,6 +584,7 @@ export function NumberNotification() {
       toast.success(`Number assigned to ${req.company?.name || req.email}`);
       setAssigningId(null);
       setAssignNumber("");
+      setAssignChannels("1");
       // Dismiss the notification request
       await dismissRequest(req.id);
       router.refresh();
@@ -653,14 +654,23 @@ export function NumberNotification() {
                           value={assignNumber}
                           onChange={(e) => setAssignNumber(e.target.value)}
                           autoFocus
-                          onKeyDown={(e) => e.key === "Escape" && (setAssigningId(null), setAssignNumber(""))}
+                          onKeyDown={(e) => e.key === "Escape" && (setAssigningId(null), setAssignNumber(""), setAssignChannels("1"))}
+                        />
+                        <input
+                          type="number"
+                          min="1"
+                          className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          placeholder="Channels (default: 1)"
+                          value={assignChannels}
+                          onChange={(e) => setAssignChannels(e.target.value)}
+                          onKeyDown={(e) => e.key === "Escape" && (setAssigningId(null), setAssignNumber(""), setAssignChannels("1"))}
                         />
                         <div className="flex gap-2">
                           <Button
                             size="sm"
                             variant="outline"
                             className="flex-1"
-                            onClick={() => { setAssigningId(null); setAssignNumber(""); }}
+                            onClick={() => { setAssigningId(null); setAssignNumber(""); setAssignChannels("1"); }}
                             disabled={assigning}
                           >
                             Cancel
@@ -685,6 +695,7 @@ export function NumberNotification() {
                           onClick={() => {
                             setAssigningId(req.id);
                             setAssignNumber("");
+                            setAssignChannels("1");
                           }}
                         >
                           <Plus className="h-3.5 w-3.5" />
