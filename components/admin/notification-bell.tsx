@@ -570,13 +570,25 @@ export function NumberNotification() {
       toast.error("Company not found for this request");
       return;
     }
+
+    let direction = "BOTH";
+    if (req.message?.includes("OUTBOUND")) {
+      direction = "OUTBOUND";
+    } else if (req.message?.includes("INBOUND")) {
+      direction = "INBOUND";
+    }
+
     setAssigning(true);
     try {
       const method = isAdditional ? "POST" : "POST"; // POST always = add new number
       const res = await fetch(`/api/companies/${companyId}/number`, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newNumber: assignNumber.trim(), channels: parseInt(assignChannels) || 1 }),
+        body: JSON.stringify({ 
+          newNumber: assignNumber.trim(), 
+          channels: parseInt(assignChannels) || 1,
+          direction
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to assign number");
