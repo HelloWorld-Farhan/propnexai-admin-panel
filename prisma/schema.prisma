@@ -1843,10 +1843,17 @@ model JobApplication {
   firstName      String
   lastName       String
   email          String
+  countryCode    String?
   phone          String
   experience     String
   expectedPayout String
+  currentPayout  String?
+  sponsor        String?
+  legalStatus    String?
+  citizenship    String?
+  gender         String?
   resumeUrl      String
+  agreedToTerms  Boolean  @default(true)
   isRead         Boolean  @default(false)
   appliedAt      DateTime @default(now())
 

@@ -24,6 +24,7 @@ jobs:
       - name: Install and Build
         run: |
           npm install
+          npx prisma generate
           npx tsc --noEmit
           npm run build
 
