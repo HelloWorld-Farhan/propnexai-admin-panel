@@ -56,7 +56,19 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (value.trim() !== "") {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
+      if (field === "lastDate") {
+        const selectedDate = new Date(value);
+        selectedDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate <= today) {
+          setErrors((prev) => ({ ...prev, [field]: "Date must be in the future (not today or past)" }));
+        } else {
+          setErrors((prev) => ({ ...prev, [field]: "" }));
+        }
+      } else {
+        setErrors((prev) => ({ ...prev, [field]: "" }));
+      }
     } else {
       setErrors((prev) => ({ ...prev, [field]: "This field is required" }));
     }
@@ -73,6 +85,17 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
         hasErrors = true;
       }
     });
+
+    if (formData.lastDate) {
+      const selectedDate = new Date(formData.lastDate);
+      selectedDate.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (selectedDate <= today) {
+        newErrors.lastDate = "Date must be in the future (not today or past)";
+        hasErrors = true;
+      }
+    }
 
     if (hasErrors) {
       setErrors(newErrors);
@@ -132,7 +155,7 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
                 minRows={3}
                 value={formData.description}
                 onChange={(e) => handleChange("description", e.target.value)}
-                className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.description ? "border-red-500" : ""}`} 
+                className={`flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.description ? "border-red-500" : ""}`} 
               />
               {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
             </div>
@@ -140,21 +163,23 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="experience">Required Experience</Label>
-                <Input 
+                <TextareaAutosize 
                   id="experience" 
+                  minRows={1}
                   value={formData.experience} 
                   onChange={(e) => handleChange("experience", e.target.value)} 
-                  className={errors.experience ? "border-red-500" : ""}
+                  className={`flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.experience ? "border-red-500" : ""}`}
                 />
                 {errors.experience && <p className="text-xs text-red-500">{errors.experience}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="education">Education</Label>
-                <Input 
+                <TextareaAutosize 
                   id="education" 
+                  minRows={1}
                   value={formData.education} 
                   onChange={(e) => handleChange("education", e.target.value)} 
-                  className={errors.education ? "border-red-500" : ""}
+                  className={`flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.education ? "border-red-500" : ""}`}
                 />
                 {errors.education && <p className="text-xs text-red-500">{errors.education}</p>}
               </div>
@@ -199,7 +224,7 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
                 minRows={3}
                 value={formData.responsibilities}
                 onChange={(e) => handleChange("responsibilities", e.target.value)}
-                className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.responsibilities ? "border-red-500" : ""}`} 
+                className={`flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.responsibilities ? "border-red-500" : ""}`} 
               />
               {errors.responsibilities && <p className="text-xs text-red-500">{errors.responsibilities}</p>}
             </div>
@@ -211,7 +236,7 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
                 minRows={3}
                 value={formData.knowledge}
                 onChange={(e) => handleChange("knowledge", e.target.value)}
-                className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.knowledge ? "border-red-500" : ""}`} 
+                className={`flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.knowledge ? "border-red-500" : ""}`} 
               />
               {errors.knowledge && <p className="text-xs text-red-500">{errors.knowledge}</p>}
             </div>

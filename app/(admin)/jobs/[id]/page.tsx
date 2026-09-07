@@ -41,7 +41,10 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
                 Edit
               </Button>
             </Link>
-            <form action={async () => { "use server"; await deleteJobPosting(job.id); }}>
+            <form action={async (formData: FormData) => {
+              "use server";
+              await deleteJobPosting(job.id);
+            }}>
               <Button variant="destructive" type="submit">
                 <Trash className="mr-2 h-4 w-4" />
                 Delete
@@ -82,11 +85,19 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
           <div className="space-y-4 text-sm">
             <div>
               <span className="font-medium text-muted-foreground">Responsibilities:</span>
-              <p className="mt-1 whitespace-pre-wrap">{job.responsibilities}</p>
+              <ul className="mt-1 list-disc pl-5 space-y-1">
+                {job.responsibilities?.split('\n').filter(line => line.trim()).map((line, i) => (
+                  <li key={i}>{line.replace(/^-\s*/, '')}</li>
+                ))}
+              </ul>
             </div>
             <div>
               <span className="font-medium text-muted-foreground">Knowledge & Skills:</span>
-              <p className="mt-1 whitespace-pre-wrap">{job.knowledge}</p>
+              <ul className="mt-1 list-disc pl-5 space-y-1">
+                {job.knowledge?.split('\n').filter(line => line.trim()).map((line, i) => (
+                  <li key={i}>{line.replace(/^-\s*/, '')}</li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
