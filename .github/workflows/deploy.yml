@@ -18,6 +18,8 @@ jobs:
           echo "ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}" >> .env.local
           echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env.local
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.local
+          echo "DATABASE_URL=mongodb://propnex_admin:Propnexai%40123@200.234.34.240:27017/propnex?authSource=admin&replicaSet=rs0" >> .env.local
+          echo "ADMIN_SESSION_SECRET=propnex-admin-session-secret-change-in-production-min-32-chars" >> .env.local
 
       - name: Install and Build
         run: |
