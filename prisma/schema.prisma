@@ -1816,3 +1816,36 @@ model FormSubmission {
   volume    String?  // For Partner App
   createdAt DateTime @default(now())
 }
+
+// ─── Jobs & Careers ─────────────────────────────────────────────────────────
+
+model JobPosting {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  jobId            String   @unique
+  title            String
+  description      String
+  experience       String
+  responsibilities String
+  knowledge        String
+  education        String
+  lastDate         DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  applications     JobApplication[]
+}
+
+model JobApplication {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  jobId          String   @db.ObjectId
+  firstName      String
+  lastName       String
+  email          String
+  phone          String
+  experience     String
+  expectedPayout String
+  resumeUrl      String
+  appliedAt      DateTime @default(now())
+
+  job            JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}

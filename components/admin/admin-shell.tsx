@@ -10,6 +10,7 @@ import {
   LogOut,
   Phone,
   ClipboardList,
+  Briefcase,
   Menu,
   X,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/channels", label: "Form Info", icon: ClipboardList },
   { href: "/numbers", label: "Numbers", icon: Phone },
   { href: "/agents", label: "Agent Library", icon: Bot },
+  { href: "/jobs", label: "Jobs", icon: Briefcase }, // Added Jobs
   { href: "/support", label: "Support", icon: LifeBuoy },
 ];
 
