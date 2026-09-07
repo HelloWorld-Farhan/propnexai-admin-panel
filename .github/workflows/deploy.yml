@@ -24,6 +24,7 @@ jobs:
       - name: Install and Build
         run: |
           npm install
+          npx tsc --noEmit
           npm run build
 
       - name: Copy Files to Server
