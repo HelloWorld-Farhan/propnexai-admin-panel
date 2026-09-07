@@ -1,0 +1,45 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Create .env.local file
+        run: |
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env.local
+          echo "ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}" >> .env.local
+          echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env.local
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.local
+
+      - name: Install and Build
+        run: |
+          npm install
+          npm run build
+
+      - name: Copy Files to Server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.HOST_IP }}
+          username: root
+          password: ${{ secrets.HOST_PASSWORD }}
+          source: ".next,public,package.json,package-lock.json,.env.local"
+          target: "/root/propnexai-admin-panel"
+
+      - name: Restart PM2 on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST_IP }}
+          username: root
+          password: ${{ secrets.HOST_PASSWORD }}
+          script: |
+            cd /root/propnexai-admin-panel
+            npm install --production
+            pm2 restart propnexai-admin --update-env
