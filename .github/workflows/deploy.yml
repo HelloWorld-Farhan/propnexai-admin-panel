@@ -27,18 +27,18 @@ jobs:
       - name: Copy Files to Server
         uses: appleboy/scp-action@v0.1.4
         with:
-          host: ${{ secrets.HOST_IP }}
+          host: ${{ secrets.HOSTINGER_HOST }}
           username: root
-          password: ${{ secrets.HOST_PASSWORD }}
+          password: ${{ secrets.HOSTINGER_PASSWORD }}
           source: ".next,public,package.json,package-lock.json,.env.local"
           target: "/root/propnexai-admin-panel"
 
       - name: Restart PM2 on Server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOST_IP }}
+          host: ${{ secrets.HOSTINGER_HOST }}
           username: root
-          password: ${{ secrets.HOST_PASSWORD }}
+          password: ${{ secrets.HOSTINGER_PASSWORD }}
           script: |
             cd /root/propnexai-admin-panel
             npm install --production
