@@ -1847,6 +1847,7 @@ model JobApplication {
   experience     String
   expectedPayout String
   resumeUrl      String
+  isRead         Boolean  @default(false)
   appliedAt      DateTime @default(now())
 
   job JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)

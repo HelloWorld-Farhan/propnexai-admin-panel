@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Check, Plus, X, Coins, PhoneCall, UserCheck, Building2, Trash2, Bot } from "lucide-react";
+import { Bell, Check, Plus, X, Coins, PhoneCall, UserCheck, Building2, Trash2, Bot, Briefcase } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -1038,6 +1038,112 @@ export function AgentLibraryNotification() {
   );
 }
 
+export function JobApplicationNotification() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [pending, setPending] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchPending();
+    const interval = setInterval(fetchPending, 15000); // Poll every 15s
+    return () => clearInterval(interval);
+  }, []);
+
+  async function fetchPending() {
+    try {
+      const res = await fetch(`/api/job-applications/unread?t=${Date.now()}`, { cache: "no-store" });
+      const data = await res.json();
+      if (data.success) {
+        setPendingCount(data.count);
+        setPending(data.data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleView(id: string) {
+    try {
+      const res = await fetch("/api/job-applications/unread", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setOpen(false);
+        router.push("/jobs?tab=applications");
+        fetchPending(); // Refresh list
+      }
+    } catch (err) {
+      console.error("Failed to mark as read", err);
+    }
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative" aria-label="Job Applications">
+          <Briefcase className="size-5" />
+          {pendingCount > 0 && (
+            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">
+              {pendingCount}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-0">
+        <div className="border-b p-3">
+          <h4 className="font-medium leading-none">Job Applications</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            New unread job applications
+          </p>
+        </div>
+        <div className="max-h-[300px] overflow-y-auto">
+          {pending.length === 0 ? (
+            <p className="p-4 text-center text-sm text-muted-foreground">
+              No new applications.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {pending.map((app) => (
+                <div key={app.id} className="flex flex-col gap-2 border-b p-3 last:border-0">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <p className="text-sm font-medium leading-snug truncate">
+                      {app.firstName} {app.lastName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {app.job?.title || "Unknown Role"} {app.job?.jobId ? `(ID: ${app.job.jobId})` : ""}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Email: {app.email}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Phone: {app.phone}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-1">
+                      {new Date(app.appliedAt).toLocaleDateString()} — {new Date(app.appliedAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleView(app.id)}
+                    >
+                      View Application
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function AdminNotifications() {
   return (
     <div className="flex items-center gap-2">
@@ -1046,6 +1152,7 @@ export function AdminNotifications() {
       <NumberNotification />
       <SubCompanyNotification />
       <AgentLibraryNotification />
+      <JobApplicationNotification />
     </div>
   );
 }

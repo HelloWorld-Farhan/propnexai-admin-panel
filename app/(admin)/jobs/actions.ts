@@ -42,10 +42,27 @@ export async function createJobPosting(formData: FormData) {
 }
 
 export async function deleteJobPosting(id: string) {
-  await prisma.jobPosting.delete({
-    where: { id },
-  });
-  revalidatePath("/jobs");
+  try {
+    await prisma.jobPosting.delete({
+      where: { id },
+    });
+    revalidatePath("/jobs");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to delete" };
+  }
+}
+
+export async function deleteJobApplication(id: string) {
+  try {
+    await prisma.jobApplication.delete({
+      where: { id },
+    });
+    revalidatePath("/jobs");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to delete" };
+  }
 }
 
 export async function updateJobPosting(id: string, formData: FormData) {

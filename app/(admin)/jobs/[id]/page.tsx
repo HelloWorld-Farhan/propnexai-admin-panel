@@ -41,7 +41,7 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
                 Edit
               </Button>
             </Link>
-            <form action={deleteJobPosting.bind(null, job.id)}>
+            <form action={async () => { "use server"; await deleteJobPosting(job.id); }}>
               <Button variant="destructive" type="submit">
                 <Trash className="mr-2 h-4 w-4" />
                 Delete
