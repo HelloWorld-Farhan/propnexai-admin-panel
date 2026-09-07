@@ -33,7 +33,7 @@ jobs:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: root
           password: ${{ secrets.HOSTINGER_PASSWORD }}
-          source: ".next,public,package.json,package-lock.json,.env.local"
+          source: ".next,public,package.json,package-lock.json,.env.local,prisma"
           target: "/root/propnexai-admin-panel"
 
       - name: Restart PM2 on Server
