@@ -41,6 +41,12 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
           <h2 className="text-lg font-semibold mb-4">Job Details</h2>
           <div className="space-y-4 text-sm">
             <div>
+              <span className="font-medium text-muted-foreground">Job Type:</span> {job.jobType}
+            </div>
+            <div>
+              <span className="font-medium text-muted-foreground">Location:</span> {job.location}
+            </div>
+            <div>
               <span className="font-medium text-muted-foreground">Experience:</span> {job.experience}
             </div>
             <div>

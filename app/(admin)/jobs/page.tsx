@@ -38,6 +38,7 @@ export default async function JobsPage() {
               <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Job ID</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Title</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Type</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Posted Date</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Last Date</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Applications</th>
@@ -47,7 +48,7 @@ export default async function JobsPage() {
             <tbody className="[&_tr:last-child]:border-0">
               {jobs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <td colSpan={7} className="h-24 text-center text-muted-foreground">
                     No jobs posted yet.
                   </td>
                 </tr>
@@ -56,10 +57,16 @@ export default async function JobsPage() {
                   <tr key={job.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td className="p-4 align-middle font-medium">{job.jobId}</td>
                     <td className="p-4 align-middle">
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        {job.title}
+                      <div className="flex flex-col">
+                        <span className="flex items-center gap-2 font-medium">
+                          <Briefcase className="h-4 w-4 text-muted-foreground" />
+                          {job.title}
+                        </span>
+                        <span className="text-xs text-muted-foreground mt-1 ml-6">{job.location}</span>
                       </div>
+                    </td>
+                    <td className="p-4 align-middle text-muted-foreground">
+                      {job.jobType}
                     </td>
                     <td className="p-4 align-middle text-muted-foreground">
                       {format(job.createdAt, "MMM d, yyyy")}

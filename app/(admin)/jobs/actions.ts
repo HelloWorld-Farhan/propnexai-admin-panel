@@ -11,6 +11,8 @@ export async function createJobPosting(formData: FormData) {
   const responsibilities = formData.get("responsibilities") as string;
   const knowledge = formData.get("knowledge") as string;
   const education = formData.get("education") as string;
+  const jobType = formData.get("jobType") as string;
+  const location = formData.get("location") as string;
   const lastDateStr = formData.get("lastDate") as string;
   
   if (!title || !description || !lastDateStr) {
@@ -29,6 +31,8 @@ export async function createJobPosting(formData: FormData) {
       responsibilities: responsibilities || "",
       knowledge: knowledge || "",
       education: education || "",
+      jobType: jobType || "Full-time",
+      location: location || "Remote",
       lastDate: new Date(lastDateStr),
     },
   });

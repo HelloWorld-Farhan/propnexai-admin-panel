@@ -506,13 +506,13 @@ model User {
   updatedAt   DateTime   @updatedAt
 
   memberships       CompanyMember[]
-  invitationsSent   Invitation[]     @relation("InvitedBy")
-  assignedLeads     Lead[]           @relation("LeadAssignee")
-  leadAssignments   LeadAssignment[] @relation("AssignmentTarget")
-  leadAssignmentsBy LeadAssignment[] @relation("AssignmentActor")
+  invitationsSent   Invitation[]       @relation("InvitedBy")
+  assignedLeads     Lead[]             @relation("LeadAssignee")
+  leadAssignments   LeadAssignment[]   @relation("AssignmentTarget")
+  leadAssignmentsBy LeadAssignment[]   @relation("AssignmentActor")
   leadNotes         LeadNote[]
   leadActivities    LeadActivity[]
-  assignedCalls     CallLog[]        @relation("CallHumanAgent")
+  assignedCalls     CallLog[]          @relation("CallHumanAgent")
   schedulerEvents   SchedulerEvent[]
   auditLogs         AuditLog[]
   notifications     Notification[]
@@ -524,22 +524,22 @@ model User {
 }
 
 model CompanyMember {
-  id               String           @id @default(auto()) @map("_id") @db.ObjectId
-  companyId        String           @db.ObjectId
-  userId           String           @db.ObjectId
-  roleId           String?          @db.ObjectId
-  role             UserRole         @default(AGENT)
-  status           MemberStatus     @default(ACTIVE)
-  jobTitle         String?
+  id                 String             @id @default(auto()) @map("_id") @db.ObjectId
+  companyId          String             @db.ObjectId
+  userId             String             @db.ObjectId
+  roleId             String?            @db.ObjectId
+  role               UserRole           @default(AGENT)
+  status             MemberStatus       @default(ACTIVE)
+  jobTitle           String?
   campaignAccessType CampaignAccessType @default(ALL)
-  invitedAt        DateTime?
-  joinedAt         DateTime?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  invitedAt          DateTime?
+  joinedAt           DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  company      Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  customRole   Role?                @relation(fields: [roleId], references: [id])
+  company        Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customRole     Role?                  @relation(fields: [roleId], references: [id])
   campaignAccess MemberCampaignAccess[]
 
   @@unique([companyId, userId])
@@ -562,22 +562,22 @@ model MemberCampaignAccess {
 }
 
 model Invitation {
-  id                  String           @id @default(auto()) @map("_id") @db.ObjectId
-  companyId           String           @db.ObjectId
+  id                  String             @id @default(auto()) @map("_id") @db.ObjectId
+  companyId           String             @db.ObjectId
   email               String
-  role                UserRole         @default(AGENT)
-  roleId              String?          @db.ObjectId
+  role                UserRole           @default(AGENT)
+  roleId              String?            @db.ObjectId
   jobTitle            String?
-  campaignAccessType CampaignAccessType @default(ALL)
-  campaignIds        String[]           @default([])
-  token               String           @unique
+  campaignAccessType  CampaignAccessType @default(ALL)
+  campaignIds         String[]           @default([])
+  token               String             @unique
   clerkInvitationId   String?
   clerkOrganizationId String?
-  status              InvitationStatus @default(PENDING)
+  status              InvitationStatus   @default(PENDING)
   expiresAt           DateTime
-  invitedById         String           @db.ObjectId
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  invitedById         String             @db.ObjectId
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   invitedBy User    @relation("InvitedBy", fields: [invitedById], references: [id])
@@ -587,12 +587,12 @@ model Invitation {
 }
 
 model PendingApproval {
-  id          String                @id @default(auto()) @map("_id") @db.ObjectId
-  email       String                @unique
-  status      PendingApprovalStatus @default(PENDING)
-  remindedAt  DateTime?
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
+  id         String                @id @default(auto()) @map("_id") @db.ObjectId
+  email      String                @unique
+  status     PendingApprovalStatus @default(PENDING)
+  remindedAt DateTime?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
 
   @@index([status])
 }
@@ -665,7 +665,7 @@ model Lead {
   assignedUser    User?             @relation("LeadAssignee", fields: [assignedUserId], references: [id])
   assignedAiAgent AiAgent?          @relation("DialerLeadAgent", fields: [assignedAiAgentId], references: [id])
   dialerChannel   Channel?          @relation(fields: [channelId], references: [id])
-  campaign      Campaign?         @relation(fields: [campaignId], references: [id])
+  campaign        Campaign?         @relation(fields: [campaignId], references: [id])
   assignments     LeadAssignment[]
   notes           LeadNote[]
   activities      LeadActivity[]
@@ -735,27 +735,27 @@ model LeadActivity {
 // ─── Call Logs ─────────────────────────────────────────────────────────────────
 
 model PhoneNumber {
-  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
-  companyId          String?           @db.ObjectId
-  assignedParentTenantId String?       @db.ObjectId
+  id                     String            @id @default(auto()) @map("_id") @db.ObjectId
+  companyId              String?           @db.ObjectId
+  assignedParentTenantId String?           @db.ObjectId
   /// Entity ID segment for public IDs (e.g. PH000001). Formerly resourceKey.
-  phoneNumberId     String
+  phoneNumberId          String
   /// Full external ID (e.g. v1.PNX.CP000001.PH000001).
-  publicId           String
-  number             String
-  channels           Int?
-  label              String?
-  provider           TelephonyProvider
-  campaignId         String?           @db.ObjectId
-  inboundAgentId     String?           @db.ObjectId
-  outboundAgentId    String?           @db.ObjectId
-  direction          CallDirection?
-  status             PhoneNumberStatus @default(ACTIVE)
-  inboundCallsCount  Int               @default(0)
-  outboundCallsCount Int               @default(0)
-  lastActivityAt     DateTime?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  publicId               String
+  number                 String
+  channels               Int?
+  label                  String?
+  provider               TelephonyProvider
+  campaignId             String?           @db.ObjectId
+  inboundAgentId         String?           @db.ObjectId
+  outboundAgentId        String?           @db.ObjectId
+  direction              CallDirection?
+  status                 PhoneNumberStatus @default(ACTIVE)
+  inboundCallsCount      Int               @default(0)
+  outboundCallsCount     Int               @default(0)
+  lastActivityAt         DateTime?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 
   company            Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
   campaign           Campaign?        @relation(fields: [campaignId], references: [id])
@@ -772,20 +772,20 @@ model PhoneNumber {
 }
 
 model UploadedContact {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  companyId String   @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  companyId   String   @db.ObjectId
   /// Public ID resource segment (e.g. CT000001).
   resourceKey String
-  phone     String
+  phone       String
   /// Excel column: user_name
-  field1    String?
+  field1      String?
   /// Excel column: Recording URL
-  field2    String?
+  field2      String?
   /// Excel column: Transcripts
-  field3    String?
+  field3      String?
   campaignIds String[] @default([])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -795,63 +795,65 @@ model UploadedContact {
 }
 
 model CallLog {
-  id              String        @id @default(auto()) @map("_id") @db.ObjectId
-  companyId       String?       @db.ObjectId
+  id                  String        @id @default(auto()) @map("_id") @db.ObjectId
+  companyId           String?       @db.ObjectId
   /// Entity ID segment for public IDs (e.g. CL00000001). Formerly resourceKey.
-  callLogId       String
+  callLogId           String
   /// Full external ID (e.g. v1.PNX.CP000001.CL00000001).
-  publicId        String
-  leadId          String?       @db.ObjectId
-  phoneNumberId   String?       @db.ObjectId
-  aiAgentId       String?       @db.ObjectId
-  assignedUserId  String?       @db.ObjectId
-  campaignId        String?       @db.ObjectId
-  direction       CallDirection
-  status          CallStatus
-  outcome         CallOutcome?
-  startedAt       DateTime
-  durationSeconds Int           @default(0)
-  recordingUrl    String?
-  transcriptUrl   String?
-  aiSummary       Json?
-  sentiment       Json?
-  engagement       Json?
-  reactivationPlan Json?
-  cost             Float?
-  creditsUsed      Float?
-  provider         String?
-  providerStatus   String?
-  providerCallId   String?
-  correlationId    String?
+  publicId            String
+  leadId              String?       @db.ObjectId
+  phoneNumberId       String?       @db.ObjectId
+  aiAgentId           String?       @db.ObjectId
+  assignedUserId      String?       @db.ObjectId
+  campaignId          String?       @db.ObjectId
+  direction           CallDirection
+  status              CallStatus
+  outcome             CallOutcome?
+  startedAt           DateTime
+  durationSeconds     Int           @default(0)
+  recordingUrl        String?
+  transcriptUrl       String?
+  aiSummary           Json?
+  sentiment           Json?
+  engagement          Json?
+  reactivationPlan    Json?
+  cost                Float?
+  creditsUsed         Float?
+  provider            String?
+  providerStatus      String?
+  providerCallId      String?
+  correlationId       String?
   providerRequestedAt DateTime?
   providerAcceptedAt  DateTime?
   providerCompletedAt DateTime?
-  answeredAt       DateTime?
-  endedAt          DateTime?
-  disconnectReason String?
-  providerRequest  Json?
-  providerResponse Json?
-  providerWebhook  Json?
-  providerMetadata Json?
-  retryNumber      Int           @default(0)
-  parentCallLogId  String?       @db.ObjectId
-  isRetry          Boolean       @default(false)
-  retryReason      CallStatus?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  answeredAt          DateTime?
+  endedAt             DateTime?
+  disconnectReason    String?
+  providerRequest     Json?
+  providerResponse    Json?
+  providerWebhook     Json?
+  providerMetadata    Json?
+  retryNumber         Int           @default(0)
+  parentCallLogId     String?       @db.ObjectId
+  isRetry             Boolean       @default(false)
+  retryReason         CallStatus?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  company       Company?           @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  lead          Lead?              @relation(fields: [leadId], references: [id])
-  phoneNumber   PhoneNumber?       @relation(fields: [phoneNumberId], references: [id])
-  aiAgent       AiAgent?           @relation(fields: [aiAgentId], references: [id])
-  assignedUser  User?              @relation("CallHumanAgent", fields: [assignedUserId], references: [id])
-  campaign      Campaign?          @relation(fields: [campaignId], references: [id])
-  parentCallLog CallLog?           @relation("CallLogRetries", fields: [parentCallLogId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  childRetries  CallLog[]          @relation("CallLogRetries")
-  transcript    CallTranscript?
-  internalNotes CallInternalNote[]
+  company        Company?               @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  lead           Lead?                  @relation(fields: [leadId], references: [id])
+  phoneNumber    PhoneNumber?           @relation(fields: [phoneNumberId], references: [id])
+  aiAgent        AiAgent?               @relation(fields: [aiAgentId], references: [id])
+  assignedUser   User?                  @relation("CallHumanAgent", fields: [assignedUserId], references: [id])
+  campaign       Campaign?              @relation(fields: [campaignId], references: [id])
+  parentCallLog  CallLog?               @relation("CallLogRetries", fields: [parentCallLogId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childRetries   CallLog[]              @relation("CallLogRetries")
+  transcript     CallTranscript?
+  internalNotes  CallInternalNote[]
   providerEvents CallLogProviderEvent[]
 
+  @@unique([companyId, callLogId])
+  @@unique([companyId, publicId])
   @@index([companyId, startedAt])
   @@index([companyId, status, startedAt])
   @@index([companyId, leadId])
@@ -860,8 +862,6 @@ model CallLog {
   @@index([companyId, campaignId])
   @@index([parentCallLogId])
   @@index([campaignId, phoneNumberId, isRetry])
-  @@unique([companyId, callLogId])
-  @@unique([companyId, publicId])
   @@index([publicId])
 }
 
@@ -956,13 +956,13 @@ model AgentLibraryEntry {
   isPublished           Boolean   @default(true)
   sortOrder             Int       @default(0)
   totalVoices           Int       @default(10)
-  
-  assignedByName        String?
-  assignedByEmail       String?
-  assignedByPhone       String?
 
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  assignedByName  String?
+  assignedByEmail String?
+  assignedByPhone String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   deployedAgents AiAgent[]
 }
@@ -975,7 +975,7 @@ model AiAgent {
   /// Public ID resource segment (e.g. AG000023).
   resourceKey       String
   libraryEntryId    String?          @db.ObjectId
-  campaignId          String?          @db.ObjectId
+  campaignId        String?          @db.ObjectId
   name              String
   description       String?
   type              AgentType
@@ -997,27 +997,27 @@ model AiAgent {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
-  company              Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  libraryEntry         AgentLibraryEntry?    @relation(fields: [libraryEntryId], references: [id])
-  campaign             Campaign?               @relation(fields: [campaignId], references: [id])
-  promptTemplates      AgentPromptTemplate[]
-  toolAssignments      AgentToolAssignment[]
-  knowledgeSources     KnowledgeSource[]
-  inboundPhoneNumbers  PhoneNumber[]         @relation("InboundAgent")
-  outboundPhoneNumbers PhoneNumber[]         @relation("OutboundAgent")
-  callLogs             CallLog[]
-  outboundCampaigns    OutboundCampaign[]
-  dialerLeads          Lead[]                @relation("DialerLeadAgent")
-  channels             Channel[]
-  dialerCalls          DialerCall[]
+  company               Company                     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  libraryEntry          AgentLibraryEntry?          @relation(fields: [libraryEntryId], references: [id])
+  campaign              Campaign?                   @relation(fields: [campaignId], references: [id])
+  promptTemplates       AgentPromptTemplate[]
+  toolAssignments       AgentToolAssignment[]
+  knowledgeSources      KnowledgeSource[]
+  inboundPhoneNumbers   PhoneNumber[]               @relation("InboundAgent")
+  outboundPhoneNumbers  PhoneNumber[]               @relation("OutboundAgent")
+  callLogs              CallLog[]
+  outboundCampaigns     OutboundCampaign[]
+  dialerLeads           Lead[]                      @relation("DialerLeadAgent")
+  channels              Channel[]
+  dialerCalls           DialerCall[]
   communicationChannels AgentCommunicationChannel[]
 
+  @@unique([companyId, resourceKey])
   @@index([companyId, status])
   @@index([companyId, type])
   @@index([companyId, enabled, status])
   @@index([libraryEntryId])
   @@index([companyId, campaignId])
-  @@unique([companyId, resourceKey])
 }
 
 model AgentCommunicationChannel {
@@ -1116,12 +1116,12 @@ model OutboundCampaign {
   aiAgentId      String?                @db.ObjectId
   name           String
   status         OutboundCampaignStatus @default(DRAFT)
-  totalCalls     Int            @default(0)
-  connectedCalls Int            @default(0)
-  conversionRate Float          @default(0)
-  generatedLeads Int            @default(0)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  totalCalls     Int                    @default(0)
+  connectedCalls Int                    @default(0)
+  conversionRate Float                  @default(0)
+  generatedLeads Int                    @default(0)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
 
   company Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   aiAgent AiAgent? @relation(fields: [aiAgentId], references: [id])
@@ -1274,32 +1274,32 @@ model CsvImportBatch {
 }
 
 model ApiKey {
-  id                      String            @id @default(auto()) @map("_id") @db.ObjectId
-  companyId               String            @db.ObjectId
+  id                      String             @id @default(auto()) @map("_id") @db.ObjectId
+  companyId               String             @db.ObjectId
   name                    String
   description             String?
-  keyId                   String            @unique
+  keyId                   String             @unique
   keyPrefix               String
   hashedSecret            String
   environment             ApiKeyEnvironment
-  status                  ApiKeyStatus      @default(ACTIVE)
-  scopes                  String[]          @default([])
-  campaignAccessType        CampaignAccessType  @default(SELECTED)
+  status                  ApiKeyStatus       @default(ACTIVE)
+  scopes                  String[]           @default([])
+  campaignAccessType      CampaignAccessType @default(SELECTED)
   expiresAt               DateTime?
   lastUsedAt              DateTime?
-  createdById             String            @db.ObjectId
+  createdById             String             @db.ObjectId
   deletedAt               DateTime?
   previousHashedSecret    String?
   previousSecretExpiresAt DateTime?
   /// Forward-compatible placeholder; not enforced yet.
   rateLimitPerMinute      Int?
   /// Forward-compatible placeholder; not enforced yet.
-  allowedIpCidrs          String[]          @default([])
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  allowedIpCidrs          String[]           @default([])
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 
-  company      Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  createdBy    User                 @relation(fields: [createdById], references: [id])
+  company        Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy      User                   @relation(fields: [createdById], references: [id])
   campaignAccess ApiKeyCampaignAccess[]
 
   @@unique([companyId, name])
@@ -1623,31 +1623,31 @@ enum CampaignStage {
 }
 
 model Campaign {
-  id             String         @id @default(auto()) @map("_id") @db.ObjectId
-  companyId      String         @db.ObjectId
+  id               String            @id @default(auto()) @map("_id") @db.ObjectId
+  companyId        String            @db.ObjectId
   /// Public ID resource segment (e.g. CP000001).
-  resourceKey    String
-  name           String
-  status         CampaignStatus    @default(ACTIVE)
-  direction      CampaignDirection @default(OUTBOUND)
-  stage          CampaignStage     @default(MAIN)
-  parentCampaignId String?         @db.ObjectId
-  parentCampaign   Campaign?       @relation("CampaignRetries", fields: [parentCampaignId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  childCampaigns   Campaign[]      @relation("CampaignRetries")
-  address        String?
-  phone          String?
-  email          String?
-  notes          String?
-  customFields   Json              @default("{}")
+  resourceKey      String
+  name             String
+  status           CampaignStatus    @default(ACTIVE)
+  direction        CampaignDirection @default(OUTBOUND)
+  stage            CampaignStage     @default(MAIN)
+  parentCampaignId String?           @db.ObjectId
+  parentCampaign   Campaign?         @relation("CampaignRetries", fields: [parentCampaignId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childCampaigns   Campaign[]        @relation("CampaignRetries")
+  address          String?
+  phone            String?
+  email            String?
+  notes            String?
+  customFields     Json              @default("{}")
   /// Per-campaign AI toggle. AI configuration is stored per campaign, not globally.
-  aiEnabled      Boolean           @default(false)
+  aiEnabled        Boolean           @default(false)
   /// Campaign-specific system prompt controlling the AI agent behavior.
-  systemPrompt   String?
+  systemPrompt     String?
   /// Extensible AI settings bag (model, temperature, knowledgeBase, voice, etc.).
-  aiConfig       Json              @default("{}")
-  lastActivityAt DateTime?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  aiConfig         Json              @default("{}")
+  lastActivityAt   DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   company      Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   leads        Lead[]
@@ -1661,13 +1661,13 @@ model Campaign {
   apiKeyAccess ApiKeyCampaignAccess[]
   execution    CampaignExecution?
 
+  @@unique([companyId, resourceKey])
   @@index([companyId, status])
   @@index([companyId, name])
   @@index([companyId, lastActivityAt])
   @@index([companyId, aiEnabled])
   @@index([companyId, direction])
   @@index([parentCampaignId])
-  @@unique([companyId, resourceKey])
 }
 
 model CampaignExecution {
@@ -1730,7 +1730,7 @@ model ContactRetryJob {
   retryReason      CallStatus
   correlationId    String?
   scheduledAt      DateTime
-  status           ContactRetryJobStatus   @default(PENDING)
+  status           ContactRetryJobStatus @default(PENDING)
   createdCallLogId String?               @db.ObjectId
   skipReason       String?
   processedAt      DateTime?
@@ -1806,14 +1806,14 @@ model CampaignInvitation {
 
 model FormSubmission {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  formType  String   // "DEMO_CALL" or "PARTNER_APP"
+  formType  String // "DEMO_CALL" or "PARTNER_APP"
   name      String
   email     String
   phone     String
   company   String?
   industry  String?
-  clients   String?  // For Partner App
-  volume    String?  // For Partner App
+  clients   String? // For Partner App
+  volume    String? // For Partner App
   createdAt DateTime @default(now())
 }
 
@@ -1828,11 +1828,13 @@ model JobPosting {
   responsibilities String
   knowledge        String
   education        String
+  jobType          String   @default("Full-time")
+  location         String   @default("Remote")
   lastDate         DateTime
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  
-  applications     JobApplication[]
+
+  applications JobApplication[]
 }
 
 model JobApplication {
@@ -1847,5 +1849,5 @@ model JobApplication {
   resumeUrl      String
   appliedAt      DateTime @default(now())
 
-  job            JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }

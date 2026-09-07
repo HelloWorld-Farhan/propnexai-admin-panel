@@ -53,6 +53,36 @@ export default function NewJobPage() {
                 <Input id="education" name="education" required placeholder="e.g. Bachelor's in CS" />
               </div>
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="jobType">Job Type</Label>
+                <select 
+                  id="jobType" 
+                  name="jobType" 
+                  required 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="Full-time">Full-time</option>
+                  <option value="Part-time">Part-time</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Internship">Internship</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <select 
+                  id="location" 
+                  name="location" 
+                  required 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="Remote">Remote</option>
+                  <option value="On-site">On-site</option>
+                  <option value="Hybrid">Hybrid</option>
+                </select>
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="responsibilities">Responsibilities</Label>
