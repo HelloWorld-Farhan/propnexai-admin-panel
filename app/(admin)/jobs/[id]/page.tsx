@@ -2,8 +2,9 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Pencil, Trash } from "lucide-react";
 import { notFound } from "next/navigation";
+import { deleteJobPosting } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,20 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{job.title}</h1>
             <p className="text-muted-foreground">Job ID: {job.jobId} • Posted {format(job.createdAt, "PPP")}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href={`/jobs/${job.id}/edit`}>
+              <Button variant="outline">
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Link>
+            <form action={deleteJobPosting.bind(null, job.id)}>
+              <Button variant="destructive" type="submit">
+                <Trash className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </form>
           </div>
         </div>
       </div>
