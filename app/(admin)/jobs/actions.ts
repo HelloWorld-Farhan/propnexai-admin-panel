@@ -109,6 +109,14 @@ export async function acceptJobApplication(id: string) {
     });
     
     if (!app) return { success: false, error: "Application not found" };
+    if (app.status === "REJECTED") return { success: false, error: "Cannot accept a rejected application" };
+    if (app.status === "ACCEPTED") return { success: false, error: "Application already accepted" };
+
+    // Update status in DB
+    await prisma.jobApplication.update({
+      where: { id },
+      data: { status: "ACCEPTED" }
+    });
 
     // Send email
     await fetch(WEBHOOK_URL, {
@@ -122,9 +130,10 @@ export async function acceptJobApplication(id: string) {
       })
     });
     
-    // delete or update status? The user didn't specify updating status, just "accpet and decline button like the perfectly send the mail to the user". Let's just return success so the UI can toast it. Or we can just keep it. We can add a "status" field in the future, but for now we just trigger the webhook.
-    // Wait, the user didn't mention a status field in the schema. So we'll just send the email.
+    // We updated status in DB, and sent email
     
+    revalidatePath("/jobs");
+    revalidatePath(`/jobs/${app.jobId}`);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -139,6 +148,14 @@ export async function declineJobApplication(id: string) {
     });
     
     if (!app) return { success: false, error: "Application not found" };
+    if (app.status === "ACCEPTED") return { success: false, error: "Cannot decline an accepted application" };
+    if (app.status === "REJECTED") return { success: false, error: "Application already rejected" };
+
+    // Update status in DB
+    await prisma.jobApplication.update({
+      where: { id },
+      data: { status: "REJECTED" }
+    });
 
     await fetch(WEBHOOK_URL, {
       method: "POST",
@@ -151,9 +168,10 @@ export async function declineJobApplication(id: string) {
       })
     });
     
-    // We could delete the application here, or just let them stay. 
     // Usually, declined applications stay in history.
     
+    revalidatePath("/jobs");
+    revalidatePath(`/jobs/${app.jobId}`);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

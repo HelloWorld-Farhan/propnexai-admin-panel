@@ -201,6 +201,7 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Job Role</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Contact</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Experience</th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Applied Date</th>
                 <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -229,6 +230,11 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
                       </div>
                     </td>
                     <td className="p-4 align-middle">{app.experience}</td>
+                    <td className="p-4 align-middle">
+                      {app.status === "ACCEPTED" && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-green-100 text-green-700">Accepted</span>}
+                      {app.status === "REJECTED" && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-red-100 text-red-700">Rejected</span>}
+                      {(!app.status || app.status === "PENDING") && <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">Pending</span>}
+                    </td>
                     <td className="p-4 align-middle text-muted-foreground">
                       {format(new Date(app.appliedAt), "MMM d, yyyy")}
                     </td>
@@ -237,12 +243,15 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
                         {app.resumeUrl ? (
                           <a href={app.resumeUrl} target="_blank" rel="noopener noreferrer">
                             <Button variant="outline" size="sm">
-                              View Resume
+                              Resume
                             </Button>
                           </a>
                         ) : (
                           <span className="text-muted-foreground italic text-xs mr-2">No resume</span>
                         )}
+                        
+                        <ApplicationActionsInline app={app} />
+
                         <ApplicationDetailsModal app={app} />
                         <Button 
                           variant="ghost" 
@@ -283,6 +292,57 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
   );
 }
 
+export function ApplicationActionsInline({ app }: { app: any }) {
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
+
+  const handleAccept = async () => {
+    if (!window.confirm("Are you sure you want to ACCEPT this applicant? This will send them an automated email invite.")) return;
+    setIsAccepting(true);
+    const res = await acceptJobApplication(app.id);
+    if (res?.error) toast.error(res.error);
+    else toast.success("Acceptance email sent!");
+    setIsAccepting(false);
+  };
+
+  const handleDecline = async () => {
+    if (!window.confirm("Are you sure you want to REJECT this applicant? This will send them an automated rejection email.")) return;
+    setIsDeclining(true);
+    const res = await declineJobApplication(app.id);
+    if (res?.error) toast.error(res.error);
+    else toast.success("Rejection email sent!");
+    setIsDeclining(false);
+  };
+
+  const isAccepted = app.status === "ACCEPTED";
+  const isRejected = app.status === "REJECTED";
+
+  return (
+    <div className="flex gap-1 mr-2">
+      <Button 
+        size="sm" 
+        variant="outline" 
+        className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800 disabled:opacity-50"
+        onClick={handleAccept}
+        disabled={isAccepting || isDeclining || isAccepted || isRejected}
+        title="Accept Applicant"
+      >
+        {isAccepting ? "..." : "Accept"}
+      </Button>
+      <Button 
+        size="sm" 
+        variant="outline" 
+        className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:text-red-800 disabled:opacity-50"
+        onClick={handleDecline}
+        disabled={isAccepting || isDeclining || isAccepted || isRejected}
+        title="Decline Applicant"
+      >
+        {isDeclining ? "..." : "Decline"}
+      </Button>
+    </div>
+  );
+}
+
 export function ApplicationDetailsModal({ app }: { app: any }) {
   const [open, setOpen] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
@@ -291,6 +351,7 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
   if (!app) return null;
 
   const handleAccept = async () => {
+    if (!window.confirm("Are you sure you want to ACCEPT this applicant? This will send them an automated email invite.")) return;
     setIsAccepting(true);
     const res = await acceptJobApplication(app.id);
     if (res?.error) {
@@ -303,6 +364,7 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
   };
 
   const handleDecline = async () => {
+    if (!window.confirm("Are you sure you want to REJECT this applicant? This will send them an automated rejection email.")) return;
     setIsDeclining(true);
     const res = await declineJobApplication(app.id);
     if (res?.error) {
@@ -313,6 +375,9 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
     }
     setIsDeclining(false);
   };
+
+  const isAccepted = app.status === "ACCEPTED";
+  const isRejected = app.status === "REJECTED";
 
   return (
     <>
@@ -326,7 +391,7 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
         <Info className="h-4 w-4" />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Applicant Details: {app.firstName} {app.lastName}</DialogTitle>
           </DialogHeader>
@@ -374,16 +439,16 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
               <Button 
                 variant="destructive" 
                 onClick={handleDecline}
-                disabled={isDeclining || isAccepting}
+                disabled={isDeclining || isAccepting || isAccepted || isRejected}
               >
-                {isDeclining ? "Sending Rejection..." : "Decline & Send Rejection"}
+                {isDeclining ? "Sending Rejection..." : isRejected ? "Already Rejected" : "Decline & Send Rejection"}
               </Button>
               <Button 
-                className="bg-green-600 hover:bg-green-700 text-white" 
+                className="bg-green-600 hover:bg-green-700 text-white disabled:bg-green-800" 
                 onClick={handleAccept}
-                disabled={isAccepting || isDeclining}
+                disabled={isAccepting || isDeclining || isAccepted || isRejected}
               >
-                {isAccepting ? "Sending Acceptance..." : "Accept & Send Invite"}
+                {isAccepting ? "Sending Acceptance..." : isAccepted ? "Already Accepted" : "Accept & Send Invite"}
               </Button>
             </div>
           </div>

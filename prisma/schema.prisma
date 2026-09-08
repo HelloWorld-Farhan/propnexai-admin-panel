@@ -1855,6 +1855,7 @@ model JobApplication {
   resumeUrl      String
   agreedToTerms  Boolean  @default(true)
   isRead         Boolean  @default(false)
+  status         String   @default("PENDING")
   appliedAt      DateTime @default(now())
 
   job JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
