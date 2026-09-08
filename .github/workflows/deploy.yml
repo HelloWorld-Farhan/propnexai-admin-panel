@@ -43,6 +43,8 @@ jobs:
           username: root
           password: ${{ secrets.HOSTINGER_PASSWORD }}
           script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             cd /root/propnexai-admin-panel
             npm install --production
-            pm2 restart propnexai-admin --update-env
+            pm2 restart propnexai-admin --update-env || pm2 start npm --name propnexai-admin -- run start
