@@ -153,6 +153,7 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [infoApp, setInfoApp] = useState<any>(null);
 
   const filteredApps = applications.filter((app) => {
     const s = search.toLowerCase();
@@ -242,6 +243,7 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
                         ) : (
                           <span className="text-muted-foreground italic text-xs mr-2">No resume</span>
                         )}
+                        <ApplicationDetailsModal app={app} />
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -274,6 +276,56 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting ? "Deleting..." : "Delete Application"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+export function ApplicationDetailsModal({ app }: { app: any }) {
+  const [open, setOpen] = useState(false);
+  if (!app) return null;
+
+  return (
+    <>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        title="View Info" 
+        className="h-8 w-8"
+        onClick={() => setOpen(true)}
+      >
+        <Info className="h-4 w-4" />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Applicant Details: {app.firstName} {app.lastName}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mt-4 text-sm">
+            <div><span className="font-semibold text-muted-foreground block mb-1">Email:</span> {app.email}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Phone:</span> {app.countryCode ? app.countryCode + " " : ""}{app.phone}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Citizenship:</span> {app.citizenship || "N/A"}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Gender:</span> {app.gender || "N/A"}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Experience:</span> {app.experience}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Sponsorship Required:</span> {app.sponsor || "N/A"}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Legal Status:</span> {app.legalStatus || "N/A"}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Expected Payout:</span> {app.expectedPayout}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Current Payout:</span> {app.currentPayout || "N/A"}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Agreed to Terms:</span> {app.agreedToTerms ? "Yes" : "No"}</div>
+            <div><span className="font-semibold text-muted-foreground block mb-1">Applied At:</span> {app.appliedAt ? format(new Date(app.appliedAt), "PPP") : "N/A"}</div>
+            
+            <div className="md:col-span-2 flex items-center justify-between mt-4 p-4 border rounded-md bg-muted/50">
+              <span className="font-semibold">Resume Document</span>
+              {app.resumeUrl ? (
+                <a href={app.resumeUrl} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm">View Resume</Button>
+                </a>
+              ) : (
+                <span className="text-muted-foreground italic text-xs">Not Provided</span>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

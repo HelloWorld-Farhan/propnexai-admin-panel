@@ -2,9 +2,10 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink, Pencil, Trash } from "lucide-react";
+import { ArrowLeft, Pencil, Trash } from "lucide-react";
 import { notFound } from "next/navigation";
 import { deleteJobPosting } from "../actions";
+import { ApplicationDetailsModal } from "../client-components";
 
 export const dynamic = "force-dynamic";
 
@@ -143,15 +144,18 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
                       {app.appliedAt ? format(new Date(app.appliedAt), "MMM d, yyyy") : "N/A"}
                     </td>
                     <td className="p-4 align-middle text-right">
-                      {app.resumeUrl ? (
-                        <a href={app.resumeUrl} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm">
-                            View <ExternalLink className="ml-2 h-4 w-4" />
-                          </Button>
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground italic text-xs">No resume</span>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {app.resumeUrl ? (
+                          <a href={app.resumeUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm">
+                              View Resume
+                            </Button>
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground italic text-xs">No resume</span>
+                        )}
+                        <ApplicationDetailsModal app={app} />
+                      </div>
                     </td>
                   </tr>
                 ))
