@@ -9,9 +9,10 @@ import { ApplicationDetailsModal } from "../client-components";
 
 export const dynamic = "force-dynamic";
 
-export default async function JobDetailsPage({ params }: { params: { id: string } }) {
+export default async function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   const job = await prisma.jobPosting.findUnique({
-    where: { id: params.id },
+    where: { id: resolvedParams.id },
     include: {
       applications: {
         orderBy: { appliedAt: "desc" },

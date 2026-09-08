@@ -7,7 +7,8 @@ import { JobPostingsTable, ApplicationsTable } from "./client-components";
 
 export const dynamic = "force-dynamic";
 
-export default async function JobsPage({ searchParams }: { searchParams: { tab?: string } }) {
+export default async function JobsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const resolvedSearchParams = await searchParams;
   const jobs = await prisma.jobPosting.findMany({
     orderBy: { createdAt: "desc" },
     include: {
@@ -24,7 +25,7 @@ export default async function JobsPage({ searchParams }: { searchParams: { tab?:
     },
   });
 
-  const defaultTab = searchParams.tab === "applications" ? "applications" : "postings";
+  const defaultTab = resolvedSearchParams.tab === "applications" ? "applications" : "postings";
 
   return (
     <div className="space-y-6">

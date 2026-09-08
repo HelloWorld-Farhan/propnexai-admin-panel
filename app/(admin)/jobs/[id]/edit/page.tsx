@@ -8,11 +8,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { useRouter } from "next/navigation";
 
-export default function EditJobPage({ params }: { params: { id: string } }) {
+export default function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -31,7 +32,7 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch(`/api/jobs/${params.id}`)
+    fetch(`/api/jobs/${resolvedParams.id}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.job) {
@@ -51,7 +52,7 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
         setFetching(false);
       })
       .catch(() => setFetching(false));
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -109,7 +110,8 @@ export default function EditJobPage({ params }: { params: { id: string } }) {
     });
 
     try {
-      await updateJobPosting(params.id, submitData);
+      await updateJobPosting(resolvedParams.id, submitData);
+      router.push("/jobs");
     } catch (err) {
       console.error(err);
       setLoading(false);
