@@ -434,23 +434,6 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
                 <span className="text-muted-foreground italic text-xs">Not Provided</span>
               )}
             </div>
-
-            <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-border">
-              <Button 
-                variant="destructive" 
-                onClick={handleDecline}
-                disabled={isDeclining || isAccepting || isAccepted || isRejected}
-              >
-                {isDeclining ? "Sending Rejection..." : isRejected ? "Already Rejected" : "Decline & Send Rejection"}
-              </Button>
-              <Button 
-                className="bg-green-600 hover:bg-green-700 text-white disabled:bg-green-800" 
-                onClick={handleAccept}
-                disabled={isAccepting || isDeclining || isAccepted || isRejected}
-              >
-                {isAccepting ? "Sending Acceptance..." : isAccepted ? "Already Accepted" : "Accept & Send Invite"}
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
