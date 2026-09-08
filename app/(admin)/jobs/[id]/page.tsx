@@ -11,6 +11,11 @@ export const dynamic = "force-dynamic";
 
 export default async function JobDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
+  
+  if (!resolvedParams?.id || resolvedParams.id === "undefined") {
+    notFound();
+  }
+
   const job = await prisma.jobPosting.findUnique({
     where: { id: resolvedParams.id },
     include: {
