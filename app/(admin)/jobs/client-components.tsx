@@ -318,27 +318,31 @@ export function ApplicationActionsInline({ app }: { app: any }) {
   const isRejected = app.status === "REJECTED";
 
   return (
-    <div className="flex gap-1 mr-2">
-      <Button 
-        size="sm" 
-        variant="outline" 
-        className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800 disabled:opacity-50"
-        onClick={handleAccept}
-        disabled={isAccepting || isDeclining || isAccepted || isRejected}
-        title="Accept Applicant"
-      >
-        {isAccepting ? "..." : "Accept"}
-      </Button>
-      <Button 
-        size="sm" 
-        variant="outline" 
-        className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:text-red-800 disabled:opacity-50"
-        onClick={handleDecline}
-        disabled={isAccepting || isDeclining || isAccepted || isRejected}
-        title="Decline Applicant"
-      >
-        {isDeclining ? "..." : "Decline"}
-      </Button>
+    <div className="flex gap-1 mr-2 min-h-[32px]">
+      {!(isAccepted || isRejected) && (
+        <>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800 disabled:opacity-50"
+            onClick={handleAccept}
+            disabled={isAccepting || isDeclining}
+            title="Accept Applicant"
+          >
+            {isAccepting ? "..." : "Accept"}
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:text-red-800 disabled:opacity-50"
+            onClick={handleDecline}
+            disabled={isAccepting || isDeclining}
+            title="Decline Applicant"
+          >
+            {isDeclining ? "..." : "Decline"}
+          </Button>
+        </>
+      )}
     </div>
   );
 }
