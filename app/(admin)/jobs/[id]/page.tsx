@@ -32,7 +32,7 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{job.title}</h1>
-            <p className="text-muted-foreground">Job ID: {job.jobId} • Posted {format(job.createdAt, "PPP")}</p>
+            <p className="text-muted-foreground">Job ID: {job.jobId} • Posted {job.createdAt ? format(new Date(job.createdAt), "PPP") : "N/A"}</p>
           </div>
           <div className="flex items-center gap-2">
             <Link href={`/jobs/${job.id}/edit`}>
@@ -71,7 +71,7 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
               <span className="font-medium text-muted-foreground">Education:</span> {job.education}
             </div>
             <div>
-              <span className="font-medium text-muted-foreground">Last Date:</span> {format(job.lastDate, "PPP")}
+              <span className="font-medium text-muted-foreground">Last Date:</span> {job.lastDate ? format(new Date(job.lastDate), "PPP") : "N/A"}
             </div>
             <div>
               <span className="font-medium text-muted-foreground">Description:</span>
@@ -86,7 +86,7 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
             <div>
               <span className="font-medium text-muted-foreground">Responsibilities:</span>
               <ul className="mt-1 list-disc pl-5 space-y-1">
-                {job.responsibilities?.split('\n').filter(line => line.trim()).map((line, i) => (
+                {(job.responsibilities || "").split('\n').filter(line => line.trim()).map((line, i) => (
                   <li key={i}>{line.replace(/^-\s*/, '')}</li>
                 ))}
               </ul>
@@ -94,7 +94,7 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
             <div>
               <span className="font-medium text-muted-foreground">Knowledge & Skills:</span>
               <ul className="mt-1 list-disc pl-5 space-y-1">
-                {job.knowledge?.split('\n').filter(line => line.trim()).map((line, i) => (
+                {(job.knowledge || "").split('\n').filter(line => line.trim()).map((line, i) => (
                   <li key={i}>{line.replace(/^-\s*/, '')}</li>
                 ))}
               </ul>
@@ -140,7 +140,7 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
                     <td className="p-4 align-middle">{app.experience}</td>
                     <td className="p-4 align-middle">{app.expectedPayout}</td>
                     <td className="p-4 align-middle text-muted-foreground">
-                      {format(app.appliedAt, "MMM d, yyyy")}
+                      {app.appliedAt ? format(new Date(app.appliedAt), "MMM d, yyyy") : "N/A"}
                     </td>
                     <td className="p-4 align-middle text-right">
                       {app.resumeUrl ? (
