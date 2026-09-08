@@ -98,3 +98,64 @@ export async function updateJobPosting(id: string, formData: FormData) {
   revalidatePath("/jobs");
   revalidatePath(`/jobs/${id}`);
 }
+
+const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
+
+export async function acceptJobApplication(id: string) {
+  try {
+    const app = await prisma.jobApplication.findUnique({
+      where: { id },
+      include: { job: true }
+    });
+    
+    if (!app) return { success: false, error: "Application not found" };
+
+    // Send email
+    await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "job_accepted",
+        applicantName: `${app.firstName} ${app.lastName}`,
+        applicantEmail: app.email,
+        jobTitle: app.job?.title || "the position"
+      })
+    });
+    
+    // delete or update status? The user didn't specify updating status, just "accpet and decline button like the perfectly send the mail to the user". Let's just return success so the UI can toast it. Or we can just keep it. We can add a "status" field in the future, but for now we just trigger the webhook.
+    // Wait, the user didn't mention a status field in the schema. So we'll just send the email.
+    
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function declineJobApplication(id: string) {
+  try {
+    const app = await prisma.jobApplication.findUnique({
+      where: { id },
+      include: { job: true }
+    });
+    
+    if (!app) return { success: false, error: "Application not found" };
+
+    await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "job_rejected",
+        applicantName: `${app.firstName} ${app.lastName}`,
+        applicantEmail: app.email,
+        jobTitle: app.job?.title || "the position"
+      })
+    });
+    
+    // We could delete the application here, or just let them stay. 
+    // Usually, declined applications stay in history.
+    
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

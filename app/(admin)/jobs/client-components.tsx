@@ -7,7 +7,7 @@ import { Briefcase, Info, Pencil, Trash, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { deleteJobPosting, deleteJobApplication } from "./actions";
+import { deleteJobPosting, deleteJobApplication, acceptJobApplication, declineJobApplication } from "./actions";
 import { toast } from "sonner";
 
 export function JobPostingsTable({ jobs }: { jobs: any[] }) {
@@ -285,7 +285,34 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
 
 export function ApplicationDetailsModal({ app }: { app: any }) {
   const [open, setOpen] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
+
   if (!app) return null;
+
+  const handleAccept = async () => {
+    setIsAccepting(true);
+    const res = await acceptJobApplication(app.id);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success("Acceptance email sent to applicant!");
+      setOpen(false);
+    }
+    setIsAccepting(false);
+  };
+
+  const handleDecline = async () => {
+    setIsDeclining(true);
+    const res = await declineJobApplication(app.id);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      toast.success("Rejection email sent to applicant.");
+      setOpen(false);
+    }
+    setIsDeclining(false);
+  };
 
   return (
     <>
@@ -303,6 +330,22 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
           <DialogHeader>
             <DialogTitle>Applicant Details: {app.firstName} {app.lastName}</DialogTitle>
           </DialogHeader>
+
+          {app.job && (
+            <div className="bg-primary/5 border border-primary/20 rounded-md p-4 mb-2 mt-2">
+              <h3 className="font-semibold text-primary mb-2 flex items-center gap-2">
+                <Briefcase className="h-4 w-4" /> Applied For: {app.job.title}
+              </h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-muted-foreground">Job ID:</span> {app.job.jobId}</div>
+                <div><span className="text-muted-foreground">Type:</span> {app.job.jobType}</div>
+                <div><span className="text-muted-foreground">Location:</span> {app.job.location}</div>
+                <div><span className="text-muted-foreground">Date Posted:</span> {app.job.createdAt ? format(new Date(app.job.createdAt), "PPP") : "N/A"}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">Last Date to Apply:</span> {app.job.lastDate ? format(new Date(app.job.lastDate), "PPP") : "N/A"}</div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 mt-4 text-sm">
             <div><span className="font-semibold text-muted-foreground block mb-1">Email:</span> {app.email}</div>
             <div><span className="font-semibold text-muted-foreground block mb-1">Phone:</span> {app.countryCode ? app.countryCode + " " : ""}{app.phone}</div>
@@ -325,6 +368,23 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
               ) : (
                 <span className="text-muted-foreground italic text-xs">Not Provided</span>
               )}
+            </div>
+
+            <div className="md:col-span-2 flex justify-end gap-3 mt-4 pt-4 border-t border-border">
+              <Button 
+                variant="destructive" 
+                onClick={handleDecline}
+                disabled={isDeclining || isAccepting}
+              >
+                {isDeclining ? "Sending Rejection..." : "Decline & Send Rejection"}
+              </Button>
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white" 
+                onClick={handleAccept}
+                disabled={isAccepting || isDeclining}
+              >
+                {isAccepting ? "Sending Acceptance..." : "Accept & Send Invite"}
+              </Button>
             </div>
           </div>
         </DialogContent>
