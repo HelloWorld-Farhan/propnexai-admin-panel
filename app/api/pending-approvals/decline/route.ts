@@ -13,6 +13,17 @@ export async function POST(req: Request) {
       data: { status: "REJECTED" },
     });
 
+    // Try to get the user's full name from the User table
+    let fullName = email.split("@")[0];
+    try {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (user && user.firstName) {
+        fullName = `${user.firstName} ${user.lastName || ""}`.trim();
+      }
+    } catch (e) {
+      console.error("Failed to fetch user name:", e);
+    }
+
     // Trigger webhook for rejection
     try {
       const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
@@ -21,7 +32,7 @@ export async function POST(req: Request) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "user_rejected",
-          name: email.split("@")[0],
+          name: fullName,
           email: email
         }),
       }).catch(err => console.error("Failed to trigger rejection webhook:", err));
