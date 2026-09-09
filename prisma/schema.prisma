@@ -111,8 +111,7 @@ enum LeadActivityType {
 }
 
 enum TelephonyProvider {
-  TWILIO
-  EXOTEL
+  BONVOICE
   PROPNEX
 }
 
