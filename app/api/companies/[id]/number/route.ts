@@ -25,6 +25,12 @@ export async function PATCH(
       return NextResponse.json({ error: "No phone number found for this sub-company" }, { status: 404 });
     }
 
+    // Ensure company is active so dashboard unlocks
+    await prisma.company.update({
+      where: { id },
+      data: { status: "ACTIVE" } as any,
+    });
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("[EDIT_SUB_COMPANY_NUMBER_ERROR]", error);
@@ -68,6 +74,13 @@ export async function POST(
         where: { id: existingNumber.id },
         data: { direction: newDirection, channels: newChannels }
       });
+      
+      // Ensure company is active so dashboard unlocks
+      await prisma.company.update({
+        where: { id },
+        data: { status: "ACTIVE" } as any,
+      });
+      
       return NextResponse.json({ success: true, updated: true });
     }
 
@@ -88,6 +101,12 @@ export async function POST(
         direction: body.direction || null,
         channels: body.channels !== undefined ? body.channels : null,
       } as any,
+    });
+
+    // Ensure company is active so dashboard unlocks
+    await prisma.company.update({
+      where: { id },
+      data: { status: "ACTIVE" } as any,
     });
 
     // Webhook and Resolution Logic
