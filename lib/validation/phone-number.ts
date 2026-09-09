@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const phoneNumberProviders = ["TWILIO", "EXOTEL", "PROPNEX"] as const;
+export const phoneNumberProviders = ["BONVOICE", "PROPNEX"] as const;
 export const phoneNumberStatuses = ["ACTIVE", "INACTIVE", "DISABLED"] as const;
 
 /** Accepts string | null | "" and normalizes empty to null. Required presence for create. */
