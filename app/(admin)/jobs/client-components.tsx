@@ -295,55 +295,82 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
 export function ApplicationActionsInline({ app }: { app: any }) {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ open: boolean, type: 'accept' | 'decline' | null }>({ open: false, type: null });
 
-  const handleAccept = async () => {
-    if (!window.confirm("Are you sure you want to ACCEPT this applicant? This will send them an automated email invite.")) return;
-    setIsAccepting(true);
-    const res = await acceptJobApplication(app.id);
-    if (res?.error) toast.error(res.error);
-    else toast.success("Acceptance email sent!");
-    setIsAccepting(false);
-  };
-
-  const handleDecline = async () => {
-    if (!window.confirm("Are you sure you want to REJECT this applicant? This will send them an automated rejection email.")) return;
-    setIsDeclining(true);
-    const res = await declineJobApplication(app.id);
-    if (res?.error) toast.error(res.error);
-    else toast.success("Rejection email sent!");
-    setIsDeclining(false);
+  const confirmAction = async () => {
+    if (confirmState.type === 'accept') {
+      setIsAccepting(true);
+      const res = await acceptJobApplication(app.id);
+      if (res?.error) toast.error(res.error);
+      else toast.success("Acceptance email sent!");
+      setIsAccepting(false);
+    } else if (confirmState.type === 'decline') {
+      setIsDeclining(true);
+      const res = await declineJobApplication(app.id);
+      if (res?.error) toast.error(res.error);
+      else toast.success("Rejection email sent!");
+      setIsDeclining(false);
+    }
+    setConfirmState({ open: false, type: null });
   };
 
   const isAccepted = app.status === "ACCEPTED";
   const isRejected = app.status === "REJECTED";
 
   return (
-    <div className="flex gap-1 mr-2 min-h-[32px]">
-      {!(isAccepted || isRejected) && (
-        <>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800 disabled:opacity-50"
-            onClick={handleAccept}
-            disabled={isAccepting || isDeclining}
-            title="Accept Applicant"
-          >
-            {isAccepting ? "..." : "Accept"}
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:text-red-800 disabled:opacity-50"
-            onClick={handleDecline}
-            disabled={isAccepting || isDeclining}
-            title="Decline Applicant"
-          >
-            {isDeclining ? "..." : "Decline"}
-          </Button>
-        </>
-      )}
-    </div>
+    <>
+      <div className="flex gap-1 mr-2 min-h-[32px]">
+        {!(isAccepted || isRejected) && (
+          <>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800 disabled:opacity-50"
+              onClick={() => setConfirmState({ open: true, type: 'accept' })}
+              disabled={isAccepting || isDeclining}
+              title="Accept Applicant"
+            >
+              {isAccepting ? "..." : "Accept"}
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:text-red-800 disabled:opacity-50"
+              onClick={() => setConfirmState({ open: true, type: 'decline' })}
+              disabled={isAccepting || isDeclining}
+              title="Decline Applicant"
+            >
+              {isDeclining ? "..." : "Decline"}
+            </Button>
+          </>
+        )}
+      </div>
+
+      <Dialog open={confirmState.open} onOpenChange={(val) => !val && setConfirmState({ open: false, type: null })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Action</DialogTitle>
+            <DialogDescription>
+              {confirmState.type === 'accept' 
+                ? "Are you sure you want to ACCEPT this applicant? This will send them an automated email invite." 
+                : "Are you sure you want to REJECT this applicant? This will send them an automated rejection email."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setConfirmState({ open: false, type: null })} disabled={isAccepting || isDeclining}>Cancel</Button>
+            <Button 
+              variant={confirmState.type === 'accept' ? 'default' : 'destructive'} 
+              onClick={confirmAction} 
+              disabled={isAccepting || isDeclining}
+            >
+              {confirmState.type === 'accept' 
+                ? (isAccepting ? "Accepting..." : "OK") 
+                : (isDeclining ? "Rejecting..." : "OK")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -351,33 +378,34 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
   const [open, setOpen] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ open: boolean, type: 'accept' | 'decline' | null }>({ open: false, type: null });
 
   if (!app) return null;
 
-  const handleAccept = async () => {
-    if (!window.confirm("Are you sure you want to ACCEPT this applicant? This will send them an automated email invite.")) return;
-    setIsAccepting(true);
-    const res = await acceptJobApplication(app.id);
-    if (res?.error) {
-      toast.error(res.error);
-    } else {
-      toast.success("Acceptance email sent to applicant!");
-      setOpen(false);
+  const confirmAction = async () => {
+    if (confirmState.type === 'accept') {
+      setIsAccepting(true);
+      const res = await acceptJobApplication(app.id);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Acceptance email sent to applicant!");
+        setConfirmState({ open: false, type: null });
+        setOpen(false);
+      }
+      setIsAccepting(false);
+    } else if (confirmState.type === 'decline') {
+      setIsDeclining(true);
+      const res = await declineJobApplication(app.id);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Rejection email sent to applicant.");
+        setConfirmState({ open: false, type: null });
+        setOpen(false);
+      }
+      setIsDeclining(false);
     }
-    setIsAccepting(false);
-  };
-
-  const handleDecline = async () => {
-    if (!window.confirm("Are you sure you want to REJECT this applicant? This will send them an automated rejection email.")) return;
-    setIsDeclining(true);
-    const res = await declineJobApplication(app.id);
-    if (res?.error) {
-      toast.error(res.error);
-    } else {
-      toast.success("Rejection email sent to applicant.");
-      setOpen(false);
-    }
-    setIsDeclining(false);
   };
 
   const isAccepted = app.status === "ACCEPTED";
@@ -438,6 +466,52 @@ export function ApplicationDetailsModal({ app }: { app: any }) {
                 <span className="text-muted-foreground italic text-xs">Not Provided</span>
               )}
             </div>
+            
+            {!(isAccepted || isRejected) && (
+              <div className="md:col-span-2 flex justify-end gap-2 mt-4 pt-4 border-t border-border">
+                <Button 
+                  variant="outline" 
+                  className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                  onClick={() => setConfirmState({ open: true, type: 'accept' })}
+                  disabled={isAccepting || isDeclining}
+                >
+                  Accept Applicant
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                  onClick={() => setConfirmState({ open: true, type: 'decline' })}
+                  disabled={isAccepting || isDeclining}
+                >
+                  Decline Applicant
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={confirmState.open} onOpenChange={(val) => !val && setConfirmState({ open: false, type: null })}>
+        <DialogContent className="sm:max-w-md z-[60]">
+          <DialogHeader>
+            <DialogTitle>Confirm Action</DialogTitle>
+            <DialogDescription>
+              {confirmState.type === 'accept' 
+                ? "Are you sure you want to ACCEPT this applicant? This will send them an automated email invite." 
+                : "Are you sure you want to REJECT this applicant? This will send them an automated rejection email."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setConfirmState({ open: false, type: null })} disabled={isAccepting || isDeclining}>Cancel</Button>
+            <Button 
+              variant={confirmState.type === 'accept' ? 'default' : 'destructive'} 
+              onClick={confirmAction} 
+              disabled={isAccepting || isDeclining}
+            >
+              {confirmState.type === 'accept' 
+                ? (isAccepting ? "Accepting..." : "OK") 
+                : (isDeclining ? "Rejecting..." : "OK")}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
