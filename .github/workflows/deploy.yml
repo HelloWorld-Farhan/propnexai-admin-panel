@@ -12,14 +12,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Create .env.local file
-        run: |
-          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env.local
-          echo "ADMIN_USERNAME=admin" >> .env.local
-          echo "ADMIN_PASSWORD=propnex-admin-2026" >> .env.local
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.local
-          echo "DATABASE_URL=mongodb://propnexaiofficial_db_user:KccmbOVh4GsZp1Ok@ac-bwr5uzv-shard-00-00.vuuzm1i.mongodb.net:27017,ac-bwr5uzv-shard-00-01.vuuzm1i.mongodb.net:27017,ac-bwr5uzv-shard-00-02.vuuzm1i.mongodb.net:27017/propnex?ssl=true&authSource=admin&replicaSet=atlas-j95wo5-shard-0&retryWrites=true&w=majority&appName=Cluster0" >> .env.local
-          echo "ADMIN_SESSION_SECRET=propnex-admin-session-secret-change-in-production-min-32-chars" >> .env.local
 
       - name: Install and Build
         run: |
@@ -33,7 +25,7 @@ jobs:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: root
           password: ${{ secrets.HOSTINGER_PASSWORD }}
-          source: ".next,public,package.json,package-lock.json,.env.local,prisma"
+          source: ".next,public,package.json,package-lock.json,prisma"
           target: "/root/propnexai-admin-panel"
 
       - name: Restart PM2 on Server
