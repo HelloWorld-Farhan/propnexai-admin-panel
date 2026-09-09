@@ -29,13 +29,19 @@ export function VerifySubCompanyDialog({
   onSuccess: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [assignedNumber, setAssignedNumber] = useState("");
+  
+  const [inboundNumber, setInboundNumber] = useState("");
+  const [inboundChannels, setInboundChannels] = useState<number | "">("");
+  
+  const [outboundNumber, setOutboundNumber] = useState("");
+  const [outboundChannels, setOutboundChannels] = useState<number | "">("");
+  
   const [loading, setLoading] = useState(false);
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
-    if (!assignedNumber.trim()) {
-      toast.error("Assigned number is required");
+    if (!inboundNumber.trim() && !outboundNumber.trim()) {
+      toast.error("Please assign at least one Inbound or Outbound number");
       return;
     }
 
@@ -44,7 +50,13 @@ export function VerifySubCompanyDialog({
       const res = await fetch(`/api/companies/${subCompanyId}/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignedNumber, parentCompanyId }),
+        body: JSON.stringify({ 
+          parentCompanyId,
+          inboundNumber: inboundNumber.trim(),
+          inboundChannels: inboundChannels ? Number(inboundChannels) : 1,
+          outboundNumber: outboundNumber.trim(),
+          outboundChannels: outboundChannels ? Number(outboundChannels) : 1
+        }),
       });
 
       if (!res.ok) {
@@ -74,18 +86,53 @@ export function VerifySubCompanyDialog({
           <DialogHeader>
             <DialogTitle>Verify Sub-Company</DialogTitle>
             <DialogDescription>
-              Assign a phone number to <strong>{subCompanyName}</strong>. This number will be linked to both the main company and this sub-company.
+              Assign phone numbers to <strong>{subCompanyName}</strong> to activate it. You can assign an Inbound number, an Outbound number, or both.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Assigned Number</Label>
-              <Input
-                placeholder="e.g. 919429390765"
-                value={assignedNumber}
-                onChange={(e) => setAssignedNumber(e.target.value)}
-              />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Inbound Number (Optional)</Label>
+                <Input
+                  placeholder="e.g. 919429390765"
+                  value={inboundNumber}
+                  onChange={(e) => setInboundNumber(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Inbound Channels</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 1"
+                  value={inboundChannels}
+                  onChange={(e) => setInboundChannels(e.target.value ? Number(e.target.value) : "")}
+                />
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Outbound Number (Optional)</Label>
+                <Input
+                  placeholder="e.g. 919429390765"
+                  value={outboundNumber}
+                  onChange={(e) => setOutboundNumber(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Outbound Channels</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 1"
+                  value={outboundChannels}
+                  onChange={(e) => setOutboundChannels(e.target.value ? Number(e.target.value) : "")}
+                />
+              </div>
+            </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" type="button" onClick={() => setOpen(false)} disabled={loading}>

@@ -404,7 +404,10 @@ export async function deleteAllCompanies() {
 export async function verifySubCompany(
   subCompanyId: string,
   parentCompanyId: string,
-  assignedNumber: string,
+  inboundNumber?: string,
+  inboundChannels?: number,
+  outboundNumber?: string,
+  outboundChannels?: number
 ) {
   // Validate the sub-company exists and belongs to the parent
   const existing = await prisma.company.findUnique({
@@ -426,11 +429,11 @@ export async function verifySubCompany(
       data: { status: "ACTIVE" } as any,
     });
 
-    // Assign the phone number to the child company
-    if (assignedNumber?.trim()) {
+    // Assign the Inbound phone number to the child company
+    if (inboundNumber?.trim()) {
       const phoneNumberId = await allocatePhoneNumberEntityId(tx, subCompanyId);
       const publicId = generatePublicId(existing.cli, "UNASSIGNED", phoneNumberId);
-      const cleanedNumber = assignedNumber.trim();
+      const cleanedNumber = inboundNumber.trim();
 
       await tx.phoneNumber.create({
         data: {
@@ -438,87 +441,34 @@ export async function verifySubCompany(
           phoneNumberId,
           publicId,
           number: cleanedNumber,
+          direction: "INBOUND",
+          channels: inboundChannels || 1,
           provider: "PROPNEX",
           status: "ACTIVE",
-          // Link back to parent tenant for shared number visibility
           assignedParentTenantId: parentCompanyId,
         },
       });
+    }
 
-      // Transfer past inbound calls from parent to sub-company
-      const matchingCalls = await tx.callLog.findMany({
-        where: {
-          phoneNumber: { number: cleanedNumber },
-          direction: "INBOUND",
-          companyId: { not: subCompanyId }
+    // Assign the Outbound phone number to the child company
+    if (outboundNumber?.trim()) {
+      const phoneNumberId = await allocatePhoneNumberEntityId(tx, subCompanyId);
+      const publicId = generatePublicId(existing.cli, "UNASSIGNED", phoneNumberId);
+      const cleanedNumber = outboundNumber.trim();
+
+      await tx.phoneNumber.create({
+        data: {
+          companyId: subCompanyId,
+          phoneNumberId,
+          publicId,
+          number: cleanedNumber,
+          direction: "OUTBOUND",
+          channels: outboundChannels || 1,
+          provider: "PROPNEX",
+          status: "ACTIVE",
+          assignedParentTenantId: parentCompanyId,
         },
       });
-
-      if (matchingCalls.length > 0) {
-        // Deduplicate calls by callLogId to prevent double cloning
-        const uniqueCalls = new Map<string, any>();
-        for (const call of matchingCalls) {
-          if (call.callLogId) {
-            uniqueCalls.set(call.callLogId, call);
-          }
-        }
-
-        let totalCreditsToDeduct = 0;
-
-        for (const call of Array.from(uniqueCalls.values())) {
-          const credits = call.creditsUsed || 0;
-          
-          try {
-            await tx.callLog.upsert({
-              where: {
-                companyId_callLogId: {
-                  companyId: subCompanyId,
-                  callLogId: call.callLogId
-                }
-              },
-              update: {},
-              create: {
-                companyId: subCompanyId,
-                callLogId: call.callLogId,
-                publicId: call.publicId || `CLONED-${call.callLogId}`,
-                direction: call.direction,
-                status: call.status,
-                startedAt: call.startedAt ? new Date(call.startedAt) : new Date(),
-                durationSeconds: call.durationSeconds,
-                recordingUrl: call.recordingUrl,
-                transcriptUrl: call.transcriptUrl,
-                creditsUsed: credits,
-                provider: call.provider,
-                providerCallId: call.providerCallId,
-                providerWebhook: call.providerWebhook
-              }
-            });
-            totalCreditsToDeduct += credits;
-          } catch (e) {
-            // Ignore if it already exists or fails
-          }
-        }
-
-        // Deduct credits for past calls from the sub-company
-        if (totalCreditsToDeduct > 0) {
-          await tx.creditBalance.updateMany({
-            where: { companyId: subCompanyId },
-            data: {
-              creditsRemaining: { decrement: totalCreditsToDeduct },
-              creditsUsed: { increment: totalCreditsToDeduct },
-            },
-          });
-
-          await tx.creditUsage.create({
-            data: {
-              companyId: subCompanyId,
-              amount: totalCreditsToDeduct,
-              reason: "CALL",
-              description: `Deducted credits for ${uniqueCalls.size} past inbound calls upon number assignment`,
-            },
-          });
-        }
-      }
     }
     return updated;
   }, {
@@ -540,18 +490,17 @@ export async function verifySubCompany(
     });
     const user = fullCompany?.members?.[0]?.user;
     if (user && user.email) {
-      const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
-      fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "subcompany_approved",
-          email: user.email,
-          subcompanyName: fullCompany.name,
-          assignedNumber: assignedNumber || "Pending",
-          credits: fullCompany.creditBalance?.creditsRemaining || 0
-        }),
-      }).catch(err => console.error("Failed to send subcompany approved webhook:", err));
+      const { notificationService } = require("@/src/server/services/notification.service");
+      const ownerName = user.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : "User";
+      
+      notificationService.sendSubCompanyVerifiedEmail({
+        subCompanyName: fullCompany.name,
+        userName: ownerName,
+        email: user.email,
+        inboundNumber,
+        outboundNumber,
+        credits: fullCompany.creditBalance?.creditsRemaining || 0
+      }).catch((err: any) => console.error("Webhook trigger failed:", err));
     }
   } catch (e) {
     console.error("Failed to process subcompany approved webhook:", e);

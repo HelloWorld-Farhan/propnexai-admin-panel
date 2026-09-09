@@ -9,11 +9,18 @@ export async function POST(
     const { id } = await context.params;
     const body = await req.json();
 
-    if (!body.assignedNumber || !body.parentCompanyId) {
+    if (!body.parentCompanyId || (!body.inboundNumber && !body.outboundNumber)) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const company = await verifySubCompany(id, body.parentCompanyId, body.assignedNumber);
+    const company = await verifySubCompany(
+      id, 
+      body.parentCompanyId, 
+      body.inboundNumber, 
+      body.inboundChannels, 
+      body.outboundNumber, 
+      body.outboundChannels
+    );
 
     return NextResponse.json(company);
   } catch (error: any) {
