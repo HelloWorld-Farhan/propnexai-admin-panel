@@ -172,7 +172,6 @@ export async function listCompaniesForAdmin() {
   });
 }
 
-
 export async function getCompanyById(id: string) {
   const company = await prisma.company.findUnique({
     where: { id },
@@ -288,7 +287,6 @@ export async function deleteCompanyById(id: string) {
           )
         );
       }
-
 
       // --- Continue Hard Deletion (leaves first, then company) ---
       
@@ -449,7 +447,6 @@ export async function verifySubCompany(
             direction: "INBOUND",
             channels: inboundChannels || 1,
             status: "ACTIVE",
-            assignedAt: now,
           } as any,
         });
       } else {
@@ -464,7 +461,6 @@ export async function verifySubCompany(
             provider: "PROPNEX",
             status: "ACTIVE",
             assignedParentTenantId: parentCompanyId,
-            assignedAt: now,
           } as any,
         });
       }
@@ -487,7 +483,6 @@ export async function verifySubCompany(
             direction: "OUTBOUND",
             channels: outboundChannels || 1,
             status: "ACTIVE",
-            assignedAt: now,
           } as any,
         });
       } else {
@@ -502,7 +497,6 @@ export async function verifySubCompany(
             provider: "PROPNEX",
             status: "ACTIVE",
             assignedParentTenantId: parentCompanyId,
-            assignedAt: now,
           } as any,
         });
       }
