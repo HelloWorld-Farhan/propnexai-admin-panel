@@ -429,25 +429,45 @@ export async function verifySubCompany(
       data: { status: "ACTIVE" } as any,
     });
 
+    const now = new Date();
+
     // Assign the Inbound phone number to the child company
     if (inboundNumber?.trim()) {
       const phoneNumberId = await allocatePhoneNumberEntityId(tx, subCompanyId);
       const publicId = generatePublicId(existing.cli, "UNASSIGNED", phoneNumberId);
       const cleanedNumber = inboundNumber.trim();
 
-      await tx.phoneNumber.create({
-        data: {
-          companyId: subCompanyId,
-          phoneNumberId,
-          publicId,
-          number: cleanedNumber,
-          direction: "INBOUND",
-          channels: inboundChannels || 1,
-          provider: "PROPNEX",
-          status: "ACTIVE",
-          assignedParentTenantId: parentCompanyId,
-        },
+      // Check if this number already exists for sub-company (update instead of create)
+      const existingPhone = await tx.phoneNumber.findFirst({
+        where: { companyId: subCompanyId, number: cleanedNumber }
       });
+
+      if (existingPhone) {
+        await tx.phoneNumber.update({
+          where: { id: existingPhone.id },
+          data: {
+            direction: "INBOUND",
+            channels: inboundChannels || 1,
+            status: "ACTIVE",
+            assignedAt: now,
+          } as any,
+        });
+      } else {
+        await tx.phoneNumber.create({
+          data: {
+            companyId: subCompanyId,
+            phoneNumberId,
+            publicId,
+            number: cleanedNumber,
+            direction: "INBOUND",
+            channels: inboundChannels || 1,
+            provider: "PROPNEX",
+            status: "ACTIVE",
+            assignedParentTenantId: parentCompanyId,
+            assignedAt: now,
+          } as any,
+        });
+      }
     }
 
     // Assign the Outbound phone number to the child company
@@ -456,19 +476,36 @@ export async function verifySubCompany(
       const publicId = generatePublicId(existing.cli, "UNASSIGNED", phoneNumberId);
       const cleanedNumber = outboundNumber.trim();
 
-      await tx.phoneNumber.create({
-        data: {
-          companyId: subCompanyId,
-          phoneNumberId,
-          publicId,
-          number: cleanedNumber,
-          direction: "OUTBOUND",
-          channels: outboundChannels || 1,
-          provider: "PROPNEX",
-          status: "ACTIVE",
-          assignedParentTenantId: parentCompanyId,
-        },
+      const existingPhone = await tx.phoneNumber.findFirst({
+        where: { companyId: subCompanyId, number: cleanedNumber }
       });
+
+      if (existingPhone) {
+        await tx.phoneNumber.update({
+          where: { id: existingPhone.id },
+          data: {
+            direction: "OUTBOUND",
+            channels: outboundChannels || 1,
+            status: "ACTIVE",
+            assignedAt: now,
+          } as any,
+        });
+      } else {
+        await tx.phoneNumber.create({
+          data: {
+            companyId: subCompanyId,
+            phoneNumberId,
+            publicId,
+            number: cleanedNumber,
+            direction: "OUTBOUND",
+            channels: outboundChannels || 1,
+            provider: "PROPNEX",
+            status: "ACTIVE",
+            assignedParentTenantId: parentCompanyId,
+            assignedAt: now,
+          } as any,
+        });
+      }
     }
     return updated;
   }, {

@@ -692,6 +692,8 @@ export function CompanyDetail({ company }: { company: CompanyData }) {
                                   subCompanyId={child.id}
                                   subCompanyName={child.name}
                                   parentCompanyId={company.id}
+                                  existingInboundNums={inboundNums}
+                                  existingOutboundNums={outboundNums}
                                   onSuccess={refreshLiveCompany}
                                 />
                               )}
