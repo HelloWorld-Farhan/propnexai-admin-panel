@@ -5,7 +5,7 @@ import { CallDirection, CallStatus } from "@prisma/client";
 import crypto from "crypto";
 import axios from "axios";
 
-const VOICELINK_API_URL = "https://app.voicelink.co.in/api";
+
 export const preferredRegion = 'bom1';
 
 export async function OPTIONS() {
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. We are doing Option 1 (Frontend Bypass). Vercel no longer talks to Voicelink 
+    // 3. We are doing Option 1 (Frontend Bypass). Vercel no longer talks to Bonvoice 
     // or Hostinger. We simply extract the DID number to return to the frontend.
     const didNumber = outboundNumber.number.replace("+", "");
 

@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-// Endpoint to receive Voicelink call events
+// Endpoint to receive Bonvoice call events
 export async function POST(req: Request) {
   try {
     const payload = await req.json();
     
-    // Minimal expected fields from Voicelink
+    // Minimal expected fields from Bonvoice
     // Assuming structure: { call_id, did_number, customer_number, status, duration, custom_parameters: '{"companyId": "..."}' }
     const { call_id, did_number, customer_number, status, duration, custom_parameters } = payload;
     
