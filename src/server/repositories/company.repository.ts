@@ -433,7 +433,7 @@ export async function verifySubCompany(
     if (inboundNumber?.trim()) {
       const phoneNumberId = await allocatePhoneNumberEntityId(tx, subCompanyId);
       const publicId = generatePublicId(existing.cli, "UNASSIGNED", phoneNumberId);
-      const cleanedNumber = inboundNumber.trim();
+      const cleanedNumber = inboundNumber.replace(/[\s-()]/g, "").trim();
 
       // Check if this number already exists for sub-company (update instead of create)
       const existingPhone = await tx.phoneNumber.findFirst({
@@ -470,7 +470,7 @@ export async function verifySubCompany(
     if (outboundNumber?.trim()) {
       const phoneNumberId = await allocatePhoneNumberEntityId(tx, subCompanyId);
       const publicId = generatePublicId(existing.cli, "UNASSIGNED", phoneNumberId);
-      const cleanedNumber = outboundNumber.trim();
+      const cleanedNumber = outboundNumber.replace(/[\s-()]/g, "").trim();
 
       const existingPhone = await tx.phoneNumber.findFirst({
         where: { companyId: subCompanyId, number: cleanedNumber }

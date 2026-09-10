@@ -18,7 +18,7 @@ export async function PATCH(
     // Update the phone number associated with this company
     const updated = await prisma.phoneNumber.updateMany({
       where: { companyId: id },
-      data: { number: body.newNumber.trim() },
+      data: { number: body.newNumber.replace(/[\s-()]/g, "").trim() },
     });
 
     if (updated.count === 0) {
@@ -62,7 +62,7 @@ export async function POST(
     }
 
     // Check not already assigned
-    const numTrimmed = body.newNumber.trim();
+    const numTrimmed = body.newNumber.replace(/[\s-()]/g, "").trim();
     const existingNumber = company.phoneNumbers.find((p: any) => p.number === numTrimmed);
     if (existingNumber) {
       const newDirection = (existingNumber.direction && body.direction && existingNumber.direction !== body.direction) 
