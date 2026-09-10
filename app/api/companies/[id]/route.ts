@@ -94,7 +94,6 @@ export async function PATCH(
                 number: cleanedNumber,
                 provider: "PROPNEX",
                 status: "ACTIVE",
-                direction: "BOTH",
                 assignedParentTenantId: parentComp?.parentCompanyId,
               },
             });
