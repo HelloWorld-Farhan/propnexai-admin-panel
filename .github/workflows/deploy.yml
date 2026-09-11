@@ -39,4 +39,4 @@ jobs:
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             cd /root/propnexai-admin-panel
             npm install --production
-            pm2 restart propnexai-admin --update-env || pm2 start npm --name propnexai-admin -- run start
+            pm2 restart propnex-admin-panel --update-env || pm2 start npm --name propnex-admin-panel -- run start
