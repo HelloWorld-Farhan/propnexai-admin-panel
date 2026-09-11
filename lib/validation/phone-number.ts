@@ -29,22 +29,26 @@ export const createPhoneNumberSchema = z.object({
   companyId: z.string().min(1, "Company is required"),
   campaignId: nullableId,
   label: nullableLabel,
-  direction: z.enum(["INBOUND", "OUTBOUND"]).nullable().optional(),
+  direction: z.enum(["INBOUND", "OUTBOUND", "BOTH"]).nullable().optional(),
   provider: z.enum(phoneNumberProviders).default("PROPNEX"),
   status: z.enum(phoneNumberStatuses).default("ACTIVE"),
   inboundAgentId: nullableId,
   outboundAgentId: nullableId,
+  channels: z.number().int().min(1).optional().nullable(),
+  agentUrl: z.string().url().or(z.literal("")).optional().nullable().transform(v => v === "" ? null : v),
 });
 
 export const updatePhoneNumberSchema = z.object({
   companyId: z.string().min(1).optional(),
   campaignId: nullableId,
   label: nullableLabel,
-  direction: z.enum(["INBOUND", "OUTBOUND"]).nullable().optional(),
+  direction: z.enum(["INBOUND", "OUTBOUND", "BOTH"]).nullable().optional(),
   provider: z.enum(phoneNumberProviders).optional(),
   status: z.enum(phoneNumberStatuses).optional(),
   inboundAgentId: nullableId,
   outboundAgentId: nullableId,
+  channels: z.number().int().min(1).optional().nullable(),
+  agentUrl: z.string().url().or(z.literal("")).optional().nullable().transform(v => v === "" ? null : v),
 });
 
 export function formatZodError(error: z.ZodError): string {

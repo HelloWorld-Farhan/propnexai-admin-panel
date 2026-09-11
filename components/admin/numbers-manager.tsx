@@ -50,6 +50,8 @@ export type PhoneNumberRow = {
   campaign: { id: string; name: string; resourceKey: string } | null;
   inboundAgent: { id: string; name: string } | null;
   outboundAgent: { id: string; name: string } | null;
+  channels?: number | null;
+  agentUrl?: string | null;
   updatedAt: string;
 };
 
@@ -57,12 +59,16 @@ type NumberFormState = {
   number: string;
   companyId: string;
   direction: "INBOUND" | "OUTBOUND" | "BOTH" | "none";
+  channels?: string;
+  agentUrl?: string;
 };
 
 const EMPTY_FORM: NumberFormState = {
   number: "",
   companyId: "",
   direction: "INBOUND",
+  channels: "1",
+  agentUrl: "",
 };
 
 function toNullableId(value: string): string | null {
@@ -181,6 +187,8 @@ export function NumbersManager({
       number: row.number,
       companyId: row.companyId,
       direction: row.direction ?? "INBOUND",
+      channels: row.channels?.toString() || "1",
+      agentUrl: row.agentUrl || "",
     });
     setOpen(true);
   }
@@ -207,6 +215,8 @@ export function NumbersManager({
     const assignmentPayload = {
       companyId: form.companyId,
       direction: form.direction,
+      channels: parseInt(form.channels || "1", 10),
+      ...(form.direction === "OUTBOUND" || form.direction === "BOTH" ? { agentUrl: form.agentUrl } : { agentUrl: null }),
     };
 
     const res = await fetch(
@@ -318,6 +328,33 @@ export function NumbersManager({
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Channels</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={form.channels}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, channels: e.target.value }))
+                  }
+                  placeholder="Number of concurrent channels"
+                />
+              </div>
+
+              {(form.direction === "OUTBOUND" || form.direction === "BOTH") && (
+                <div className="space-y-2">
+                  <Label>Agent URL (Outbound)</Label>
+                  <Input
+                    type="url"
+                    value={form.agentUrl}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, agentUrl: e.target.value }))
+                    }
+                    placeholder="wss://your-agent-url"
+                  />
+                </div>
+              )}
 
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? "Saving..." : "Save"}

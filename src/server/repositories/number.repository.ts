@@ -116,6 +116,8 @@ export async function createPhoneNumberForAdmin(input: {
   inboundAgentId?: string | null;
   outboundAgentId?: string | null;
   direction?: CallDirection | null;
+  channels?: number | null;
+  agentUrl?: string | null;
 }) {
   const number = input.number.trim();
   const campaignId = input.campaignId ?? null;
@@ -170,6 +172,8 @@ export async function createPhoneNumberForAdmin(input: {
         publicId,
         inboundAgentId: input.inboundAgentId ?? null,
         outboundAgentId: input.outboundAgentId ?? null,
+        channels: input.channels ?? null,
+        agentUrl: input.agentUrl ?? null,
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore - Bypass cached TS server Prisma type error
         direction: input.direction ?? null,
@@ -297,6 +301,8 @@ export async function updatePhoneNumberForAdmin(
     inboundAgentId?: string | null;
     outboundAgentId?: string | null;
     direction?: CallDirection | null;
+    channels?: number | null;
+    agentUrl?: string | null;
   },
 ) {
   const existing = await prisma.phoneNumber.findUnique({
@@ -372,6 +378,8 @@ export async function updatePhoneNumberForAdmin(
         status: input.status,
         inboundAgentId: nextInboundAgentId,
         outboundAgentId: nextOutboundAgentId,
+        channels: input.channels === undefined ? undefined : input.channels,
+        agentUrl: input.agentUrl === undefined ? undefined : input.agentUrl,
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore - Bypass cached TS server Prisma type error
         direction: input.direction,

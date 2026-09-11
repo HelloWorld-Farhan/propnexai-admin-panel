@@ -323,7 +323,19 @@ export async function deleteCompanyById(id: string) {
         tx.billingInvoice.deleteMany({ where: { companyId: id } }),
         tx.creditUsage.deleteMany({ where: { companyId: id } }),
         tx.creditBalance.deleteMany({ where: { companyId: id } }),
-        tx.phoneNumber.deleteMany({ where: { companyId: id } }),
+        tx.phoneNumber.updateMany({ 
+          where: { companyId: id }, 
+          data: { 
+            companyId: null, 
+            direction: null, 
+            status: "INACTIVE",
+            campaignId: null,
+            inboundAgentId: null,
+            outboundAgentId: null,
+            agentUrl: null,
+            channels: null
+          } 
+        }),
         tx.invitation.deleteMany({ where: { companyId: id } }),
         tx.companyMember.deleteMany({ where: { companyId: id } }),
         tx.apiKey.deleteMany({ where: { companyId: id } }),
@@ -368,6 +380,22 @@ export async function deleteCompanyById(id: string) {
       }
     });
   }
+
+  // Unassign phone numbers for the parent and all child companies
+  const companyIdsToUnassign = [id, ...(company.childCompanies?.map((c) => c.id) || [])];
+  await prisma.phoneNumber.updateMany({
+    where: { companyId: { in: companyIdsToUnassign } },
+    data: {
+      companyId: null,
+      direction: null,
+      status: "INACTIVE",
+      campaignId: null,
+      inboundAgentId: null,
+      outboundAgentId: null,
+      agentUrl: null,
+      channels: null
+    }
+  });
 
   let ownerEmail = "";
   let ownerName = "";
