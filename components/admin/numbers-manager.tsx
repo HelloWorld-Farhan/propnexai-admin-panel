@@ -143,6 +143,34 @@ export function NumbersManager({
       },
     },
     {
+      accessorKey: "channels",
+      header: "Channels",
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.channels ?? 1}</span>
+      ),
+    },
+    {
+      accessorKey: "agentUrl",
+      header: "Agent URL",
+      cell: ({ row }) => {
+        const isOutbound = row.original.direction === "OUTBOUND" || row.original.direction === "BOTH";
+        
+        if (!isOutbound) {
+          return <span className="text-xs text-muted-foreground">—</span>;
+        }
+
+        if (!row.original.agentUrl) {
+          return <span className="text-xs font-semibold text-red-500">No link assigned</span>;
+        }
+
+        return (
+          <span className="text-xs font-mono text-emerald-500 max-w-[200px] truncate block" title={row.original.agentUrl}>
+            {row.original.agentUrl}
+          </span>
+        );
+      },
+    },
+    {
       id: "actions",
       header: "",
       cell: ({ row }) => (
