@@ -164,7 +164,7 @@ export function NumbersManager({
         }
 
         return (
-          <span className="text-xs font-mono text-emerald-500 max-w-[200px] truncate block" title={row.original.agentUrl}>
+          <span className="text-xs font-mono text-emerald-500 break-all" title={row.original.agentUrl}>
             {row.original.agentUrl}
           </span>
         );
