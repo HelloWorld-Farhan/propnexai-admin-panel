@@ -15,10 +15,21 @@ export async function PATCH(
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const numTrimmed = body.newNumber.replace(/[\s-()]/g, "").trim();
+
+    // Look for an existing agentUrl for this DID globally
+    const existingGlobalNumber = await prisma.phoneNumber.findFirst({
+      where: { number: numTrimmed, agentUrl: { not: null } },
+      select: { agentUrl: true }
+    });
+
     // Update the phone number associated with this company
     const updated = await prisma.phoneNumber.updateMany({
       where: { companyId: id },
-      data: { number: body.newNumber.replace(/[\s-()]/g, "").trim() },
+      data: { 
+        number: numTrimmed,
+        ...(existingGlobalNumber?.agentUrl ? { agentUrl: existingGlobalNumber.agentUrl } : {})
+      },
     });
 
     if (updated.count === 0) {
@@ -88,6 +99,12 @@ export async function POST(
     const phoneNumberId = await allocatePhoneNumberEntityId(prisma as any, id);
     const publicId = generatePublicId(company.name.substring(0, 3).toUpperCase(), "UNASSIGNED", phoneNumberId);
 
+    // Look for an existing agentUrl for this DID globally
+    const existingGlobalNumber = await prisma.phoneNumber.findFirst({
+      where: { number: numTrimmed, agentUrl: { not: null } },
+      select: { agentUrl: true }
+    });
+
     // Create the new phone number record
     const created = await prisma.phoneNumber.create({
       data: {
@@ -100,6 +117,7 @@ export async function POST(
         assignedParentTenantId: company.parentCompanyId,
         direction: body.direction || null,
         channels: body.channels !== undefined ? body.channels : null,
+        agentUrl: existingGlobalNumber?.agentUrl || null,
       } as any,
     });
 
