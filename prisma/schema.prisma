@@ -473,6 +473,8 @@ model Company {
   supportRequests            SupportRequest[]
   billingQuotes              BillingQuote[]
   callInternalNotes          CallInternalNote[]
+  infraNotifications         InfraCostNotification[] @relation("InfraNotificationCompany")
+  infraSubNotifications      InfraCostNotification[] @relation("InfraNotificationSubCompany")
 
   @@index([status])
   @@index([clerkOrganizationId])
@@ -1859,4 +1861,30 @@ model JobApplication {
   appliedAt      DateTime @default(now())
 
   job JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model InfraCostNotification {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  email          String?   
+  companyId      String?   @db.ObjectId 
+  subCompanyId   String?   @db.ObjectId 
+  companyName    String?
+  subCompanyName String?
+  
+  startDate      DateTime
+  endDate        DateTime
+  recurrenceType String    @default("ONCE")
+  customMonths   Int[]     @default([])
+  
+  pausedUntil    DateTime?
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company      Company?  @relation(name: "InfraNotificationCompany", fields: [companyId], references: [id], onDelete: Cascade)
+  subCompany   Company?  @relation(name: "InfraNotificationSubCompany", fields: [subCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([subCompanyId])
+  @@index([email])
 }

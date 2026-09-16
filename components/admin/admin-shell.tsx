@@ -13,6 +13,7 @@ import {
   Briefcase,
   Menu,
   X,
+  Server,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/numbers", label: "Numbers", icon: Phone },
   { href: "/agents", label: "Agent Library", icon: Bot },
   { href: "/jobs", label: "Jobs", icon: Briefcase }, // Added Jobs
+  { href: "/infra-costs", label: "Infra Costs", icon: Server },
   { href: "/support", label: "Support", icon: LifeBuoy },
 ];
 
