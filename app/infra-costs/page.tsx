@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { Server } from "lucide-react";
 import { InfraCostClient } from "./components/InfraCostClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function InfraCostsPage() {
   const notifications = await prisma.infraCostNotification.findMany({
     orderBy: { createdAt: "desc" },
