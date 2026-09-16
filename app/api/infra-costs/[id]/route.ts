@@ -16,6 +16,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
         recurrenceType: body.recurrenceType,
+        message: body.message || null,
         pausedUntil: body.pausedUntil ? new Date(body.pausedUntil) : null,
       },
     });

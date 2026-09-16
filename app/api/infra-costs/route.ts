@@ -14,6 +14,7 @@ export async function POST(req: Request) {
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
         recurrenceType: body.recurrenceType || "ONCE",
+        message: body.message || null,
       },
     });
     return NextResponse.json(notification);

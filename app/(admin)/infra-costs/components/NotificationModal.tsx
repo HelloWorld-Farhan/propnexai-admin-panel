@@ -41,6 +41,7 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
     endDay: "",
     recurrenceType: "ONCE",
     customMonth: "",
+    message: "",
   });
 
   const [targetError, setTargetError] = useState<string | null>(null);
@@ -57,6 +58,7 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
         endDay: editingItem.endDate ? new Date(editingItem.endDate).getDate().toString() : "",
         recurrenceType: editingItem.recurrenceType?.startsWith("EVERY_") && !["EVERY_1_MONTH", "EVERY_2_MONTHS", "EVERY_6_MONTHS"].includes(editingItem.recurrenceType) ? "OTHER" : (editingItem.recurrenceType || "ONCE"),
         customMonth: editingItem.recurrenceType?.startsWith("EVERY_") && !["EVERY_1_MONTH", "EVERY_2_MONTHS", "EVERY_6_MONTHS"].includes(editingItem.recurrenceType) ? editingItem.recurrenceType.split("_")[1] : "",
+        message: editingItem.message || "",
       });
       setTargetError(null);
     } else {
@@ -70,6 +72,7 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
         endDay: "",
         recurrenceType: "ONCE",
         customMonth: "",
+        message: "",
       });
       setTargetError(null);
     }
@@ -153,7 +156,7 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
     }
   };
 
-  const isFormValid = formData.companyId && formData.startDay && formData.endDay && (formData.recurrenceType !== "OTHER" || formData.customMonth);
+  const isFormValid = formData.companyId && formData.startDay && formData.endDay && formData.message.trim().length > 0 && (formData.recurrenceType !== "OTHER" || formData.customMonth);
 
   if (!isOpen) return null;
 
@@ -219,11 +222,11 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Start Day (1-31) <span className="text-destructive">*</span></Label>
+              <Label>Start Day (1-27) <span className="text-destructive">*</span></Label>
               <Input 
                 type="number"
                 min="1"
-                max="31"
+                max="27"
                 value={formData.startDay}
                 onChange={(e) => setFormData({ ...formData, startDay: e.target.value })}
                 placeholder="e.g. 27"
@@ -231,11 +234,11 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
               />
             </div>
             <div className="space-y-2">
-              <Label>End Day (1-31) <span className="text-destructive">*</span></Label>
+              <Label>End Day (1-27) <span className="text-destructive">*</span></Label>
               <Input 
                 type="number"
                 min="1"
-                max="31"
+                max="27"
                 value={formData.endDay}
                 onChange={(e) => setFormData({ ...formData, endDay: e.target.value })}
                 placeholder="e.g. 2"
@@ -246,6 +249,22 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
           {(!formData.startDay || !formData.endDay) && (
             <p className="text-xs text-destructive">Both Start Day and End Day are required.</p>
           )}
+
+          <div className="space-y-2">
+            <Label>Notification Message <span className="text-destructive">*</span></Label>
+            <textarea
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              placeholder="Enter a short message to display on the main website..."
+              maxLength={150}
+              required
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+            {formData.message.trim().length === 0 && (
+              <p className="text-xs text-destructive">Message is required and cannot be empty.</p>
+            )}
+            <p className="text-xs text-muted-foreground text-right">{formData.message.length}/150 characters</p>
+          </div>
 
           <div className="space-y-2">
             <Label>Recurrence Cycle <span className="text-destructive">*</span></Label>

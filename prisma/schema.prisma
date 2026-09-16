@@ -1875,6 +1875,7 @@ model InfraCostNotification {
   endDate        DateTime
   recurrenceType String    @default("ONCE")
   customMonths   Int[]     @default([])
+  message        String?
   
   pausedUntil    DateTime?
   
