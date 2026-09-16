@@ -113,16 +113,48 @@ export function InfraCostClient({ initialData }: { initialData: any[] }) {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleSkip(item.id)} 
-                        className="text-xs mr-2"
-                        disabled={skippingId === item.id || item.recurrenceType === "ONCE"}
-                      >
-                        {skippingId === item.id && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                        Shift to next schedule
-                      </Button>
+                      {(() => {
+                        const isBlocked = item.recurrenceType === "ONCE";
+                        const tooltipText = isBlocked
+                          ? "Not available for one-time notifications. Only recurring schedules (Daily, Weekly, Monthly) can be shifted to the next occurrence."
+                          : "Skip the current schedule window and move this notification to the next occurrence date.";
+                        return (
+                          <div
+                            className="relative group"
+                            title={tooltipText}
+                          >
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => !isBlocked && handleSkip(item.id)}
+                              className={`text-xs mr-2 transition-all duration-200 ${
+                                isBlocked
+                                  ? "opacity-35 cursor-not-allowed border-dashed border-muted-foreground/30 text-muted-foreground bg-transparent hover:bg-transparent hover:border-muted-foreground/30 hover:text-muted-foreground line-through decoration-muted-foreground/50"
+                                  : ""
+                              }`}
+                              disabled={skippingId === item.id}
+                            >
+                              {skippingId === item.id && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                              Shift to next schedule
+                            </Button>
+                            {/* Tooltip */}
+                            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 hidden group-hover:flex">
+                              <div className={`max-w-[220px] rounded-md px-2.5 py-1.5 text-[11px] leading-snug shadow-lg text-center whitespace-normal ${
+                                isBlocked
+                                  ? "bg-destructive/90 text-destructive-foreground"
+                                  : "bg-popover text-popover-foreground border border-border"
+                              }`}>
+                                {tooltipText}
+                                {/* Arrow */}
+                                <div className={`absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent ${
+                                  isBlocked ? "border-t-destructive/90" : "border-t-popover"
+                                }`} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       <Button 
                         variant="ghost" 
                         size="icon" 
