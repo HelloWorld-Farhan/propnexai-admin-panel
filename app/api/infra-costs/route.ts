@@ -55,6 +55,10 @@ export async function POST(req: Request) {
       startDate.getDate() === now.getDate();
     const isPast10AM = now.getHours() >= 10;
 
+    console.log("Infra Cost Notification Created:", notification.id);
+    console.log("Checking email dispatch...");
+    console.log("GAS_URL loaded:", GAS_URL ? "YES" : "NO (Missing from .env or server not restarted)");
+
     const emailPayload = {
       companyName: body.companyName || "",
       email: body.email || "",
@@ -65,6 +69,7 @@ export async function POST(req: Request) {
       message: body.message || "",
     };
 
+    console.log("Dispatching Admin Email...");
     // Always fire admin reminder immediately when notification is created
     await sendEmail({ type: "infra_cost_reminder_admin", ...emailPayload });
 
@@ -72,7 +77,10 @@ export async function POST(req: Request) {
     // — start date is today and it's already past 10 AM (can't wait for 10 AM trigger)
     // — OR start date is in the past (edge case)
     if (body.email && ((isToday && isPast10AM) || startDate <= now)) {
+      console.log("Dispatching User Email...");
       await sendEmail({ type: "infra_cost_reminder_user", ...emailPayload });
+    } else {
+      console.log("Skipping User Email (Scheduled for Future)");
     }
     // For future dates: the GAS time-based trigger handles sending at 10 AM
     // ──────────────────────────────────────────────────────────────────────────
