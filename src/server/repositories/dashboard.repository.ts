@@ -37,7 +37,7 @@ export async function getDashboardStats() {
     prisma.user.count(),
     prisma.phoneNumber.count({ where: { status: "ACTIVE", direction: "INBOUND" } }),
     prisma.phoneNumber.count({ where: { status: "ACTIVE", direction: "OUTBOUND" } }),
-    prisma.aiAgent.count(),
+    prisma.agentLibraryEntry.count(),
     prisma.jobPosting.count(),
     prisma.formSubmission.count({ where: { formType: "PARTNER_APP" } }),
     prisma.formSubmission.count({ where: { formType: "DEMO_CALL" } }),
