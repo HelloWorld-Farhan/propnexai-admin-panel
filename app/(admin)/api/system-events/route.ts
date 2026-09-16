@@ -7,7 +7,7 @@ export async function GET(req: Request) {
     const search = searchParams.get("search") || "";
     const date = searchParams.get("date") || "";
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = 15;
+    const limit = 10;
 
     let where: any = {};
 
