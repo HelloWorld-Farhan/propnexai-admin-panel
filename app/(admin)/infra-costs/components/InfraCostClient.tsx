@@ -115,21 +115,15 @@ export function InfraCostClient({ initialData }: { initialData: any[] }) {
                     <div className="flex items-center justify-end gap-1">
                       {(() => {
                         const isBlocked = item.recurrenceType === "ONCE";
-                        const tooltipText = isBlocked
-                          ? "Not available for one-time notifications. Only recurring schedules (Daily, Weekly, Monthly) can be shifted to the next occurrence."
-                          : "Skip the current schedule window and move this notification to the next occurrence date.";
                         return (
-                          <div
-                            className="relative group"
-                            title={tooltipText}
-                          >
+                          <div className="relative group inline-flex">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => !isBlocked && handleSkip(item.id)}
-                              className={`text-xs mr-2 transition-all duration-200 ${
+                              className={`text-xs mr-2 transition-all duration-200 select-none ${
                                 isBlocked
-                                  ? "opacity-35 cursor-not-allowed border-dashed border-muted-foreground/30 text-muted-foreground bg-transparent hover:bg-transparent hover:border-muted-foreground/30 hover:text-muted-foreground line-through decoration-muted-foreground/50"
+                                  ? "opacity-40 cursor-not-allowed border-dashed border-muted-foreground/40 text-muted-foreground/60 bg-transparent hover:bg-transparent hover:border-muted-foreground/40 hover:text-muted-foreground/60 line-through"
                                   : ""
                               }`}
                               disabled={skippingId === item.id}
@@ -137,23 +131,25 @@ export function InfraCostClient({ initialData }: { initialData: any[] }) {
                               {skippingId === item.id && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
                               Shift to next schedule
                             </Button>
-                            {/* Tooltip */}
-                            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 hidden group-hover:flex">
-                              <div className={`max-w-[220px] rounded-md px-2.5 py-1.5 text-[11px] leading-snug shadow-lg text-center whitespace-normal ${
+
+                            {/* Compact tooltip — appears to the right */}
+                            <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 z-[9999] opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap">
+                              {/* Left arrow */}
+                              <div className={`absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent ${
+                                isBlocked ? "border-r-red-500" : "border-r-zinc-700"
+                              }`} />
+                              <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium leading-none shadow-lg ${
                                 isBlocked
-                                  ? "bg-destructive/90 text-destructive-foreground"
-                                  : "bg-popover text-popover-foreground border border-border"
+                                  ? "bg-red-500 text-white"
+                                  : "bg-zinc-700 text-zinc-100"
                               }`}>
-                                {tooltipText}
-                                {/* Arrow */}
-                                <div className={`absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent ${
-                                  isBlocked ? "border-t-destructive/90" : "border-t-popover"
-                                }`} />
-                              </div>
+                                {isBlocked ? "🚫 One-time only — cannot shift" : "⏭ Move to next occurrence"}
+                              </span>
                             </div>
                           </div>
                         );
                       })()}
+
 
                       <Button 
                         variant="ghost" 
