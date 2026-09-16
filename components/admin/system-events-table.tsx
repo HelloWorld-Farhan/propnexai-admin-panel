@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 type SystemEvent = {
@@ -14,54 +14,111 @@ type SystemEvent = {
   title: string;
   message: string;
   createdAt: string;
-  company: { name: string };
+  company: { name: string } | null;
 };
+
+// Color mapping per event type
+const EVENT_COLORS: Record<string, string> = {
+  CREDIT_ADDED:           "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  CREDIT_DEDUCTED:        "bg-red-500/10 text-red-400 border-red-500/20",
+  NUMBER_ASSIGNED:        "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  NUMBER_RELEASED:        "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  AGENT_CREATED:          "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  AGENT_EDITED:           "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+  AGENT_DELETED:          "bg-rose-500/10 text-rose-400 border-rose-500/20",
+  NOTIFICATION_CREATED:  "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  NOTIFICATION_EDITED:   "bg-sky-500/10 text-sky-400 border-sky-500/20",
+  NOTIFICATION_DELETED:  "bg-pink-500/10 text-pink-400 border-pink-500/20",
+};
+
+const getEventColor = (type: string) =>
+  EVENT_COLORS[type] ?? "bg-muted/60 text-muted-foreground border-border";
 
 export function SystemEventsTable() {
   const [events, setEvents] = useState<SystemEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [date, setDate] = useState("");
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [newEventIds, setNewEventIds] = useState<Set<string>>(new Set());
+  const prevEventIdsRef = useRef<Set<string>>(new Set());
 
-  const fetchEvents = async () => {
-    setLoading(true);
+  const fetchEvents = useCallback(async (silent = false) => {
+    if (!silent) setRefreshing(true);
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (date) params.set("date", date);
       params.set("page", page.toString());
 
-      const res = await fetch(`/api/system-events?${params.toString()}`);
+      const res = await fetch(`/api/system-events?${params.toString()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
-        setEvents(data.events);
-        setTotalPages(data.pagination.totalPages || 1);
+        const incoming: SystemEvent[] = data.events ?? [];
+
+        // Detect new events (highlight them briefly)
+        const incomingIds = new Set(incoming.map((e) => e.id));
+        const fresh = incoming
+          .filter((e) => !prevEventIdsRef.current.has(e.id))
+          .map((e) => e.id);
+        if (fresh.length > 0) {
+          setNewEventIds(new Set(fresh));
+          setTimeout(() => setNewEventIds(new Set()), 2500);
+        }
+        prevEventIdsRef.current = incomingIds;
+
+        setEvents(incoming);
+        setTotal(data.pagination?.total ?? 0);
+        setTotalPages(data.pagination?.totalPages ?? 1);
+        setLastUpdated(new Date());
       }
     } catch (error) {
       console.error("Failed to fetch events", error);
     } finally {
-      setLoading(false);
+      setInitialLoad(false);
+      setRefreshing(false);
     }
-  };
+  }, [search, date, page]);
 
+  // First load
   useEffect(() => {
-    fetchEvents();
-  }, [page, search, date]);
+    setInitialLoad(true);
+    fetchEvents(false);
+  }, [fetchEvents]);
 
-  // Optionally auto-refresh page 1 every 30 seconds if not searching
+  // Silent background polling every 10 seconds
   useEffect(() => {
-    if (page === 1 && !search && !date) {
-      const interval = setInterval(fetchEvents, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [page, search, date]);
+    const interval = setInterval(() => {
+      fetchEvents(true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [fetchEvents]);
 
   return (
     <Card>
       <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <CardTitle className="text-base">Recent system activity</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-base">Recent system activity</CardTitle>
+          {/* Live indicator */}
+          <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+            </span>
+            LIVE
+          </span>
+          {lastUpdated && (
+            <span className="text-[10px] text-muted-foreground hidden sm:inline">
+              Updated {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
         <div className="flex flex-col sm:flex-row items-center gap-2">
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -78,73 +135,102 @@ export function SystemEventsTable() {
             value={date}
             onChange={(e) => { setDate(e.target.value); setPage(1); }}
           />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 px-2"
+            onClick={() => fetchEvents(false)}
+            disabled={refreshing}
+            title="Refresh now"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          </Button>
         </div>
       </CardHeader>
+
       <CardContent>
-        <div className="relative min-h-[300px]">
-          {loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm">
+        <div className="relative">
+          {/* Initial loading skeleton */}
+          {initialLoad ? (
+            <div className="flex items-center justify-center min-h-[200px]">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>Message</TableHead>
-                <TableHead>Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {events.length === 0 && !loading ? (
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                    No system events found.
-                  </TableCell>
+                  <TableHead className="w-[140px]">Company</TableHead>
+                  <TableHead className="w-[180px]">Event</TableHead>
+                  <TableHead>Message</TableHead>
+                  <TableHead className="w-[150px] text-right">Time</TableHead>
                 </TableRow>
-              ) : (
-                events.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell className="font-medium">{event.company.name}</TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                        {event.type.replace(/_/g, " ")}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      <div className="font-medium text-xs">{event.title}</div>
-                      <div className="text-muted-foreground mt-0.5 max-w-md truncate" title={event.message}>{event.message}</div>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDate(new Date(event.createdAt))}
+              </TableHeader>
+              <TableBody>
+                {events.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-10">
+                      No system events found.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  events.map((event) => {
+                    const isNew = newEventIds.has(event.id);
+                    return (
+                      <TableRow
+                        key={event.id}
+                        className={`transition-colors duration-700 ${
+                          isNew ? "bg-emerald-500/5 border-l-2 border-l-emerald-500" : ""
+                        }`}
+                      >
+                        <TableCell className="font-medium text-sm">
+                          {event.company?.name ?? <span className="text-muted-foreground italic">System</span>}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${getEventColor(event.type)}`}>
+                            {event.type.replace(/_/g, " ")}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm max-w-[360px]">
+                          <div className="font-medium text-xs leading-tight">{event.title}</div>
+                          {event.message && (
+                            <div className="text-muted-foreground mt-0.5 truncate" title={event.message}>
+                              {event.message}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap text-right">
+                          {formatDate(new Date(event.createdAt))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
-        
+
         {/* Pagination */}
-        <div className="flex items-center justify-between px-2 py-4 border-t mt-4">
+        <div className="flex items-center justify-between px-2 py-3 border-t mt-2">
           <div className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+            {total > 0 ? (
+              <>Page <span className="font-medium text-foreground">{page}</span> of <span className="font-medium text-foreground">{totalPages}</span> &nbsp;·&nbsp; <span className="font-medium text-foreground">{total}</span> events</>
+            ) : "No events"}
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1 || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || initialLoad}
             >
               <ChevronLeft className="h-4 w-4 mr-1" /> Previous
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || loading}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || initialLoad}
             >
               Next <ChevronRight className="h-4 w-4 ml-1" />
             </Button>

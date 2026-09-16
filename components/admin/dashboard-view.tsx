@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,15 +55,19 @@ export function DashboardView({
 }) {
   const [stats, setStats] = useState(initialStats);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetch("/api/dashboard")
-        .then((res) => res.json())
-        .then((data) => setStats(data))
-        .catch(() => undefined);
-    }, 30000);
-    return () => clearInterval(interval);
+  const refreshStats = useCallback(() => {
+    fetch("/api/dashboard", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => setStats(data))
+      .catch(() => undefined);
   }, []);
+
+  // Silent background poll every 10 seconds — no loading state, no flicker
+  useEffect(() => {
+    const interval = setInterval(refreshStats, 10000);
+    return () => clearInterval(interval);
+  }, [refreshStats]);
+
 
   return (
     <div className="space-y-6">
