@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Search, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { X, Search, Loader2, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -179,6 +179,27 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
     }
   };
 
+  const previewDates = useMemo(() => {
+    const sDay = parseInt(formData.startDay);
+    const eDay = parseInt(formData.endDay);
+    
+    if (isNaN(sDay) || isNaN(eDay)) return null;
+    
+    const now = new Date();
+    let sMonth = now.getMonth();
+    let sYear = now.getFullYear();
+    if (sDay < now.getDate()) sMonth++;
+    
+    let eMonth = sMonth;
+    let eYear = sYear;
+    if (eDay < sDay) eMonth++;
+    
+    const startDate = createSafeDate(sYear, sMonth, sDay, false);
+    const endDate = createSafeDate(eYear, eMonth, eDay, true);
+    
+    return { startDate, endDate };
+  }, [formData.startDay, formData.endDay]);
+
   const isFormValid = formData.companyId && formData.startDay && formData.endDay && formData.message.trim().length > 0 && (formData.recurrenceType !== "OTHER" || formData.customMonth);
 
   if (!isOpen) return null;
@@ -333,12 +354,29 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
         </div>
         </form>
         
-        <div className="p-4 border-t flex justify-end gap-2 bg-muted/10">
-          <Button variant="outline" onClick={onClose} type="button">Cancel</Button>
-          <Button onClick={handleSubmit} disabled={loading || !isFormValid || !!targetError}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Notification
-          </Button>
+        <div className="p-4 border-t flex items-center justify-between gap-2 bg-muted/10">
+          <div className="text-xs text-muted-foreground">
+            {previewDates ? (
+              <div className="flex items-center gap-1.5 font-medium text-emerald-500/90 bg-emerald-500/10 px-2 py-1.5 rounded-md border border-emerald-500/20 shadow-sm">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>
+                  Scheduled: {previewDates.startDate.toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {" to "}
+                  {previewDates.endDate.toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+            ) : (
+              "Enter dates to preview schedule"
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onClose} type="button">Cancel</Button>
+            <Button onClick={handleSubmit} disabled={loading || !isFormValid || !!targetError}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Notification
+            </Button>
+          </div>
         </div>
       </div>
     </div>

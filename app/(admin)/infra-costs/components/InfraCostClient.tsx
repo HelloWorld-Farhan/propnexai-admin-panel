@@ -200,11 +200,19 @@ export function InfraCostClient({ initialData }: { initialData: any[] }) {
 
                         {/* Message */}
                         <td className="px-4 py-3">
-                          <div
-                            className="truncate text-sm cursor-help max-w-[200px]"
-                            title={item.message}
-                          >
-                            {item.message || "No message provided."}
+                          <div className="relative group inline-flex cursor-help">
+                            <div className="truncate text-sm max-w-[200px]">
+                              {item.message || "No message provided."}
+                            </div>
+                            
+                            {item.message && (
+                              <div className="pointer-events-none absolute bottom-full left-0 mb-2 w-max max-w-xs z-[9999] opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                                <div className="absolute top-full left-4 border-[5px] border-transparent border-t-zinc-800" />
+                                <div className="rounded-md px-3 py-2.5 text-xs font-medium leading-relaxed shadow-xl bg-zinc-800 text-zinc-100 border border-zinc-700 break-words whitespace-normal">
+                                  {item.message}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </td>
 
