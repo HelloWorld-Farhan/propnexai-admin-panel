@@ -162,13 +162,16 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="bg-card w-full max-w-lg rounded-xl border shadow-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-card w-full max-w-3xl rounded-xl border shadow-lg overflow-hidden flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">{editingItem ? "Edit Notification" : "New Notification"}</h2>
           <Button variant="ghost" size="icon" onClick={onClose} type="button"><X className="h-4 w-4" /></Button>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto">
+          
+          {/* Left Column */}
+          <div className="space-y-4">
           
           <div className="space-y-4 bg-muted/20 p-4 rounded-lg border">
             <h3 className="text-sm font-medium flex items-center gap-2">
@@ -249,8 +252,11 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
           {(!formData.startDay || !formData.endDay) && (
             <p className="text-xs text-destructive">Both Start Day and End Day are required.</p>
           )}
+          </div>
 
-          <div className="space-y-2">
+          {/* Right Column */}
+          <div className="space-y-4 flex flex-col">
+            <div className="space-y-2 flex-grow">
             <Label>Notification Message <span className="text-destructive">*</span></Label>
             <textarea
               value={formData.message}
@@ -258,7 +264,7 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
               placeholder="Enter a short message to display on the main website..."
               maxLength={150}
               required
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-[160px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
             {formData.message.trim().length === 0 && (
               <p className="text-xs text-destructive">Message is required and cannot be empty.</p>
