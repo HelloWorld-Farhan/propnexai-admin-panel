@@ -307,7 +307,7 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
               </div>
             )}
           </div>
-
+        </div>
         </form>
         
         <div className="p-4 border-t flex justify-end gap-2 bg-muted/10">
