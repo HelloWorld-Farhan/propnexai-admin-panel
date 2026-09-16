@@ -18,7 +18,10 @@ type DashboardStats = {
   activeCompanies: number;
   activeSubCompanies: number;
   lowCreditCount: number;
+  lowCreditCompanies: Array<{ id: string; name: string; creditsRemaining: number }>;
   todayCalls: number;
+  todayInboundCalls: number;
+  todayOutboundCalls: number;
   avgCallDuration: number;
   successRate: number;
   activePhoneNumbers: number;
@@ -82,12 +85,43 @@ export function DashboardView({
             </div>
           </CardContent>
         </Card>
-        <StatCard
-          title="Low credit alerts"
-          value={stats.lowCreditCount}
-          variant={stats.lowCreditCount > 0 ? "warning" : "default"}
-        />
-        <StatCard title="Today's calls" value={stats.todayCalls} />
+        <Card className={stats.lowCreditCount > 0 ? "border-amber-500/30 bg-amber-500/5" : undefined}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Low credit alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{stats.lowCreditCount}</p>
+            {stats.lowCreditCount > 0 && (
+              <div className="mt-2 text-xs flex flex-col gap-1 border-t pt-2 border-amber-500/20">
+                {stats.lowCreditCompanies.map(c => (
+                  <div key={c.id} className="flex justify-between items-center">
+                    <span className="truncate pr-2">{c.name}</span>
+                    <span className="text-amber-500 font-medium whitespace-nowrap">{c.creditsRemaining.toFixed(2)} cr</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Today's calls
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl font-semibold">{stats.todayCalls}</p>
+              <div className="flex gap-2 text-xs">
+                <span className="text-muted-foreground"><strong className="text-foreground">{stats.todayInboundCalls}</strong> In</span>
+                <span className="text-muted-foreground"><strong className="text-foreground">{stats.todayOutboundCalls}</strong> Out</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         <StatCard title="Call success rate" value={`${stats.successRate}%`} />
       </div>
 
@@ -113,21 +147,27 @@ export function DashboardView({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Type</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Time</TableHead>
+                  <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {stats.recentCalls.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-muted-foreground">
+                    <TableCell colSpan={4} className="text-muted-foreground">
                       No recent calls
                     </TableCell>
                   </TableRow>
                 ) : (
                   stats.recentCalls.map((call) => (
                     <TableRow key={call.id}>
+                      <TableCell>
+                        <Badge variant="outline" className={call.direction === "INBOUND" ? "border-blue-500/30 text-blue-500" : "border-emerald-500/30 text-emerald-500"}>
+                          {call.direction}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{call.company.name}</TableCell>
                       <TableCell>
                         <Badge
@@ -139,7 +179,7 @@ export function DashboardView({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(call.startedAt)}
+                        {new Date(call.startedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </TableCell>
                     </TableRow>
                   ))

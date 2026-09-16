@@ -10,7 +10,10 @@ export async function getDashboardStats() {
     activeCompanies,
     activeSubCompanies,
     lowCreditCount,
+    lowCreditCompaniesData,
     todayCalls,
+    todayInboundCalls,
+    todayOutboundCalls,
     callStats,
     activePhoneNumbers,
     totalChannels,
@@ -18,7 +21,10 @@ export async function getDashboardStats() {
     recentCalls,
     recentCompanies,
     recentNumbers,
-    recentCredits
+    recentCredits,
+    recentAgents,
+    recentJobs,
+    recentForms
   ] = await Promise.all([
     prisma.company.count({ 
       where: { 
@@ -43,9 +49,31 @@ export async function getDashboardStats() {
         company: { isDemo: false },
       },
     }),
+    prisma.creditBalance.findMany({
+      where: {
+        creditsRemaining: { lt: threshold },
+        company: { isDemo: false },
+      },
+      include: { company: { select: { name: true } } },
+      take: 10,
+    }),
     prisma.callLog.count({
       where: {
         startedAt: { gte: startOfDay },
+        company: { isDemo: false },
+      },
+    }),
+    prisma.callLog.count({
+      where: {
+        startedAt: { gte: startOfDay },
+        direction: "INBOUND",
+        company: { isDemo: false },
+      },
+    }),
+    prisma.callLog.count({
+      where: {
+        startedAt: { gte: startOfDay },
+        direction: "OUTBOUND",
         company: { isDemo: false },
       },
     }),
@@ -95,6 +123,21 @@ export async function getDashboardStats() {
       take: 10,
       include: { company: { select: { name: true } } }
     }),
+    prisma.aiAgent.findMany({
+      where: { company: { isDemo: false } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { company: { select: { name: true } } }
+    }),
+    prisma.jobPosting.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.supportRequest.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { company: { select: { name: true } } }
+    })
   ]);
 
   const completedToday = await prisma.callLog.count({
@@ -111,6 +154,13 @@ export async function getDashboardStats() {
   const integrationMap = Object.fromEntries(
     integrations.map((i) => [i.status, i._count._all]),
   );
+
+  // Map low credit companies specifically
+  const lowCreditCompanies = lowCreditCompaniesData.map(c => ({
+    id: c.companyId,
+    name: c.company.name,
+    creditsRemaining: c.creditsRemaining
+  }));
 
   // Combine and format the custom recent events
   const combinedEvents = [
@@ -133,18 +183,45 @@ export async function getDashboardStats() {
     ...recentCredits.map(c => ({
       id: c.id,
       company: { name: c.company?.name || "Unknown" },
-      type: "CREDIT_GRANTED",
-      title: "Credit Granted",
-      message: `${c.amount} credits were given to ${c.company?.name || "Unknown"}.`,
+      type: "CREDIT_EDITED",
+      title: "Credit Balance Update",
+      message: `${c.amount} credits were modified for ${c.company?.name || "Unknown"} (${c.reason}).`,
       createdAt: c.createdAt
+    })),
+    ...recentAgents.map(a => ({
+      id: a.id,
+      company: { name: a.company?.name || "Unknown" },
+      type: "AGENT_CREATED",
+      title: "New AI Agent",
+      message: `Agent Library: ${a.name} was created for ${a.company?.name || "Unknown"}.`,
+      createdAt: a.createdAt
+    })),
+    ...recentJobs.map(j => ({
+      id: j.id,
+      company: { name: "System" },
+      type: "JOB_POSTED",
+      title: "Job Notification",
+      message: `A new job was posted: ${j.title}.`,
+      createdAt: j.createdAt
+    })),
+    ...recentForms.map(f => ({
+      id: f.id,
+      company: { name: f.company?.name || "System" },
+      type: "FORM_INFO",
+      title: "Form Request Submitted",
+      message: `Form info submitted by ${f.name} regarding ${f.reason}.`,
+      createdAt: f.createdAt
     }))
-  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 10);
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 15);
 
   return {
-    activeCompanies, // This will now represent active parent companies
+    activeCompanies,
     activeSubCompanies,
     lowCreditCount,
+    lowCreditCompanies,
     todayCalls,
+    todayInboundCalls,
+    todayOutboundCalls,
     avgCallDuration: Math.round(callStats._avg.durationSeconds ?? 0),
     successRate,
     activePhoneNumbers,
