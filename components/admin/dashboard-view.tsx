@@ -15,6 +15,14 @@ import {
 import { formatDate } from "@/lib/utils";
 
 type DashboardStats = {
+  totalUsers: number;
+  totalInboundNumbers: number;
+  totalOutboundNumbers: number;
+  totalAiAgents: number;
+  totalJobPostings: number;
+  totalPartnerForms: number;
+  totalDemoCalls: number;
+  totalInfraCosts: number;
   activeCompanies: number;
   activeSubCompanies: number;
   lowCreditCount: number;
@@ -85,34 +93,43 @@ export function DashboardView({
             </div>
           </CardContent>
         </Card>
-        <Card className={stats.lowCreditCount > 0 ? "border-amber-500/30 bg-amber-500/5" : undefined}>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Low credit alerts
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{stats.lowCreditCount}</p>
+            <p className="text-2xl font-semibold mb-2">{stats.lowCreditCount}</p>
             {stats.lowCreditCount > 0 && (
-              <div className="mt-2 text-xs flex flex-col gap-1 border-t pt-2 border-amber-500/20 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+              <div className="flex flex-col gap-3 border-t pt-3">
                 {stats.lowCreditCompanies.some(c => !c.isSubCompany) && (
-                  <div className="font-semibold text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Main Companies</div>
-                )}
-                {stats.lowCreditCompanies.filter(c => !c.isSubCompany).map(c => (
-                  <div key={c.id} className="flex justify-between items-center">
-                    <span className="truncate pr-2">{c.name}</span>
-                    <span className="text-amber-500 font-medium whitespace-nowrap">{c.creditsRemaining.toFixed(2)} cr</span>
+                  <div>
+                    <div className="font-semibold text-muted-foreground text-[10px] uppercase tracking-wider mb-1.5">Main Companies</div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                      {stats.lowCreditCompanies.filter(c => !c.isSubCompany).map(c => (
+                        <div key={c.id} className="flex items-center gap-1.5">
+                          <span className="truncate max-w-[100px]" title={c.name}>{c.name}</span>
+                          <span className="text-amber-500 font-medium whitespace-nowrap">{c.creditsRemaining.toFixed(2)} cr</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
+                
                 {stats.lowCreditCompanies.some(c => c.isSubCompany) && (
-                  <div className="font-semibold text-muted-foreground text-[10px] uppercase tracking-wider mb-1 mt-2">Sub-companies</div>
-                )}
-                {stats.lowCreditCompanies.filter(c => c.isSubCompany).map(c => (
-                  <div key={c.id} className="flex justify-between items-center pl-2 border-l border-amber-500/20">
-                    <span className="truncate pr-2 text-muted-foreground">{c.name}</span>
-                    <span className="text-amber-500/80 font-medium whitespace-nowrap">{c.creditsRemaining.toFixed(2)} cr</span>
+                  <div>
+                    <div className="font-semibold text-muted-foreground text-[10px] uppercase tracking-wider mb-1.5">Sub-companies</div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                      {stats.lowCreditCompanies.filter(c => c.isSubCompany).map(c => (
+                        <div key={c.id} className="flex items-center gap-1.5 pl-2 border-l border-amber-500/20">
+                          <span className="truncate max-w-[100px] text-muted-foreground" title={c.name}>{c.name}</span>
+                          <span className="text-amber-500/80 font-medium whitespace-nowrap">{c.creditsRemaining.toFixed(2)} cr</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </CardContent>
@@ -140,14 +157,18 @@ export function DashboardView({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Connection & traffic</CardTitle>
+            <CardTitle className="text-base">System Totals</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="Active phone numbers" value={stats.activePhoneNumbers} />
-            <Row label="Total configured channels" value={stats.totalChannels} />
-            <Row label="Connected integrations" value={stats.connectedIntegrations} />
-            <Row label="Integration errors" value={stats.errorIntegrations} />
-            <Row label="Avg call duration today" value={`${stats.avgCallDuration}s`} />
+            <Row label="Total sub-companies" value={stats.activeSubCompanies ?? 0} />
+            <Row label="Phone numbers (Inbound)" value={stats.totalInboundNumbers} />
+            <Row label="Phone numbers (Outbound)" value={stats.totalOutboundNumbers} />
+            <Row label="Agent library" value={stats.totalAiAgents} />
+            <Row label="Job postings" value={stats.totalJobPostings} />
+            <Row label="Receive user (Total Users)" value={stats.totalUsers} />
+            <Row label="Partner form" value={stats.totalPartnerForms} />
+            <Row label="Demo calls" value={stats.totalDemoCalls} />
+            <Row label="Infra cost notifications" value={stats.totalInfraCosts} />
           </CardContent>
         </Card>
 
@@ -190,8 +211,8 @@ export function DashboardView({
                           {call.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(call.startedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <TableCell className="text-muted-foreground whitespace-nowrap">
+                        {formatDate(new Date(call.startedAt))}
                       </TableCell>
                     </TableRow>
                   ))

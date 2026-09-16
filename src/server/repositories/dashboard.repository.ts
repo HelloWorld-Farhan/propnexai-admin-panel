@@ -7,6 +7,14 @@ export async function getDashboardStats() {
   startOfDay.setHours(0, 0, 0, 0);
 
   const [
+    totalUsers,
+    totalInboundNumbers,
+    totalOutboundNumbers,
+    totalAiAgents,
+    totalJobPostings,
+    totalPartnerForms,
+    totalDemoCalls,
+    totalInfraCosts,
     activeCompanies,
     activeSubCompanies,
     lowCreditCount,
@@ -26,6 +34,14 @@ export async function getDashboardStats() {
     recentJobs,
     recentForms
   ] = await Promise.all([
+    prisma.user.count(),
+    prisma.phoneNumber.count({ where: { status: "ACTIVE", direction: "INBOUND" } }),
+    prisma.phoneNumber.count({ where: { status: "ACTIVE", direction: "OUTBOUND" } }),
+    prisma.aiAgent.count(),
+    prisma.jobPosting.count(),
+    prisma.formSubmission.count({ where: { formType: "PARTNER_APP" } }),
+    prisma.formSubmission.count({ where: { formType: "DEMO_CALL" } }),
+    prisma.infraCostNotification.count(),
     prisma.company.count({ 
       where: { 
         status: "ACTIVE", 
@@ -103,7 +119,7 @@ export async function getDashboardStats() {
       orderBy: { startedAt: "desc" },
       take: 10,
       include: {
-        company: { select: { name: true } },
+        company: { select: { name: true, parentCompany: { select: { name: true } } } },
         aiAgent: { select: { name: true } },
       },
     }),
@@ -111,24 +127,25 @@ export async function getDashboardStats() {
       where: { isDemo: false },
       orderBy: { createdAt: "desc" },
       take: 10,
+      include: { parentCompany: { select: { name: true } } }
     }),
     prisma.phoneNumber.findMany({
       where: { company: { isDemo: false } },
       orderBy: { createdAt: "desc" },
       take: 10,
-      include: { company: { select: { name: true } } }
+      include: { company: { select: { name: true, parentCompany: { select: { name: true } } } } }
     }),
     prisma.creditUsage.findMany({
       where: { company: { isDemo: false } },
       orderBy: { createdAt: "desc" },
       take: 10,
-      include: { company: { select: { name: true } } }
+      include: { company: { select: { name: true, parentCompany: { select: { name: true } } } } }
     }),
     prisma.aiAgent.findMany({
       where: { company: { isDemo: false } },
       orderBy: { createdAt: "desc" },
       take: 5,
-      include: { company: { select: { name: true } } }
+      include: { company: { select: { name: true, parentCompany: { select: { name: true } } } } }
     }),
     prisma.jobPosting.findMany({
       orderBy: { createdAt: "desc" },
@@ -137,7 +154,7 @@ export async function getDashboardStats() {
     prisma.supportRequest.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
-      include: { company: { select: { name: true } } }
+      include: { company: { select: { name: true, parentCompany: { select: { name: true } } } } }
     })
   ]);
 
@@ -164,38 +181,38 @@ export async function getDashboardStats() {
     isSubCompany: !!c.company.parentCompanyId
   }));
 
-  // Combine and format the custom recent events
+  // Combine and format the custom recent events (Map to parent company if exists)
   const combinedEvents = [
     ...recentCompanies.map(c => ({
       id: c.id,
-      company: { name: c.name },
+      company: { name: c.parentCompany?.name || c.name },
       type: "COMPANY_CREATED",
       title: "Company Registered",
-      message: `A new company workspace was created for ${c.name}.`,
+      message: `A new company workspace was created for ${c.parentCompany?.name || c.name}.`,
       createdAt: c.createdAt
     })),
     ...recentNumbers.map(n => ({
       id: n.id,
-      company: { name: n.company?.name || "Unknown" },
+      company: { name: n.company?.parentCompany?.name || n.company?.name || "Unknown" },
       type: "NUMBER_ASSIGNED",
       title: "Number Assigned",
-      message: `Phone number ${n.number} was assigned to ${n.company?.name || "Unknown"}.`,
+      message: `Phone number ${n.number} was assigned to ${n.company?.parentCompany?.name || n.company?.name || "Unknown"}.`,
       createdAt: n.createdAt
     })),
     ...recentCredits.map(c => ({
       id: c.id,
-      company: { name: c.company?.name || "Unknown" },
+      company: { name: c.company?.parentCompany?.name || c.company?.name || "Unknown" },
       type: "CREDIT_EDITED",
       title: "Credit Balance Update",
-      message: `${c.amount} credits were modified for ${c.company?.name || "Unknown"} (${c.reason}).`,
+      message: `${c.amount} credits were modified for ${c.company?.parentCompany?.name || c.company?.name || "Unknown"} (${c.reason}).`,
       createdAt: c.createdAt
     })),
     ...recentAgents.map(a => ({
       id: a.id,
-      company: { name: a.company?.name || "Unknown" },
+      company: { name: a.company?.parentCompany?.name || a.company?.name || "Unknown" },
       type: "AGENT_CREATED",
       title: "New AI Agent",
-      message: `Agent Library: ${a.name} was created for ${a.company?.name || "Unknown"}.`,
+      message: `Agent Library: ${a.name} was created for ${a.company?.parentCompany?.name || a.company?.name || "Unknown"}.`,
       createdAt: a.createdAt
     })),
     ...recentJobs.map(j => ({
@@ -208,7 +225,7 @@ export async function getDashboardStats() {
     })),
     ...recentForms.map(f => ({
       id: f.id,
-      company: { name: f.company?.name || "System" },
+      company: { name: f.company?.parentCompany?.name || f.company?.name || "System" },
       type: "FORM_INFO",
       title: "Form Request Submitted",
       message: `Form info submitted by ${f.name} regarding ${f.reason}.`,
@@ -217,6 +234,14 @@ export async function getDashboardStats() {
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 15);
 
   return {
+    totalUsers,
+    totalInboundNumbers,
+    totalOutboundNumbers,
+    totalAiAgents,
+    totalJobPostings,
+    totalPartnerForms,
+    totalDemoCalls,
+    totalInfraCosts,
     activeCompanies,
     activeSubCompanies,
     lowCreditCount,
