@@ -66,13 +66,13 @@ export async function POST(req: Request) {
     };
 
     // Always fire admin reminder immediately when notification is created
-    sendEmail({ type: "infra_cost_reminder_admin", ...emailPayload });
+    await sendEmail({ type: "infra_cost_reminder_admin", ...emailPayload });
 
     // Fire user reminder immediately if:
     // — start date is today and it's already past 10 AM (can't wait for 10 AM trigger)
     // — OR start date is in the past (edge case)
-    if (body.email && (isToday && isPast10AM || startDate < now)) {
-      sendEmail({ type: "infra_cost_reminder_user", ...emailPayload });
+    if (body.email && ((isToday && isPast10AM) || startDate <= now)) {
+      await sendEmail({ type: "infra_cost_reminder_user", ...emailPayload });
     }
     // For future dates: the GAS time-based trigger handles sending at 10 AM
     // ──────────────────────────────────────────────────────────────────────────
