@@ -52,10 +52,11 @@ export async function getDashboardStats() {
     prisma.creditBalance.findMany({
       where: {
         creditsRemaining: { lt: threshold },
-        company: { isDemo: false },
+        company: { isDemo: false, status: "ACTIVE" },
       },
-      include: { company: { select: { name: true } } },
-      take: 10,
+      include: { company: { select: { name: true, parentCompanyId: true } } },
+      orderBy: { creditsRemaining: "asc" },
+      take: 20,
     }),
     prisma.callLog.count({
       where: {
@@ -159,7 +160,8 @@ export async function getDashboardStats() {
   const lowCreditCompanies = lowCreditCompaniesData.map(c => ({
     id: c.companyId,
     name: c.company.name,
-    creditsRemaining: c.creditsRemaining
+    creditsRemaining: c.creditsRemaining,
+    isSubCompany: !!c.company.parentCompanyId
   }));
 
   // Combine and format the custom recent events

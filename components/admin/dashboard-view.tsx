@@ -18,7 +18,7 @@ type DashboardStats = {
   activeCompanies: number;
   activeSubCompanies: number;
   lowCreditCount: number;
-  lowCreditCompanies: Array<{ id: string; name: string; creditsRemaining: number }>;
+  lowCreditCompanies: Array<{ id: string; name: string; creditsRemaining: number; isSubCompany: boolean }>;
   todayCalls: number;
   todayInboundCalls: number;
   todayOutboundCalls: number;
@@ -94,11 +94,23 @@ export function DashboardView({
           <CardContent>
             <p className="text-2xl font-semibold">{stats.lowCreditCount}</p>
             {stats.lowCreditCount > 0 && (
-              <div className="mt-2 text-xs flex flex-col gap-1 border-t pt-2 border-amber-500/20">
-                {stats.lowCreditCompanies.map(c => (
+              <div className="mt-2 text-xs flex flex-col gap-1 border-t pt-2 border-amber-500/20 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                {stats.lowCreditCompanies.some(c => !c.isSubCompany) && (
+                  <div className="font-semibold text-muted-foreground text-[10px] uppercase tracking-wider mb-1">Main Companies</div>
+                )}
+                {stats.lowCreditCompanies.filter(c => !c.isSubCompany).map(c => (
                   <div key={c.id} className="flex justify-between items-center">
                     <span className="truncate pr-2">{c.name}</span>
                     <span className="text-amber-500 font-medium whitespace-nowrap">{c.creditsRemaining.toFixed(2)} cr</span>
+                  </div>
+                ))}
+                {stats.lowCreditCompanies.some(c => c.isSubCompany) && (
+                  <div className="font-semibold text-muted-foreground text-[10px] uppercase tracking-wider mb-1 mt-2">Sub-companies</div>
+                )}
+                {stats.lowCreditCompanies.filter(c => c.isSubCompany).map(c => (
+                  <div key={c.id} className="flex justify-between items-center pl-2 border-l border-amber-500/20">
+                    <span className="truncate pr-2 text-muted-foreground">{c.name}</span>
+                    <span className="text-amber-500/80 font-medium whitespace-nowrap">{c.creditsRemaining.toFixed(2)} cr</span>
                   </div>
                 ))}
               </div>
