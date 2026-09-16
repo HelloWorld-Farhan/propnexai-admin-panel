@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
+import { SystemEventsTable } from "./system-events-table";
 
 type DashboardStats = {
   totalUsers: number;
@@ -44,13 +45,6 @@ type DashboardStats = {
     durationSeconds: number;
     company: { name: string };
     aiAgent: { name: string } | null;
-  }>;
-  recentEvents: Array<{
-    id: string;
-    type: string;
-    title: string;
-    createdAt: string;
-    company: { name: string };
   }>;
 };
 
@@ -231,43 +225,7 @@ export function DashboardView({
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Recent system events</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {stats.recentEvents.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-muted-foreground">
-                    No recent events
-                  </TableCell>
-                </TableRow>
-              ) : (
-                stats.recentEvents.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell>{event.company.name}</TableCell>
-                    <TableCell>{event.type}</TableCell>
-                    <TableCell>{event.title}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(event.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <SystemEventsTable />
     </div>
   );
 }

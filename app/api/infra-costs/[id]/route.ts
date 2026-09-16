@@ -20,6 +20,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         pausedUntil: body.pausedUntil ? new Date(body.pausedUntil) : null,
       },
     });
+
+    if (body.companyId) {
+      await prisma.systemEvent.create({
+        data: {
+          companyId: body.companyId,
+          type: "NOTIFICATION_EDITED",
+          title: "Infra Cost Notification Updated",
+          message: `Updated notification for ${body.companyName || 'Company'}.`,
+        }
+      }).catch(console.error);
+    }
+
     return NextResponse.json(notification);
   } catch (error) {
     console.error("PUT /api/infra-costs/[id] Error:", error);
@@ -30,9 +42,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    
+    const existing = await prisma.infraCostNotification.findUnique({ where: { id } });
+    
     await prisma.infraCostNotification.delete({
       where: { id },
     });
+
+    if (existing?.companyId) {
+      await prisma.systemEvent.create({
+        data: {
+          companyId: existing.companyId,
+          type: "NOTIFICATION_DELETED",
+          title: "Infra Cost Notification Deleted",
+          message: `Deleted notification for ${existing.companyName || 'Company'}.`,
+        }
+      }).catch(console.error);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("DELETE /api/infra-costs/[id] Error:", error);

@@ -241,6 +241,15 @@ export async function addCredits(
     data: { companyId, amount, reason: "PURCHASE", description },
   }).catch(console.error);
 
+  await prisma.systemEvent.create({
+    data: {
+      companyId,
+      type: "CREDIT_ADDED",
+      title: "Credit Balance Update",
+      message: `Admin added ${amount} credits. Reason: ${description}`,
+    }
+  }).catch(console.error);
+
   // Resolve pending credit support requests
   await prisma.supportRequest.updateMany({
     where: { companyId, reason: "BILLING_CREDITS", status: "NEW" },
@@ -336,6 +345,14 @@ export async function updateCredits(
       },
     }).catch(console.error);
 
+    await prisma.systemEvent.create({
+      data: {
+        companyId,
+        type: "CREDIT_ADDED",
+        title: "Credit Balance Update",
+        message: `Admin added ${delta} credits. Reason: ${description || 'Manual Adjustment'}`,
+      }
+    }).catch(console.error);
   } else {
     // ── DEDUCTION ───────────────────────────────────────────────────────
     const cutAmount = Math.abs(delta);
@@ -426,6 +443,15 @@ export async function updateCredits(
           description: description || `Admin deducted ${actualMainCut}`,
         },
       }).catch(console.error);
+
+      await prisma.systemEvent.create({
+        data: {
+          companyId,
+          type: "CREDIT_DEDUCTED",
+          title: "Credit Balance Update",
+          message: `Admin deducted ${actualMainCut} credits. Reason: ${description || 'Manual Adjustment'}`,
+        }
+      }).catch(console.error);
     }
 
     // Log CreditUsage for each sub-company
@@ -438,6 +464,15 @@ export async function updateCredits(
             reason: "MANUAL_ADJUSTMENT",
             description: `Admin deducted ${subCut} (Cascaded from Parent)`,
           },
+        }).catch(console.error);
+
+        await prisma.systemEvent.create({
+          data: {
+            companyId: childId,
+            type: "CREDIT_DEDUCTED",
+            title: "Credit Balance Update (Cascaded)",
+            message: `Admin deducted ${subCut} credits (Cascaded from Parent).`,
+          }
         }).catch(console.error);
       }
     }

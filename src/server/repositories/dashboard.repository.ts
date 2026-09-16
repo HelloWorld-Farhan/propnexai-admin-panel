@@ -27,12 +27,6 @@ export async function getDashboardStats() {
     totalChannels,
     integrations,
     recentCalls,
-    recentCompanies,
-    recentNumbers,
-    recentCredits,
-    recentAgents,
-    recentJobs,
-    recentForms
   ] = await Promise.all([
     prisma.user.count(),
     prisma.phoneNumber.count({ where: { status: "ACTIVE", direction: "INBOUND" } }),
@@ -123,39 +117,6 @@ export async function getDashboardStats() {
         aiAgent: { select: { name: true } },
       },
     }),
-    prisma.company.findMany({
-      where: { isDemo: false },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      include: { parentCompany: { select: { name: true } } }
-    }),
-    prisma.phoneNumber.findMany({
-      where: { company: { isDemo: false } },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      include: { company: { select: { name: true, parentCompany: { select: { name: true } } } } }
-    }),
-    prisma.creditUsage.findMany({
-      where: { company: { isDemo: false } },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      include: { company: { select: { name: true, parentCompany: { select: { name: true } } } } }
-    }),
-    prisma.aiAgent.findMany({
-      where: { company: { isDemo: false } },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: { company: { select: { name: true, parentCompany: { select: { name: true } } } } }
-    }),
-    prisma.jobPosting.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    }),
-    prisma.supportRequest.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      include: { company: { select: { name: true, parentCompany: { select: { name: true } } } } }
-    })
   ]);
 
   const completedToday = await prisma.callLog.count({
@@ -181,57 +142,6 @@ export async function getDashboardStats() {
     isSubCompany: !!c.company.parentCompanyId
   }));
 
-  // Combine and format the custom recent events (Map to parent company if exists)
-  const combinedEvents = [
-    ...recentCompanies.map(c => ({
-      id: c.id,
-      company: { name: c.parentCompany?.name || c.name },
-      type: "COMPANY_CREATED",
-      title: "Company Registered",
-      message: `A new company workspace was created for ${c.parentCompany?.name || c.name}.`,
-      createdAt: c.createdAt
-    })),
-    ...recentNumbers.map(n => ({
-      id: n.id,
-      company: { name: n.company?.parentCompany?.name || n.company?.name || "Unknown" },
-      type: "NUMBER_ASSIGNED",
-      title: "Number Assigned",
-      message: `Phone number ${n.number} was assigned to ${n.company?.parentCompany?.name || n.company?.name || "Unknown"}.`,
-      createdAt: n.createdAt
-    })),
-    ...recentCredits.map(c => ({
-      id: c.id,
-      company: { name: c.company?.parentCompany?.name || c.company?.name || "Unknown" },
-      type: "CREDIT_EDITED",
-      title: "Credit Balance Update",
-      message: `${c.amount} credits were modified for ${c.company?.parentCompany?.name || c.company?.name || "Unknown"} (${c.reason}).`,
-      createdAt: c.createdAt
-    })),
-    ...recentAgents.map(a => ({
-      id: a.id,
-      company: { name: a.company?.parentCompany?.name || a.company?.name || "Unknown" },
-      type: "AGENT_CREATED",
-      title: "New AI Agent",
-      message: `Agent Library: ${a.name} was created for ${a.company?.parentCompany?.name || a.company?.name || "Unknown"}.`,
-      createdAt: a.createdAt
-    })),
-    ...recentJobs.map(j => ({
-      id: j.id,
-      company: { name: "System" },
-      type: "JOB_POSTED",
-      title: "Job Notification",
-      message: `A new job was posted: ${j.title}.`,
-      createdAt: j.createdAt
-    })),
-    ...recentForms.map(f => ({
-      id: f.id,
-      company: { name: f.company?.parentCompany?.name || f.company?.name || "System" },
-      type: "FORM_INFO",
-      title: "Form Request Submitted",
-      message: `Form info submitted by ${f.name} regarding ${f.reason}.`,
-      createdAt: f.createdAt
-    }))
-  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 15);
 
   return {
     totalUsers,
@@ -256,6 +166,5 @@ export async function getDashboardStats() {
     connectedIntegrations: integrationMap.CONNECTED ?? 0,
     errorIntegrations: integrationMap.ERROR ?? 0,
     recentCalls,
-    recentEvents: combinedEvents
   };
 }

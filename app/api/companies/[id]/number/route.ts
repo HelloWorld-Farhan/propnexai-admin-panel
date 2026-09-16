@@ -42,6 +42,15 @@ export async function PATCH(
       data: { status: "ACTIVE" } as any,
     });
 
+    await prisma.systemEvent.create({
+      data: {
+        companyId: id,
+        type: "NUMBER_ASSIGNED",
+        title: "Number Re-assigned",
+        message: `Phone number ${numTrimmed} was re-assigned to the company.`,
+      }
+    }).catch(console.error);
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("[EDIT_SUB_COMPANY_NUMBER_ERROR]", error);
@@ -91,6 +100,15 @@ export async function POST(
         where: { id },
         data: { status: "ACTIVE" } as any,
       });
+
+      await prisma.systemEvent.create({
+        data: {
+          companyId: id,
+          type: "NUMBER_ASSIGNED",
+          title: "Number Settings Updated",
+          message: `Phone number ${numTrimmed} direction/channels were updated.`,
+        }
+      }).catch(console.error);
       
       return NextResponse.json({ success: true, updated: true });
     }
@@ -126,6 +144,15 @@ export async function POST(
       where: { id },
       data: { status: "ACTIVE" } as any,
     });
+
+    await prisma.systemEvent.create({
+      data: {
+        companyId: id,
+        type: "NUMBER_ASSIGNED",
+        title: "Number Assigned",
+        message: `Phone number ${numTrimmed} was assigned to the company.`,
+      }
+    }).catch(console.error);
 
     // Webhook and Resolution Logic
     try {

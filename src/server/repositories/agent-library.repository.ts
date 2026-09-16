@@ -39,14 +39,30 @@ export type AgentLibraryInput = {
 };
 
 export async function createAgentLibraryEntry(data: AgentLibraryInput) {
-  return prisma.agentLibraryEntry.create({ data });
+  const entry = await prisma.agentLibraryEntry.create({ data });
+  await prisma.systemEvent.create({
+    data: {
+      type: "AGENT_CREATED",
+      title: "Agent Library Entry Created",
+      message: `Admin created library entry: ${data.name}.`,
+    }
+  }).catch(console.error);
+  return entry;
 }
 
 export async function updateAgentLibraryEntry(
   id: string,
   data: Partial<AgentLibraryInput>,
 ) {
-  return prisma.agentLibraryEntry.update({ where: { id }, data });
+  const entry = await prisma.agentLibraryEntry.update({ where: { id }, data });
+  await prisma.systemEvent.create({
+    data: {
+      type: "AGENT_EDITED",
+      title: "Agent Library Entry Updated",
+      message: `Admin updated library entry: ${entry.name}.`,
+    }
+  }).catch(console.error);
+  return entry;
 }
 
 export async function deleteAgentLibraryEntry(id: string) {
@@ -54,7 +70,21 @@ export async function deleteAgentLibraryEntry(id: string) {
   if (deployed > 0) {
     throw new Error("Cannot delete: agents are deployed from this library entry");
   }
-  return prisma.agentLibraryEntry.delete({ where: { id } });
+  
+  const existing = await prisma.agentLibraryEntry.findUnique({ where: { id } });
+  const deleted = await prisma.agentLibraryEntry.delete({ where: { id } });
+  
+  if (existing) {
+    await prisma.systemEvent.create({
+      data: {
+        type: "AGENT_DELETED",
+        title: "Agent Library Entry Deleted",
+        message: `Admin deleted library entry: ${existing.name}.`,
+      }
+    }).catch(console.error);
+  }
+  
+  return deleted;
 }
 
 export async function getAgentLibraryEntry(id: string) {

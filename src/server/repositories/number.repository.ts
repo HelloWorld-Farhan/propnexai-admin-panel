@@ -549,6 +549,17 @@ export async function deletePhoneNumberForAdmin(id: string) {
     await tx.phoneNumber.delete({ where: { id } });
   });
 
+  if (existing.companyId) {
+    await prisma.systemEvent.create({
+      data: {
+        companyId: existing.companyId,
+        type: "NUMBER_RELEASED",
+        title: "Number Released",
+        message: `Phone number ${existing.number} was released and deleted.`,
+      }
+    }).catch(console.error);
+  }
+
   // Fire webhook notification for number removal
   try {
     const user = existing.company?.members?.[0]?.user;

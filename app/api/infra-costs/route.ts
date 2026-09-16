@@ -17,6 +17,18 @@ export async function POST(req: Request) {
         message: body.message || null,
       },
     });
+
+    if (body.companyId) {
+      await prisma.systemEvent.create({
+        data: {
+          companyId: body.companyId,
+          type: "NOTIFICATION_CREATED",
+          title: "Infra Cost Notification Created",
+          message: `Created ${body.recurrenceType} notification for ${body.companyName || 'Company'}.`,
+        }
+      }).catch(console.error);
+    }
+
     return NextResponse.json(notification);
   } catch (error) {
     console.error("POST /api/infra-costs Error:", error);
