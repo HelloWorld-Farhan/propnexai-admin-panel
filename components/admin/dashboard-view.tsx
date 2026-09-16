@@ -137,8 +137,11 @@ export function DashboardView({
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               Today's calls
+              <span className="text-[11px] font-normal opacity-70">
+                ({new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date())})
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -174,7 +177,12 @@ export function DashboardView({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Recent calls</CardTitle>
+            <CardTitle className="text-base flex items-center justify-between">
+              <span>Recent calls</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date())}
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
