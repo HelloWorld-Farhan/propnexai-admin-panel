@@ -88,15 +88,19 @@ export function InfraCostClient({ initialData }: { initialData: any[] }) {
                     <div className="text-xs text-primary/70">{item.email}</div>
                   </td>
                   <td className="px-4 py-3 min-w-[200px]">
-                    <div className="flex items-center gap-1.5 font-medium text-foreground">
-                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                      {format(new Date(item.startDate), "MMM d, yyyy")}
-                    </div>
-                    <div className="text-xs text-muted-foreground ml-5 mt-0.5">
-                      to {format(new Date(item.endDate), "MMM d, yyyy")}
-                    </div>
-                    <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-500 uppercase tracking-wide">
-                      {item.recurrenceType.replace(/_/g, " ")}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5 font-medium text-foreground">
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                        {format(new Date(item.startDate), "MMM d, yyyy h:mm a")}
+                      </div>
+                      <div className="flex items-center ml-5">
+                        <div className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-500 uppercase tracking-wide">
+                          {item.recurrenceType.replace(/_/g, " ")}
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground ml-5">
+                        to {format(new Date(item.endDate), "MMM d, yyyy h:mm a")}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 max-w-[250px]">
@@ -110,14 +114,14 @@ export function InfraCostClient({ initialData }: { initialData: any[] }) {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button 
-                        variant="ghost" 
-                        size="icon" 
+                        variant="outline" 
+                        size="sm" 
                         onClick={() => handleSkip(item.id)} 
-                        className="h-8 w-8 text-muted-foreground hover:text-emerald-500"
-                        title={item.recurrenceType === "ONCE" ? "Mark Paid (Hide Forever)" : "Skip Cycle (Mark Paid)"}
-                        disabled={skippingId === item.id}
+                        className="text-xs mr-2"
+                        disabled={skippingId === item.id || item.recurrenceType === "ONCE"}
                       >
-                        {skippingId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FastForward className="h-4 w-4" />}
+                        {skippingId === item.id && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                        Shift to next schedule
                       </Button>
                       <Button 
                         variant="ghost" 
