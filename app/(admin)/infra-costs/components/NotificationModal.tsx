@@ -7,23 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-function getNextDateFromDay(day: number, isEndDate: boolean, startMonthOffset = 0): Date {
+function createSafeDate(year: number, month: number, day: number, isEndDate: boolean): Date {
   const now = new Date();
-  let year = now.getFullYear();
-  let month = now.getMonth() + startMonthOffset;
-  
-  // If the day has already passed this month, bump to next month
-  // Exception: if it's the end date, we evaluate if it needs to wrap to next month
-  if (!isEndDate && day < now.getDate()) {
-    month += 1;
-  }
   
   if (month > 11) {
     year += Math.floor(month / 12);
     month = month % 12;
   }
   
-  // Handle end of month wrapping (e.g. Feb 30 -> Mar 2)
+  // Handle end of month wrapping (e.g. Feb 30 -> Mar 2 or Feb 28)
   const targetDay = Math.min(day, new Date(year, month + 1, 0).getDate());
   const date = new Date(year, month, targetDay);
 
@@ -140,10 +132,24 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
       const sDay = parseInt(formData.startDay);
       const eDay = parseInt(formData.endDay);
       
-      const startDate = getNextDateFromDay(sDay, false);
-      // If end day is smaller than start day, it naturally falls into the next month
-      const monthOffset = eDay < sDay ? 1 : 0;
-      const endDate = getNextDateFromDay(eDay, true, monthOffset);
+      const now = new Date();
+      let sMonth = now.getMonth();
+      let sYear = now.getFullYear();
+
+      // If the start day has already passed THIS month, we push the start date to NEXT month
+      if (sDay < now.getDate()) {
+         sMonth++;
+      }
+      
+      // The end date month is exactly the start date month, UNLESS end day < start day (meaning it wraps to the next month)
+      let eMonth = sMonth;
+      let eYear = sYear;
+      if (eDay < sDay) {
+         eMonth++;
+      }
+
+      const startDate = createSafeDate(sYear, sMonth, sDay, false);
+      const endDate = createSafeDate(eYear, eMonth, eDay, true);
 
       const finalRecurrence = formData.recurrenceType === "OTHER" 
         ? `EVERY_${formData.customMonth}_MONTHS` 
