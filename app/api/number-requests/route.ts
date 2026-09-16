@@ -11,8 +11,34 @@ export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const email = url.searchParams.get("email");
+    const companyId = url.searchParams.get("companyId");
+    const type = url.searchParams.get("type");
+    
+    if (email) {
+      const directionLabel = type ? type.toUpperCase() : "GENERAL";
+      const requestMessage = `${directionLabel} Number Assignment Request`;
+      
+      const existing = await prisma.supportRequest.findFirst({
+        where: { 
+          email, 
+          message: requestMessage, 
+          status: "NEW",
+          ...(companyId ? { companyId } : {})
+        },
+      });
+      if (existing) {
+        const hoursSinceLastReminder = (new Date().getTime() - existing.updatedAt.getTime()) / (1000 * 60 * 60);
+        if (hoursSinceLastReminder < 24) {
+          return NextResponse.json({ success: true, locked: true }, { headers: corsHeaders });
+        }
+      }
+      return NextResponse.json({ success: true, locked: false }, { headers: corsHeaders });
+    }
+
     const requests = await prisma.supportRequest.findMany({
       where: {
         reason: "OTHER",
