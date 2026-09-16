@@ -24,7 +24,24 @@ function getNextDateFromDay(day: number, isEndDate: boolean, startMonthOffset = 
   }
   
   // Handle end of month wrapping (e.g. Feb 30 -> Mar 2)
-  return new Date(year, month, Math.min(day, new Date(year, month + 1, 0).getDate()), 0, 0, 0);
+  const targetDay = Math.min(day, new Date(year, month + 1, 0).getDate());
+  const date = new Date(year, month, targetDay);
+
+  if (isEndDate) {
+    // End date always exactly at 12:00 AM (midnight) of that day
+    date.setHours(0, 0, 0, 0);
+  } else {
+    // Start date logic
+    if (year === now.getFullYear() && month === now.getMonth() && targetDay === now.getDate()) {
+      // If it's scheduled for TODAY, use the exact current time (real-time)
+      date.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    } else {
+      // If it's scheduled for a FUTURE date, always start at 10:00 AM
+      date.setHours(10, 0, 0, 0);
+    }
+  }
+
+  return date;
 }
 
 export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any) {
