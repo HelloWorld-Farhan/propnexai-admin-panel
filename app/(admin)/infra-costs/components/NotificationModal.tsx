@@ -6,7 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format } from "date-fns";
+
+function getNextDateFromDay(day: number, isEndDate: boolean, startMonthOffset = 0): Date {
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth() + startMonthOffset;
+  
+  // If the day has already passed this month, bump to next month
+  // Exception: if it's the end date, we evaluate if it needs to wrap to next month
+  if (!isEndDate && day < now.getDate()) {
+    month += 1;
+  }
+  
+  if (month > 11) {
+    year += Math.floor(month / 12);
+    month = month % 12;
+  }
+  
+  // Handle end of month wrapping (e.g. Feb 30 -> Mar 2)
+  return new Date(year, month, Math.min(day, new Date(year, month + 1, 0).getDate()), 0, 0, 0);
+}
 
 export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any) {
   const [loading, setLoading] = useState(false);
@@ -18,10 +37,13 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
     subCompanyName: "",
     companyId: "",
     subCompanyId: "",
-    startDate: "",
-    endDate: "",
+    startDay: "",
+    endDay: "",
     recurrenceType: "ONCE",
+    customMonth: "",
   });
+
+  const [targetError, setTargetError] = useState<string | null>(null);
 
   useEffect(() => {
     if (editingItem) {
@@ -31,10 +53,12 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
         subCompanyName: editingItem.subCompanyName || "",
         companyId: editingItem.companyId || "",
         subCompanyId: editingItem.subCompanyId || "",
-        startDate: editingItem.startDate ? format(new Date(editingItem.startDate), "yyyy-MM-dd'T'HH:mm") : "",
-        endDate: editingItem.endDate ? format(new Date(editingItem.endDate), "yyyy-MM-dd'T'HH:mm") : "",
-        recurrenceType: editingItem.recurrenceType || "ONCE",
+        startDay: editingItem.startDate ? new Date(editingItem.startDate).getDate().toString() : "",
+        endDay: editingItem.endDate ? new Date(editingItem.endDate).getDate().toString() : "",
+        recurrenceType: editingItem.recurrenceType?.startsWith("EVERY_") && !["EVERY_1_MONTH", "EVERY_2_MONTHS", "EVERY_6_MONTHS"].includes(editingItem.recurrenceType) ? "OTHER" : (editingItem.recurrenceType || "ONCE"),
+        customMonth: editingItem.recurrenceType?.startsWith("EVERY_") && !["EVERY_1_MONTH", "EVERY_2_MONTHS", "EVERY_6_MONTHS"].includes(editingItem.recurrenceType) ? editingItem.recurrenceType.split("_")[1] : "",
       });
+      setTargetError(null);
     } else {
       setFormData({
         email: "",
@@ -42,16 +66,19 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
         subCompanyName: "",
         companyId: "",
         subCompanyId: "",
-        startDate: "",
-        endDate: "",
+        startDay: "",
+        endDay: "",
         recurrenceType: "ONCE",
+        customMonth: "",
       });
+      setTargetError(null);
     }
   }, [editingItem, isOpen]);
 
   const handleAutofill = async (queryParam: string, value: string) => {
     if (!value || value.length < 3) return;
     setAutofillLoading(true);
+    setTargetError(null);
     try {
       const res = await fetch(`/api/infra-costs/autofill?${queryParam}=${encodeURIComponent(value)}`);
       const data = await res.json();
@@ -64,9 +91,14 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
           subCompanyName: data.subCompanyName || "",
           email: data.email || prev.email,
         }));
+      } else {
+        setFormData(prev => ({ ...prev, companyId: "", subCompanyId: "" }));
+        setTargetError("No matching active company found for this email/name.");
       }
     } catch (err) {
       console.error("Autofill failed", err);
+      setFormData(prev => ({ ...prev, companyId: "", subCompanyId: "" }));
+      setTargetError("Failed to verify target. Please try again.");
     } finally {
       setAutofillLoading(false);
     }
@@ -74,18 +106,37 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.companyId) {
+      setTargetError("Valid company target is required.");
+      return;
+    }
+    
     setLoading(true);
     try {
       const method = editingItem ? "PUT" : "POST";
       const url = editingItem ? `/api/infra-costs/${editingItem.id}` : "/api/infra-costs";
       
+      const sDay = parseInt(formData.startDay);
+      const eDay = parseInt(formData.endDay);
+      
+      const startDate = getNextDateFromDay(sDay, false);
+      // If end day is smaller than start day, it naturally falls into the next month
+      const monthOffset = eDay < sDay ? 1 : 0;
+      const endDate = getNextDateFromDay(eDay, true, monthOffset);
+
+      const finalRecurrence = formData.recurrenceType === "OTHER" 
+        ? `EVERY_${formData.customMonth}_MONTHS` 
+        : formData.recurrenceType;
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          startDate: new Date(formData.startDate).toISOString(),
-          endDate: new Date(formData.endDate).toISOString(),
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          recurrenceType: finalRecurrence,
         }),
       });
       
@@ -102,6 +153,8 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
     }
   };
 
+  const isFormValid = formData.companyId && formData.startDay && formData.endDay && (formData.recurrenceType !== "OTHER" || formData.customMonth);
+
   if (!isOpen) return null;
 
   return (
@@ -109,7 +162,7 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
       <div className="bg-card w-full max-w-lg rounded-xl border shadow-lg overflow-hidden flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">{editingItem ? "Edit Notification" : "New Notification"}</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onClose} type="button"><X className="h-4 w-4" /></Button>
         </div>
         
         <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto">
@@ -122,21 +175,29 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Target Email</Label>
+                <Label>Target Email <span className="text-destructive">*</span></Label>
                 <Input 
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    setTargetError(null);
+                  }}
                   onBlur={(e) => handleAutofill("email", e.target.value)}
-                  placeholder="Enter email to autofill..." 
+                  placeholder="Enter email..." 
+                  required={!formData.companyName}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Company Name</Label>
+                <Label>Company Name <span className="text-destructive">*</span></Label>
                 <Input 
                   value={formData.companyName}
-                  onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, companyName: e.target.value });
+                    setTargetError(null);
+                  }}
                   onBlur={(e) => handleAutofill("companyName", e.target.value)}
-                  placeholder="Search by company name..." 
+                  placeholder="Search name..." 
+                  required={!formData.email}
                 />
               </div>
             </div>
@@ -147,31 +208,47 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
                 <Input value={formData.subCompanyName} disabled className="bg-muted" />
               </div>
             )}
+            
+            {targetError && (
+              <p className="text-sm text-destructive font-medium mt-2">{targetError}</p>
+            )}
+            {formData.companyId && !targetError && (
+              <p className="text-sm text-emerald-500 font-medium mt-2">Target successfully validated.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Start Date & Time</Label>
+              <Label>Start Day (1-31) <span className="text-destructive">*</span></Label>
               <Input 
-                type="datetime-local" 
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                type="number"
+                min="1"
+                max="31"
+                value={formData.startDay}
+                onChange={(e) => setFormData({ ...formData, startDay: e.target.value })}
+                placeholder="e.g. 27"
                 required 
               />
             </div>
             <div className="space-y-2">
-              <Label>End Date & Time</Label>
+              <Label>End Day (1-31) <span className="text-destructive">*</span></Label>
               <Input 
-                type="datetime-local" 
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                type="number"
+                min="1"
+                max="31"
+                value={formData.endDay}
+                onChange={(e) => setFormData({ ...formData, endDay: e.target.value })}
+                placeholder="e.g. 2"
                 required 
               />
             </div>
           </div>
+          {(!formData.startDay || !formData.endDay) && (
+            <p className="text-xs text-destructive">Both Start Day and End Day are required.</p>
+          )}
 
           <div className="space-y-2">
-            <Label>Recurrence Cycle</Label>
+            <Label>Recurrence Cycle <span className="text-destructive">*</span></Label>
             <Select 
               value={formData.recurrenceType} 
               onValueChange={(val) => setFormData({ ...formData, recurrenceType: val })}
@@ -184,15 +261,33 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
                 <SelectItem value="EVERY_1_MONTH">Every 1 Month</SelectItem>
                 <SelectItem value="EVERY_2_MONTHS">Every 2 Months</SelectItem>
                 <SelectItem value="EVERY_6_MONTHS">Every 6 Months</SelectItem>
+                <SelectItem value="OTHER">Other (Custom)</SelectItem>
               </SelectContent>
             </Select>
+            
+            {formData.recurrenceType === "OTHER" && (
+              <div className="pt-2">
+                <Label>Number of Months <span className="text-destructive">*</span></Label>
+                <Input 
+                  type="number"
+                  min="1"
+                  value={formData.customMonth}
+                  onChange={(e) => setFormData({ ...formData, customMonth: e.target.value })}
+                  placeholder="e.g. 3 for Every 3 Months"
+                  required 
+                />
+                {!formData.customMonth && (
+                  <p className="text-xs text-destructive mt-1">Please specify the custom month cycle.</p>
+                )}
+              </div>
+            )}
           </div>
 
         </form>
         
         <div className="p-4 border-t flex justify-end gap-2 bg-muted/10">
           <Button variant="outline" onClick={onClose} type="button">Cancel</Button>
-          <Button onClick={handleSubmit} disabled={loading || !formData.companyId || !formData.startDate || !formData.endDate}>
+          <Button onClick={handleSubmit} disabled={loading || !isFormValid || !!targetError}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Notification
           </Button>
