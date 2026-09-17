@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as {
     username?: string;
     password?: string;
-    clientLocation?: string;
+    clientIp?: string;
   };
 
   const expectedUser = process.env.ADMIN_USERNAME?.trim();
@@ -48,7 +48,25 @@ export async function POST(request: Request) {
   await session.save();
 
   // Get Location
-  const location = body.clientLocation || "Unknown Location";
+  const ip = body.clientIp || request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown";
+  let location = "Unknown Location";
+
+  if (ip && ip !== "Unknown") {
+    try {
+      const clientIp = ip.split(",")[0].trim();
+      const geoRes = await fetch(`http://ip-api.com/json/${clientIp}`);
+      if (geoRes.ok) {
+        const geoData = await geoRes.json();
+        if (geoData.status === "success") {
+          location = `${geoData.city}, ${geoData.regionName}, ${geoData.country} (IP: ${clientIp})`;
+        } else {
+          location = `IP: ${clientIp}`;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch location", e);
+    }
+  }
 
   // Get Device Info
   const userAgentStr = request.headers.get("user-agent") || "";

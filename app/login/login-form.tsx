@@ -26,23 +26,21 @@ export default function LoginForm() {
     setLoading(true);
     setError("");
 
-    let clientLocation = "Unknown Location";
+    let clientIp = "";
     try {
-      const geoRes = await fetch("http://ip-api.com/json/");
-      if (geoRes.ok) {
-        const geoData = await geoRes.json();
-        if (geoData.status === "success") {
-          clientLocation = `${geoData.city}, ${geoData.regionName}, ${geoData.country} (IP: ${geoData.query})`;
-        }
+      const ipRes = await fetch("https://api.ipify.org?format=json");
+      if (ipRes.ok) {
+        const ipData = await ipRes.json();
+        clientIp = ipData.ip;
       }
     } catch (e) {
-      console.error("Failed to fetch client location", e);
+      console.error("Failed to fetch client IP", e);
     }
 
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, clientLocation }),
+      body: JSON.stringify({ username, password, clientIp }),
     });
 
     if (!res.ok) {
