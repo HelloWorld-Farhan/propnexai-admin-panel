@@ -66,8 +66,8 @@ export default function AdminOTPInput({
         setTimeout(() => setShowWelcome(true), 600);
         // Stage 2: "Welcome" slides up below
         setTimeout(() => setShowWelcome2(true), 1400);
-        // Hold so user can enjoy the full sequence, then navigate
-        setTimeout(() => onSuccess(), 4500);
+        // Navigate exactly 1 second after "Welcome" appears (1400 + 1000)
+        setTimeout(() => onSuccess(), 2400);
       }
     }, 55);
 
