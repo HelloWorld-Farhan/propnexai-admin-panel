@@ -111,7 +111,7 @@ export async function getDashboardStats() {
     prisma.callLog.findMany({
       where: { company: { isDemo: false } },
       orderBy: { startedAt: "desc" },
-      take: 10,
+      take: 100,
       include: {
         company: { select: { name: true, parentCompany: { select: { name: true } } } },
         aiAgent: { select: { name: true } },

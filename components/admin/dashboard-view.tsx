@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -54,6 +56,7 @@ export function DashboardView({
   initialStats: DashboardStats;
 }) {
   const [stats, setStats] = useState(initialStats);
+  const [callsPage, setCallsPage] = useState(0);
 
   const refreshStats = useCallback(() => {
     fetch("/api/dashboard", { cache: "no-store" })
@@ -195,12 +198,12 @@ export function DashboardView({
               <TableBody>
                 {stats.recentCalls.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-muted-foreground">
+                    <TableCell colSpan={4} className="text-muted-foreground text-center py-4">
                       No recent calls
                     </TableCell>
                   </TableRow>
                 ) : (
-                  stats.recentCalls.map((call) => (
+                  stats.recentCalls.slice(callsPage * 10, (callsPage + 1) * 10).map((call) => (
                     <TableRow key={call.id}>
                       <TableCell>
                         <Badge variant="outline" className={call.direction === "INBOUND" ? "border-blue-500/30 text-blue-500" : "border-emerald-500/30 text-emerald-500"}>
@@ -225,6 +228,29 @@ export function DashboardView({
                 )}
               </TableBody>
             </Table>
+            
+            {stats.recentCalls.length > 10 && (
+              <div className="flex items-center justify-end space-x-2 py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCallsPage(p => Math.max(0, p - 1))}
+                  disabled={callsPage === 0}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCallsPage(p => p + 1)}
+                  disabled={(callsPage + 1) * 10 >= stats.recentCalls.length}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
