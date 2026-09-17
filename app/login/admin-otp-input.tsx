@@ -34,7 +34,7 @@ export default function AdminOTPInput({
   // Success animation stages
   const [isGreen, setIsGreen] = useState(false);
   const [scrambled, setScrambled] = useState<string[]>(["", "", "", ""]);
-  const [showPropnexAI, setShowPropnexAI] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -59,12 +59,12 @@ export default function AdminOTPInput({
         frame++;
       } else {
         clearInterval(interval);
-        // Land on final letters
+        // Land on final letters R,P,E,A → full row = PROPNEXAI
         setScrambled(FINAL_LETTERS);
-        // After a pause, morph the whole row into "PropNex AI"
-        setTimeout(() => setShowPropnexAI(true), 700);
-        // Navigate after morph animation
-        setTimeout(() => onSuccess(), 2400);
+        // Show "Valid User — Welcome" below the boxes
+        setTimeout(() => setShowWelcome(true), 500);
+        // Hold screen so user can enjoy, then navigate
+        setTimeout(() => onSuccess(), 3800);
       }
     }, 55);
 
@@ -131,134 +131,123 @@ export default function AdminOTPInput({
 
   return (
     <div className="flex flex-col items-center space-y-5">
-      {/* ── OTP row / PropNex AI morph ── */}
-      <div className="relative flex items-center justify-center min-h-[3rem]">
-        <AnimatePresence mode="wait">
-          {!showPropnexAI ? (
-            /* OTP boxes */
-            <motion.div
-              key="otp-row"
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 0.92, filter: "blur(4px)" }}
-              transition={{ duration: 0.4 }}
-              animate={isError ? { x: [-14, 14, -11, 11, -7, 7, -3, 3, 0] } : {}}
-              className="flex gap-2"
-            >
-              {HARDCODED.map((char, i) => {
-                const isInput = char === "";
-                const digitIndex = INPUT_INDICES.indexOf(i);
+      {/* ── OTP row — always stays visible ── */}
+      <motion.div
+        animate={isError ? { x: [-14, 14, -11, 11, -7, 7, -3, 3, 0] } : {}}
+        transition={{ duration: 0.5 }}
+        className="flex gap-2"
+      >
+        {HARDCODED.map((char, i) => {
+          const isInput = char === "";
+          const digitIndex = INPUT_INDICES.indexOf(i);
 
-                if (!isInput) {
-                  return (
-                    <motion.div
-                      key={i}
-                      animate={
-                        isGreen
-                          ? {
-                              scale: [1, 1.18, 1],
-                              borderColor: "#22c55e",
-                              color: "#22c55e",
-                              backgroundColor: "rgba(34,197,94,0.12)",
-                            }
-                          : isError
-                          ? {
-                              borderColor: "hsl(var(--destructive))",
-                              color: "hsl(var(--destructive))",
-                              backgroundColor: "rgba(239,68,68,0.08)",
-                            }
-                          : {
-                              borderColor: "hsl(var(--muted))",
-                              color: "hsl(var(--muted-foreground))",
-                              backgroundColor: "hsl(var(--muted)/0.5)",
-                            }
+          if (!isInput) {
+            return (
+              <motion.div
+                key={i}
+                animate={
+                  isGreen
+                    ? {
+                        scale: [1, 1.18, 1],
+                        borderColor: "#22c55e",
+                        color: "#22c55e",
+                        backgroundColor: "rgba(34,197,94,0.12)",
                       }
-                      transition={{ duration: 0.3, delay: isGreen ? i * 0.05 : 0 }}
-                      className="flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold"
-                    >
-                      {char}
-                    </motion.div>
-                  );
+                    : isError
+                    ? {
+                        borderColor: "hsl(var(--destructive))",
+                        color: "hsl(var(--destructive))",
+                        backgroundColor: "rgba(239,68,68,0.08)",
+                      }
+                    : {
+                        borderColor: "hsl(var(--muted))",
+                        color: "hsl(var(--muted-foreground))",
+                        backgroundColor: "hsl(var(--muted)/0.5)",
+                      }
                 }
+                transition={{ duration: 0.3, delay: isGreen ? i * 0.05 : 0 }}
+                className="flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold"
+              >
+                {char}
+              </motion.div>
+            );
+          }
 
-                // Input cell — shows scrambled letter when isGreen
-                return (
-                  <motion.div
-                    key={i}
-                    animate={isGreen ? { scale: [1, 1.18, 1] } : {}}
-                    transition={{ duration: 0.3, delay: isGreen ? i * 0.05 : 0 }}
-                    className={cn(
-                      "flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold transition-all duration-200",
-                      isGreen
-                        ? "border-green-500 bg-green-500/10 text-green-400"
-                        : isError
-                        ? "border-destructive bg-destructive/10 text-destructive"
-                        : ""
-                    )}
-                  >
-                    {isGreen ? (
-                      // Scrambling character
-                      <motion.span
-                        key={scrambled[digitIndex]}
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.05 }}
-                        className="font-mono"
-                      >
-                        {scrambled[digitIndex] || digits[digitIndex]}
-                      </motion.span>
-                    ) : (
-                      <Input
-                        ref={(el) => {
-                          inputRefs.current[digitIndex] = el;
-                        }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digits[digitIndex]}
-                        onChange={(e) => handleChange(digitIndex, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(digitIndex, e)}
-                        disabled={isLoading || isLocked}
-                        className={cn(
-                          "h-full w-full border-0 bg-transparent text-center text-xl font-bold focus-visible:ring-0 p-0",
-                          isError && "text-destructive"
-                        )}
-                      />
-                    )}
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          ) : (
-            /* PropNex AI reveal */
+          // Input cell — shows scrambled letter when isGreen, normal input otherwise
+          return (
             <motion.div
-              key="propnex-ai"
-              initial={{ opacity: 0, scale: 0.85, filter: "blur(8px)" }}
-              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col items-center gap-1"
+              key={i}
+              animate={isGreen ? { scale: [1, 1.18, 1] } : {}}
+              transition={{ duration: 0.3, delay: isGreen ? i * 0.05 : 0 }}
+              className={cn(
+                "flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold transition-all duration-200",
+                isGreen
+                  ? "border-green-500 bg-green-500/10 text-green-400"
+                  : isError
+                  ? "border-destructive bg-destructive/10 text-destructive"
+                  : ""
+              )}
             >
-              <span
-                className="font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-green-300 to-emerald-500"
-                style={{ fontSize: "2rem" }}
-              >
-                PropNex AI
-              </span>
-              <motion.span
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35, duration: 0.4 }}
-                className="text-xs font-medium text-emerald-500/80 tracking-widest uppercase"
-              >
-                Valid User — Welcome
-              </motion.span>
+              {isGreen ? (
+                <motion.span
+                  key={scrambled[digitIndex]}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.05 }}
+                  className="font-mono"
+                >
+                  {scrambled[digitIndex] || digits[digitIndex]}
+                </motion.span>
+              ) : (
+                <Input
+                  ref={(el) => {
+                    inputRefs.current[digitIndex] = el;
+                  }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digits[digitIndex]}
+                  onChange={(e) => handleChange(digitIndex, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(digitIndex, e)}
+                  disabled={isLoading || isLocked}
+                  className={cn(
+                    "h-full w-full border-0 bg-transparent text-center text-xl font-bold focus-visible:ring-0 p-0",
+                    isError && "text-destructive"
+                  )}
+                />
+              )}
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          );
+        })}
+      </motion.div>
 
-      {/* ── Status message ── */}
+      {/* ── Bottom message area ── */}
       <AnimatePresence mode="wait">
-        {isError && !isGreen ? (
+        {showWelcome ? (
+          /* Valid User — Welcome appears below the PROPNEXAI boxes */
+          <motion.div
+            key="welcome"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: "easeOut" }}
+            className="flex flex-col items-center gap-1"
+          >
+            <motion.p
+              initial={{ letterSpacing: "0.05em", opacity: 0 }}
+              animate={{ letterSpacing: "0.25em", opacity: 1 }}
+              transition={{ duration: 0.7, ease: "easeOut" }}
+              className="text-sm font-semibold text-emerald-400 tracking-widest uppercase"
+            >
+              Valid User — Welcome
+            </motion.p>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 2.8, ease: "easeInOut", delay: 0.3 }}
+              className="h-px bg-gradient-to-r from-transparent via-emerald-500 to-transparent"
+            />
+          </motion.div>
+        ) : isError && !isGreen ? (
           <motion.div
             key="err"
             initial={{ opacity: 0, y: -8, scale: 0.96 }}
