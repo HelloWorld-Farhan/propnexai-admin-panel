@@ -13,12 +13,15 @@ interface AdminOTPInputProps {
   onVerify: (otp: string) => Promise<boolean>;
   onSuccess: () => void;
   onReset: () => void;
+  onSuccessStart: () => void; // signals parent to start title morph
 }
 
-export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTPInputProps) {
+type Stage = "idle" | "green" | "netflix" | "explode";
+
+export default function AdminOTPInput({ onVerify, onSuccess, onReset, onSuccessStart }: AdminOTPInputProps) {
   const [digits, setDigits] = useState<string[]>(["", "", "", ""]);
   const [isError, setIsError] = useState(false);
-  const [successStage, setSuccessStage] = useState<"idle" | "green" | "done">("idle");
+  const [stage, setStage] = useState<Stage>("idle");
   const [isLoading, setIsLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
@@ -32,13 +35,15 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
   const attemptsLeft = MAX_ATTEMPTS - attempts;
 
   const handleChange = async (index: number, value: string) => {
-    if (isLoading || successStage !== "idle" || isLocked) return;
+    if (isLoading || stage !== "idle" || isLocked) return;
     if (!/^\d*$/.test(value)) return;
+
+    // Clear error as soon as user starts typing again
+    if (isError) setIsError(false);
 
     const newDigits = [...digits];
     newDigits[index] = value.slice(-1);
     setDigits(newDigits);
-    setIsError(false);
 
     if (value && index < 3) {
       inputRefs.current[index + 1]?.focus();
@@ -50,15 +55,16 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
       const valid = await onVerify(otpStr);
 
       if (valid) {
-        // Stage 1: turn green
-        setSuccessStage("green");
-        // Stage 2: after green animation, signal done to parent
-        setTimeout(() => {
-          setSuccessStage("done");
-          setTimeout(() => {
-            onSuccess();
-          }, 3200); // time for Netflix animation to play
-        }, 900);
+        // Step 1: green
+        setStage("green");
+        onSuccessStart(); // tell parent to morph title
+
+        // Step 2: Netflix overlay
+        setTimeout(() => setStage("netflix"), 900);
+
+        // Step 3: Explode & navigate
+        setTimeout(() => setStage("explode"), 3200);
+        setTimeout(() => onSuccess(), 4000);
       } else {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
@@ -67,14 +73,12 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
 
         if (newAttempts >= MAX_ATTEMPTS) {
           setIsLocked(true);
-          setTimeout(() => {
-            onReset();
-          }, 2000);
+          setTimeout(() => onReset(), 2500);
         } else {
+          // Clear inputs but KEEP error message visible until user types
           setTimeout(() => {
             setDigits(["", "", "", ""]);
             inputRefs.current[0]?.focus();
-            setIsError(false);
           }, 700);
         }
       }
@@ -87,6 +91,8 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
     }
   };
 
+  const isGreen = stage === "green" || stage === "netflix" || stage === "explode";
+
   if (isLocked) {
     return (
       <motion.div
@@ -94,8 +100,15 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center justify-center space-y-3 py-6"
       >
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ repeat: Infinity, duration: 1.5 }}
+          className="text-3xl"
+        >
+          🔒
+        </motion.div>
         <p className="text-destructive font-semibold text-center text-base">
-          ❌ Too many failed attempts.
+          Too many failed attempts
         </p>
         <p className="text-muted-foreground text-sm text-center">
           Redirecting back to login...
@@ -104,67 +117,114 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
     );
   }
 
-  const isGreen = successStage === "green" || successStage === "done";
-
   return (
     <>
-      {/* Netflix-style full-screen overlay on success */}
+      {/* ── Netflix full-screen overlay ── */}
       <AnimatePresence>
-        {successStage === "done" && (
+        {(stage === "netflix" || stage === "explode") && (
           <motion.div
-            key="netflix-overlay"
+            key="netflix"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black"
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black overflow-hidden"
           >
-            {/* PropNex AI Logo */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.4 }}
-              animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1.1, 1, 1] }}
-              transition={{ duration: 1.2, times: [0, 0.4, 0.6, 1], delay: 0.2 }}
-              className="text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-600 mb-4"
-            >
-              PropNex AI
-            </motion.div>
+            {/* PropNex AI brand */}
+            <AnimatePresence>
+              {stage === "netflix" && (
+                <motion.div
+                  key="brand"
+                  initial={{ opacity: 0, y: 30, scale: 0.7 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  className="flex flex-col items-center gap-3 mb-8"
+                >
+                  <div
+                    className="font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-500"
+                    style={{ fontSize: "clamp(2.5rem, 8vw, 5rem)" }}
+                  >
+                    PropNex AI
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* Netflix-style WELCOME text */}
-            <motion.div
-              initial={{ opacity: 0, scale: 1.8 }}
-              animate={{ opacity: [0, 1, 1, 0], scale: [1.8, 1, 1, 0.85] }}
-              transition={{ duration: 2.4, times: [0, 0.2, 0.7, 1], delay: 0.8 }}
-              className="text-white font-black text-center"
-              style={{ fontSize: "clamp(3rem, 12vw, 9rem)", letterSpacing: "-0.04em", lineHeight: 1 }}
-            >
-              WELCOME
-            </motion.div>
+            {/* Netflix-style WELCOME explosion */}
+            <AnimatePresence>
+              {stage === "netflix" && (
+                <motion.div
+                  key="welcome"
+                  initial={{ scale: 0.1, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 4, opacity: 0 }}
+                  transition={{
+                    enter: { duration: 0.7, delay: 0.5, ease: [0.16, 1, 0.3, 1] },
+                    exit: { duration: 0.6, ease: "easeIn" },
+                  }}
+                  className="font-black text-white text-center select-none"
+                  style={{
+                    fontSize: "clamp(4rem, 16vw, 12rem)",
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1,
+                    textShadow: "0 0 80px rgba(34,197,94,0.3)",
+                  }}
+                >
+                  WELCOME
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* Subtitle */}
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: [0, 1, 1, 0], y: [20, 0, 0, -10] }}
-              transition={{ duration: 2.2, times: [0, 0.2, 0.7, 1], delay: 1.2 }}
-              className="text-emerald-400 font-medium tracking-widest uppercase text-base mt-4"
-            >
-              Admin
-            </motion.p>
+            {/* Explode stage */}
+            {stage === "explode" && (
+              <motion.div
+                initial={{ scale: 1, opacity: 1 }}
+                animate={{ scale: 6, opacity: 0 }}
+                transition={{ duration: 0.7, ease: "easeIn" }}
+                className="font-black text-white text-center select-none"
+                style={{
+                  fontSize: "clamp(4rem, 16vw, 12rem)",
+                  letterSpacing: "-0.03em",
+                  lineHeight: 1,
+                }}
+              >
+                WELCOME
+              </motion.div>
+            )}
 
-            {/* Loading bar */}
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: "200px" }}
-              transition={{ duration: 2.8, delay: 0.5, ease: "easeInOut" }}
-              className="h-0.5 bg-emerald-500 mt-8 rounded-full"
-            />
+            {/* Subtitle & loading bar */}
+            <AnimatePresence>
+              {stage === "netflix" && (
+                <motion.div
+                  key="sub"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ delay: 1.0, duration: 0.5 }}
+                  className="flex flex-col items-center gap-4 mt-6"
+                >
+                  <p className="text-emerald-400 tracking-[0.3em] uppercase text-sm font-medium">
+                    Admin Panel
+                  </p>
+                  <div className="w-48 h-0.5 bg-neutral-800 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: 2.0, delay: 1.1, ease: "easeInOut" }}
+                      className="h-full bg-emerald-500 rounded-full"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* OTP input row */}
+      {/* ── OTP row ── */}
       <div className="flex flex-col items-center space-y-5">
         <motion.div
-          animate={isError ? { x: [-12, 12, -10, 10, -6, 6, 0] } : {}}
-          transition={{ duration: 0.5 }}
+          animate={isError ? { x: [-14, 14, -11, 11, -7, 7, -3, 3, 0] } : {}}
+          transition={{ duration: 0.55 }}
           className="flex gap-2"
         >
           {HARDCODED.map((char, i) => {
@@ -177,14 +237,13 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
                   key={i}
                   animate={
                     isGreen
-                      ? { borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,0.15)", color: "#22c55e", scale: [1, 1.12, 1] }
+                      ? { scale: [1, 1.15, 1], borderColor: "#22c55e", color: "#22c55e", backgroundColor: "rgba(34,197,94,0.12)" }
                       : isError
-                      ? { borderColor: "hsl(var(--destructive))", backgroundColor: "rgba(239,68,68,0.1)", color: "hsl(var(--destructive))" }
-                      : {}
+                      ? { borderColor: "hsl(var(--destructive))", color: "hsl(var(--destructive))", backgroundColor: "rgba(239,68,68,0.08)" }
+                      : { borderColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", backgroundColor: "hsl(var(--muted)/0.5)" }
                   }
-                  transition={{ duration: 0.4, delay: isGreen ? i * 0.05 : 0 }}
-                  className="flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold transition-colors"
-                  style={{ borderColor: "hsl(var(--muted))", backgroundColor: "hsl(var(--muted)/0.5)", color: "hsl(var(--muted-foreground))" }}
+                  transition={{ duration: 0.35, delay: isGreen ? i * 0.06 : 0 }}
+                  className="flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold"
                 >
                   {char}
                 </motion.div>
@@ -194,12 +253,8 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
             return (
               <motion.div
                 key={i}
-                animate={
-                  isGreen
-                    ? { scale: [1, 1.12, 1] }
-                    : {}
-                }
-                transition={{ duration: 0.4, delay: isGreen ? i * 0.05 : 0 }}
+                animate={isGreen ? { scale: [1, 1.15, 1] } : {}}
+                transition={{ duration: 0.35, delay: isGreen ? i * 0.06 : 0 }}
               >
                 <Input
                   ref={(el) => { inputRefs.current[digitIndex] = el; }}
@@ -209,10 +264,10 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
                   value={digits[digitIndex]}
                   onChange={(e) => handleChange(digitIndex, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(digitIndex, e)}
-                  disabled={isLoading || isLocked || successStage !== "idle"}
+                  disabled={isLoading || isLocked || stage !== "idle"}
                   className={cn(
                     "h-12 w-10 text-center text-xl font-bold transition-all duration-300",
-                    isGreen && "border-green-500 bg-green-500/15 text-green-400 focus-visible:ring-green-500",
+                    isGreen && "border-green-500 bg-green-500/10 text-green-400 focus-visible:ring-green-500",
                     isError && !isGreen && "border-destructive bg-destructive/10 text-destructive focus-visible:ring-destructive",
                     isLoading && "opacity-50"
                   )}
@@ -222,33 +277,40 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
           })}
         </motion.div>
 
-        {/* Status messages */}
+        {/* ── Status message ── */}
         <AnimatePresence mode="wait">
           {isGreen ? (
             <motion.p
-              key="success-msg"
-              initial={{ opacity: 0, y: -6 }}
+              key="ok"
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="text-sm font-medium text-green-400 text-center"
+              className="text-sm font-semibold text-green-400 text-center"
             >
-              ✅ Verified! Loading admin panel...
+              ✅ Verified! Opening admin panel...
             </motion.p>
-          ) : isError && attemptsLeft > 0 ? (
-            <motion.p
-              key="error-msg"
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-sm font-medium text-destructive text-center"
+          ) : isError ? (
+            <motion.div
+              key="err"
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.97 }}
+              transition={{ duration: 0.3 }}
+              className="w-full px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/30"
             >
-              ⚠️ Wrong code! You have only{" "}
-              <span className="font-bold">{attemptsLeft}</span>{" "}
-              attempt{attemptsLeft !== 1 ? "s" : ""} remaining.
-            </motion.p>
+              <p className="text-sm font-semibold text-destructive text-center">
+                ⚠️ Incorrect code —{" "}
+                <span className="font-bold">
+                  {attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""} remaining
+                </span>
+              </p>
+              <p className="text-xs text-destructive/70 text-center mt-1">
+                Start typing to try again
+              </p>
+            </motion.div>
           ) : (
             <motion.p
-              key="hint-msg"
+              key="hint"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
