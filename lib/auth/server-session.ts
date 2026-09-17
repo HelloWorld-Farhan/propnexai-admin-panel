@@ -7,13 +7,15 @@ export const sessionOptions = {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     sameSite: "lax" as const,
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 48, // 48 hours
   },
 };
 
 export type AdminSession = {
   isLoggedIn: boolean;
   username?: string;
+  pendingOtp?: string;
+  otpExpiresAt?: number;
 };
 
 export async function getSession() {

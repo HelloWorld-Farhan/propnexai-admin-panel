@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { Eye, EyeOff } from "lucide-react";
+import AdminOTPInput from "./admin-otp-input";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,10 +38,27 @@ export default function LoginForm() {
       return;
     }
 
+    const data = await res.json();
+    if (data.step === 2) {
+      setStep(2);
+      setLoading(false);
+    }
+  }
+
+  const handleVerify = async (otp: string) => {
+    const res = await fetch("/api/auth/login/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ otp }),
+    });
+    return res.ok;
+  };
+
+  const handleSuccess = () => {
     const from = searchParams.get("from") || "/companies";
     router.push(from);
     router.refresh();
-  }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -49,7 +68,8 @@ export default function LoginForm() {
           <CardDescription>Sign in to manage companies and agents</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {step === 1 ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
@@ -87,6 +107,9 @@ export default function LoginForm() {
               {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
+          ) : (
+            <AdminOTPInput onVerify={handleVerify} onSuccess={handleSuccess} />
+          )}
         </CardContent>
       </Card>
     </div>
