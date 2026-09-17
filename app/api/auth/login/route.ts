@@ -45,6 +45,27 @@ export async function POST(request: Request) {
   session.otpExpiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
   await session.save();
 
+  // Get Location
+  const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown";
+  let location = "Unknown Location";
+
+  if (ip !== "Unknown") {
+    try {
+      const clientIp = ip.split(",")[0].trim();
+      const geoRes = await fetch(`http://ip-api.com/json/${clientIp}`);
+      if (geoRes.ok) {
+        const geoData = await geoRes.json();
+        if (geoData.status === "success") {
+          location = `${geoData.city}, ${geoData.regionName}, ${geoData.country} (IP: ${clientIp})`;
+        } else {
+          location = `IP: ${clientIp}`;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch location", e);
+    }
+  }
+
   // Trigger Google Apps Script Webhook
   const scriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
   if (scriptUrl) {
@@ -52,7 +73,7 @@ export async function POST(request: Request) {
       await fetch(scriptUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "admin_2fa_otp", otp: otpStr }),
+        body: JSON.stringify({ type: "admin_2fa_otp", otp: otpStr, location }),
       });
     } catch (err) {
       console.error("Failed to send 2FA OTP webhook:", err);
