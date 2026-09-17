@@ -5,7 +5,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
@@ -20,7 +20,6 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
-  const [successStarted, setSuccessStarted] = useState(false);
   const [navigating, setNavigating] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -73,81 +72,30 @@ export default function LoginForm() {
       const from = searchParams.get("from") || "/companies";
       router.push(from);
       router.refresh();
-    }, 600);
+    }, 700);
   };
 
   const handleReset = () => {
     setStep(1);
     setUsername("");
     setPassword("");
-    setSuccessStarted(false);
     setNavigating(false);
   };
 
   return (
-    // Outer wrapper — blurs and fades when navigating
     <motion.div
       className="flex min-h-screen items-center justify-center bg-background p-4"
-      animate={navigating ? { opacity: 0, filter: "blur(12px)", scale: 0.96 } : { opacity: 1, filter: "blur(0px)", scale: 1 }}
-      transition={{ duration: 0.6, ease: "easeInOut" }}
+      animate={
+        navigating
+          ? { opacity: 0, filter: "blur(14px)", scale: 0.95 }
+          : { opacity: 1, filter: "blur(0px)", scale: 1 }
+      }
+      transition={{ duration: 0.65, ease: "easeInOut" }}
     >
-      <Card className="w-full max-w-md border-border overflow-hidden">
-        {/* ── Card Header: morphs on success ── */}
-        <CardHeader className="pb-3">
-          <div className="relative h-9 overflow-hidden">
-            <AnimatePresence mode="wait">
-              {!successStarted ? (
-                <motion.h2
-                  key="title-admin"
-                  initial={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -24 }}
-                  transition={{ duration: 0.35 }}
-                  className="text-xl font-semibold tracking-tight absolute inset-0 flex items-center"
-                >
-                  PropNex Admin
-                </motion.h2>
-              ) : (
-                <motion.h2
-                  key="title-ai"
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, ease: "easeOut" }}
-                  className="text-xl font-bold tracking-tight absolute inset-0 flex items-center gap-2"
-                >
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-500">
-                    PropNex AI
-                  </span>
-                </motion.h2>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="relative h-5 overflow-hidden mt-1">
-            <AnimatePresence mode="wait">
-              {!successStarted ? (
-                <motion.p
-                  key="sub-normal"
-                  initial={{ opacity: 1 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-sm text-muted-foreground absolute inset-0"
-                >
-                  Sign in to manage companies and agents
-                </motion.p>
-              ) : (
-                <motion.p
-                  key="sub-success"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.15 }}
-                  className="text-sm font-semibold text-emerald-500 absolute inset-0 flex items-center gap-1.5"
-                >
-                  <span>✓</span>
-                  <span>Valid User — Welcome</span>
-                </motion.p>
-              )}
-            </AnimatePresence>
-          </div>
+      <Card className="w-full max-w-md border-border">
+        <CardHeader>
+          <CardTitle>PropNex Admin</CardTitle>
+          <CardDescription>Sign in to manage companies and agents</CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -156,8 +104,8 @@ export default function LoginForm() {
               <motion.form
                 key="login-form"
                 initial={{ opacity: 1 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
                 onSubmit={handleSubmit}
                 className="space-y-4"
               >
@@ -201,13 +149,13 @@ export default function LoginForm() {
                 key="otp-form"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35 }}
+                transition={{ duration: 0.3 }}
               >
                 <AdminOTPInput
                   onVerify={handleVerify}
                   onSuccess={handleSuccess}
                   onReset={handleReset}
-                  onSuccessStart={() => setSuccessStarted(true)}
+                  onSuccessStart={() => {}}
                 />
               </motion.div>
             )}

@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 
 const HARDCODED = ["P", "", "O", "", "N", "", "X", "", "I"];
 const INPUT_INDICES = [1, 3, 5, 7];
+// These fill in the gaps: P-[R]-O-[P]-N-[E]-X-[A]-I = PROPNEXAI
+const FINAL_LETTERS = ["R", "P", "E", "A"];
+const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#@!%$";
 const MAX_ATTEMPTS = 3;
 
 interface AdminOTPInputProps {
@@ -16,13 +19,22 @@ interface AdminOTPInputProps {
   onSuccessStart: () => void;
 }
 
-export default function AdminOTPInput({ onVerify, onSuccess, onReset, onSuccessStart }: AdminOTPInputProps) {
+export default function AdminOTPInput({
+  onVerify,
+  onSuccess,
+  onReset,
+  onSuccessStart,
+}: AdminOTPInputProps) {
   const [digits, setDigits] = useState<string[]>(["", "", "", ""]);
   const [isError, setIsError] = useState(false);
-  const [isGreen, setIsGreen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Success animation stages
+  const [isGreen, setIsGreen] = useState(false);
+  const [scrambled, setScrambled] = useState<string[]>(["", "", "", ""]);
+  const [showPropnexAI, setShowPropnexAI] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -30,21 +42,47 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset, onSuccessS
     inputRefs.current[0]?.focus();
   }, []);
 
+  // Scramble effect triggered when isGreen becomes true
+  useEffect(() => {
+    if (!isGreen) return;
+
+    let frame = 0;
+    const totalFrames = 18;
+
+    const interval = setInterval(() => {
+      if (frame < totalFrames) {
+        setScrambled(
+          FINAL_LETTERS.map(
+            () => SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)]
+          )
+        );
+        frame++;
+      } else {
+        clearInterval(interval);
+        // Land on final letters
+        setScrambled(FINAL_LETTERS);
+        // After a pause, morph the whole row into "PropNex AI"
+        setTimeout(() => setShowPropnexAI(true), 700);
+        // Navigate after morph animation
+        setTimeout(() => onSuccess(), 2400);
+      }
+    }, 55);
+
+    return () => clearInterval(interval);
+  }, [isGreen, onSuccess]);
+
   const attemptsLeft = MAX_ATTEMPTS - attempts;
 
   const handleChange = async (index: number, value: string) => {
     if (isLoading || isGreen || isLocked) return;
     if (!/^\d*$/.test(value)) return;
-
     if (isError) setIsError(false);
 
     const newDigits = [...digits];
     newDigits[index] = value.slice(-1);
     setDigits(newDigits);
 
-    if (value && index < 3) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    if (value && index < 3) inputRefs.current[index + 1]?.focus();
 
     if (newDigits.every((d) => d !== "")) {
       setIsLoading(true);
@@ -53,8 +91,6 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset, onSuccessS
       if (valid) {
         setIsGreen(true);
         onSuccessStart();
-        // Navigate after the card success animation plays
-        setTimeout(() => onSuccess(), 2200);
       } else {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
@@ -85,7 +121,7 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset, onSuccessS
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex flex-col items-center justify-center space-y-2 py-6"
+        className="flex flex-col items-center gap-2 py-6"
       >
         <p className="text-destructive font-semibold text-center">🔒 Too many failed attempts</p>
         <p className="text-muted-foreground text-sm text-center">Redirecting back to login...</p>
@@ -95,79 +131,150 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset, onSuccessS
 
   return (
     <div className="flex flex-col items-center space-y-5">
-      {/* OTP boxes */}
-      <motion.div
-        animate={isError ? { x: [-14, 14, -11, 11, -7, 7, -3, 3, 0] } : {}}
-        transition={{ duration: 0.5 }}
-        className="flex gap-2"
-      >
-        {HARDCODED.map((char, i) => {
-          const isInput = char === "";
-          const digitIndex = INPUT_INDICES.indexOf(i);
-
-          if (!isInput) {
-            return (
-              <motion.div
-                key={i}
-                animate={
-                  isGreen
-                    ? { scale: [1, 1.18, 1], borderColor: "#22c55e", color: "#22c55e", backgroundColor: "rgba(34,197,94,0.12)" }
-                    : isError
-                    ? { borderColor: "hsl(var(--destructive))", color: "hsl(var(--destructive))", backgroundColor: "rgba(239,68,68,0.08)" }
-                    : { borderColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", backgroundColor: "hsl(var(--muted)/0.5)" }
-                }
-                transition={{ duration: 0.35, delay: isGreen ? i * 0.055 : 0 }}
-                className="flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold"
-              >
-                {char}
-              </motion.div>
-            );
-          }
-
-          return (
+      {/* ── OTP row / PropNex AI morph ── */}
+      <div className="relative flex items-center justify-center min-h-[3rem]">
+        <AnimatePresence mode="wait">
+          {!showPropnexAI ? (
+            /* OTP boxes */
             <motion.div
-              key={i}
-              animate={isGreen ? { scale: [1, 1.18, 1] } : {}}
-              transition={{ duration: 0.35, delay: isGreen ? i * 0.055 : 0 }}
+              key="otp-row"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 0.92, filter: "blur(4px)" }}
+              transition={{ duration: 0.4 }}
+              animate={isError ? { x: [-14, 14, -11, 11, -7, 7, -3, 3, 0] } : {}}
+              className="flex gap-2"
             >
-              <Input
-                ref={(el) => { inputRefs.current[digitIndex] = el; }}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digits[digitIndex]}
-                onChange={(e) => handleChange(digitIndex, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(digitIndex, e)}
-                disabled={isLoading || isLocked || isGreen}
-                className={cn(
-                  "h-12 w-10 text-center text-xl font-bold transition-all duration-300",
-                  isGreen && "border-green-500 bg-green-500/10 text-green-400",
-                  isError && !isGreen && "border-destructive bg-destructive/10 text-destructive",
-                  isLoading && "opacity-50"
-                )}
-              />
-            </motion.div>
-          );
-        })}
-      </motion.div>
+              {HARDCODED.map((char, i) => {
+                const isInput = char === "";
+                const digitIndex = INPUT_INDICES.indexOf(i);
 
-      {/* Status message */}
+                if (!isInput) {
+                  return (
+                    <motion.div
+                      key={i}
+                      animate={
+                        isGreen
+                          ? {
+                              scale: [1, 1.18, 1],
+                              borderColor: "#22c55e",
+                              color: "#22c55e",
+                              backgroundColor: "rgba(34,197,94,0.12)",
+                            }
+                          : isError
+                          ? {
+                              borderColor: "hsl(var(--destructive))",
+                              color: "hsl(var(--destructive))",
+                              backgroundColor: "rgba(239,68,68,0.08)",
+                            }
+                          : {
+                              borderColor: "hsl(var(--muted))",
+                              color: "hsl(var(--muted-foreground))",
+                              backgroundColor: "hsl(var(--muted)/0.5)",
+                            }
+                      }
+                      transition={{ duration: 0.3, delay: isGreen ? i * 0.05 : 0 }}
+                      className="flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold"
+                    >
+                      {char}
+                    </motion.div>
+                  );
+                }
+
+                // Input cell — shows scrambled letter when isGreen
+                return (
+                  <motion.div
+                    key={i}
+                    animate={isGreen ? { scale: [1, 1.18, 1] } : {}}
+                    transition={{ duration: 0.3, delay: isGreen ? i * 0.05 : 0 }}
+                    className={cn(
+                      "flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold transition-all duration-200",
+                      isGreen
+                        ? "border-green-500 bg-green-500/10 text-green-400"
+                        : isError
+                        ? "border-destructive bg-destructive/10 text-destructive"
+                        : ""
+                    )}
+                  >
+                    {isGreen ? (
+                      // Scrambling character
+                      <motion.span
+                        key={scrambled[digitIndex]}
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.05 }}
+                        className="font-mono"
+                      >
+                        {scrambled[digitIndex] || digits[digitIndex]}
+                      </motion.span>
+                    ) : (
+                      <Input
+                        ref={(el) => {
+                          inputRefs.current[digitIndex] = el;
+                        }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digits[digitIndex]}
+                        onChange={(e) => handleChange(digitIndex, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(digitIndex, e)}
+                        disabled={isLoading || isLocked}
+                        className={cn(
+                          "h-full w-full border-0 bg-transparent text-center text-xl font-bold focus-visible:ring-0 p-0",
+                          isError && "text-destructive"
+                        )}
+                      />
+                    )}
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          ) : (
+            /* PropNex AI reveal */
+            <motion.div
+              key="propnex-ai"
+              initial={{ opacity: 0, scale: 0.85, filter: "blur(8px)" }}
+              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col items-center gap-1"
+            >
+              <span
+                className="font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-green-300 to-emerald-500"
+                style={{ fontSize: "2rem" }}
+              >
+                PropNex AI
+              </span>
+              <motion.span
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35, duration: 0.4 }}
+                className="text-xs font-medium text-emerald-500/80 tracking-widest uppercase"
+              >
+                Valid User — Welcome
+              </motion.span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Status message ── */}
       <AnimatePresence mode="wait">
-        {isError ? (
+        {isError && !isGreen ? (
           <motion.div
             key="err"
             initial={{ opacity: 0, y: -8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.25 }}
-            className="w-full px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/25"
+            className="w-full px-4 py-2.5 rounded-lg bg-destructive/10 border border-destructive/25"
           >
             <p className="text-sm font-semibold text-destructive text-center">
               Invalid User —{" "}
-              <span className="font-bold">{attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""} left</span>
+              <span className="font-bold">
+                {attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""} left
+              </span>
             </p>
           </motion.div>
-        ) : (
+        ) : !isGreen ? (
           <motion.p
             key="hint"
             initial={{ opacity: 0 }}
@@ -177,7 +284,7 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset, onSuccessS
           >
             Enter the 4-digit verification code sent to your admin email.
           </motion.p>
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
   );
