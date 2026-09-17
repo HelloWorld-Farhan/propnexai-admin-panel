@@ -155,12 +155,8 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset, onSuccessS
                 <motion.div
                   key="welcome"
                   initial={{ scale: 0.1, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 4, opacity: 0 }}
-                  transition={{
-                    enter: { duration: 0.7, delay: 0.5, ease: [0.16, 1, 0.3, 1] },
-                    exit: { duration: 0.6, ease: "easeIn" },
-                  }}
+                  animate={{ scale: 1, opacity: 1, transition: { duration: 0.7, delay: 0.5, ease: [0.16, 1, 0.3, 1] } }}
+                  exit={{ scale: 4, opacity: 0, transition: { duration: 0.6, ease: "easeIn" } }}
                   className="font-black text-white text-center select-none"
                   style={{
                     fontSize: "clamp(4rem, 16vw, 12rem)",
