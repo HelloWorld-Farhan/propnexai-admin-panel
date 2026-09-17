@@ -119,7 +119,7 @@ export default function LoginForm() {
             </Button>
           </form>
           ) : (
-            <AdminOTPInput onVerify={handleVerify} onSuccess={handleSuccess} />
+            <AdminOTPInput onVerify={handleVerify} onSuccess={handleSuccess} onReset={() => { setStep(1); setUsername(""); setPassword(""); }} />
           )}
         </CardContent>
       </Card>
