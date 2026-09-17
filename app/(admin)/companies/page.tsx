@@ -1,9 +1,8 @@
 import { CompaniesTable } from "@/components/admin/companies-table";
 import { CreateCompanyDialog } from "@/components/admin/create-company-dialog";
-import { ClearCompaniesDialog } from "@/components/admin/clear-companies-dialog";
 import { listCompaniesForAdmin } from "@/src/server/repositories/company.repository";
 
-import { AlertTriangle, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +32,6 @@ export default async function CompaniesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ClearCompaniesDialog />
           <CreateCompanyDialog />
         </div>
       </div>
