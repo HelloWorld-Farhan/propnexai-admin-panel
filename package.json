@@ -43,6 +43,7 @@
     "react-textarea-autosize": "^8.5.9",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
+    "ua-parser-js": "^2.0.10",
     "zod": "^4.4.3"
   },
   "devDependencies": {

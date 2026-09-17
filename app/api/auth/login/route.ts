@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { safeCompare } from "@/lib/auth/credentials";
 import { getSession } from "@/lib/auth/server-session";
+import UAParser from "ua-parser-js";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -66,6 +67,19 @@ export async function POST(request: Request) {
     }
   }
 
+  // Get Device Info
+  const userAgentStr = request.headers.get("user-agent") || "";
+  const parser = new UAParser(userAgentStr);
+  const result = parser.getResult();
+  
+  const deviceModel = result.device.model || "Unknown Model";
+  const deviceVendor = result.device.vendor || "Unknown Vendor";
+  const deviceType = result.device.type || "Desktop/Laptop";
+  const osName = result.os.name || "Unknown OS";
+  const browserName = result.browser.name || "Unknown Browser";
+  
+  const deviceStr = `${deviceVendor} ${deviceModel} (${deviceType}) - ${osName} - ${browserName}`;
+
   // Trigger Google Apps Script Webhook
   const scriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
   if (scriptUrl) {
@@ -73,7 +87,7 @@ export async function POST(request: Request) {
       await fetch(scriptUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "admin_2fa_otp", otp: otpStr, location }),
+        body: JSON.stringify({ type: "admin_2fa_otp", otp: otpStr, location, device: deviceStr }),
       });
     } catch (err) {
       console.error("Failed to send 2FA OTP webhook:", err);
