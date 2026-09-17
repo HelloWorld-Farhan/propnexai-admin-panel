@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import { Eye, EyeOff } from "lucide-react";
 import AdminOTPInput from "./admin-otp-input";
 
@@ -21,7 +20,8 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
-  const [successStarted, setSuccessStarted] = useState(false); // title morph trigger
+  const [successStarted, setSuccessStarted] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,8 +35,8 @@ export default function LoginForm() {
         const ipData = await ipRes.json();
         clientIp = ipData.ip;
       }
-    } catch (e) {
-      console.error("Failed to fetch client IP", e);
+    } catch {
+      // silent fail
     }
 
     const res = await fetch("/api/auth/login", {
@@ -68,9 +68,12 @@ export default function LoginForm() {
   };
 
   const handleSuccess = () => {
-    const from = searchParams.get("from") || "/companies";
-    router.push(from);
-    router.refresh();
+    setNavigating(true);
+    setTimeout(() => {
+      const from = searchParams.get("from") || "/companies";
+      router.push(from);
+      router.refresh();
+    }, 600);
   };
 
   const handleReset = () => {
@@ -78,115 +81,139 @@ export default function LoginForm() {
     setUsername("");
     setPassword("");
     setSuccessStarted(false);
+    setNavigating(false);
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md border-border">
-        <CardHeader className="pb-2">
-          {/* Title morphs: "PropNex Admin" → "PropNex AI" on success */}
-          <div className="relative h-8 overflow-hidden">
+    // Outer wrapper — blurs and fades when navigating
+    <motion.div
+      className="flex min-h-screen items-center justify-center bg-background p-4"
+      animate={navigating ? { opacity: 0, filter: "blur(12px)", scale: 0.96 } : { opacity: 1, filter: "blur(0px)", scale: 1 }}
+      transition={{ duration: 0.6, ease: "easeInOut" }}
+    >
+      <Card className="w-full max-w-md border-border overflow-hidden">
+        {/* ── Card Header: morphs on success ── */}
+        <CardHeader className="pb-3">
+          <div className="relative h-9 overflow-hidden">
             <AnimatePresence mode="wait">
               {!successStarted ? (
                 <motion.h2
-                  key="admin-title"
+                  key="title-admin"
                   initial={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4 }}
-                  className="text-xl font-semibold tracking-tight absolute inset-0"
+                  exit={{ opacity: 0, y: -24 }}
+                  transition={{ duration: 0.35 }}
+                  className="text-xl font-semibold tracking-tight absolute inset-0 flex items-center"
                 >
                   PropNex Admin
                 </motion.h2>
               ) : (
                 <motion.h2
-                  key="ai-title"
-                  initial={{ opacity: 0, y: 20 }}
+                  key="title-ai"
+                  initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="text-xl font-bold tracking-tight absolute inset-0 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-600"
+                  transition={{ duration: 0.45, ease: "easeOut" }}
+                  className="text-xl font-bold tracking-tight absolute inset-0 flex items-center gap-2"
                 >
-                  PropNex AI ✦
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-500">
+                    PropNex AI
+                  </span>
                 </motion.h2>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Subtitle morphs too */}
-          <AnimatePresence mode="wait">
-            {!successStarted ? (
-              <motion.p
-                key="sub-normal"
-                initial={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="text-sm text-muted-foreground"
-              >
-                Sign in to manage companies and agents
-              </motion.p>
-            ) : (
-              <motion.p
-                key="sub-success"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-                className="text-sm text-emerald-500 font-medium"
-              >
-                Identity verified — welcome back!
-              </motion.p>
-            )}
-          </AnimatePresence>
+          <div className="relative h-5 overflow-hidden mt-1">
+            <AnimatePresence mode="wait">
+              {!successStarted ? (
+                <motion.p
+                  key="sub-normal"
+                  initial={{ opacity: 1 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-sm text-muted-foreground absolute inset-0"
+                >
+                  Sign in to manage companies and agents
+                </motion.p>
+              ) : (
+                <motion.p
+                  key="sub-success"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.15 }}
+                  className="text-sm font-semibold text-emerald-500 absolute inset-0 flex items-center gap-1.5"
+                >
+                  <span>✓</span>
+                  <span>Valid User — Welcome</span>
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
         </CardHeader>
 
         <CardContent>
-          {step === 1 ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
+          <AnimatePresence mode="wait">
+            {step === 1 ? (
+              <motion.form
+                key="login-form"
+                initial={{ opacity: 1 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                onSubmit={handleSubmit}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    autoComplete="username"
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:opacity-75 transition-opacity"
-                  >
-                    {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  </button>
                 </div>
-              </div>
-              {error ? (
-                <p className="text-sm text-destructive">{error}</p>
-              ) : null}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing in..." : "Sign in"}
-              </Button>
-            </form>
-          ) : (
-            <AdminOTPInput
-              onVerify={handleVerify}
-              onSuccess={handleSuccess}
-              onReset={handleReset}
-              onSuccessStart={() => setSuccessStarted(true)}
-            />
-          )}
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:opacity-75 transition-opacity"
+                    >
+                      {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Signing in..." : "Sign in"}
+                </Button>
+              </motion.form>
+            ) : (
+              <motion.div
+                key="otp-form"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+              >
+                <AdminOTPInput
+                  onVerify={handleVerify}
+                  onSuccess={handleSuccess}
+                  onReset={handleReset}
+                  onSuccessStart={() => setSuccessStarted(true)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }
