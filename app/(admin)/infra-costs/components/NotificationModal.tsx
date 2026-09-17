@@ -132,12 +132,12 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
       const sDay = parseInt(formData.startDay);
       const eDay = parseInt(formData.endDay);
       
-      const now = new Date();
-      let sMonth = now.getMonth();
-      let sYear = now.getFullYear();
+      const baseDate = editingItem && editingItem.startDate ? new Date(editingItem.startDate) : new Date();
+      let sMonth = baseDate.getMonth();
+      let sYear = baseDate.getFullYear();
 
-      // If the start day has already passed THIS month, we push the start date to NEXT month
-      if (sDay < now.getDate()) {
+      // If the start day has already passed THIS month, we push the start date to NEXT month (only for new notifications)
+      if (!editingItem && sDay < baseDate.getDate()) {
          sMonth++;
       }
       
@@ -185,10 +185,10 @@ export function NotificationModal({ isOpen, onClose, editingItem, onSaved }: any
     
     if (isNaN(sDay) || isNaN(eDay)) return null;
     
-    const now = new Date();
-    let sMonth = now.getMonth();
-    let sYear = now.getFullYear();
-    if (sDay < now.getDate()) sMonth++;
+    const baseDate = editingItem && editingItem.startDate ? new Date(editingItem.startDate) : new Date();
+    let sMonth = baseDate.getMonth();
+    let sYear = baseDate.getFullYear();
+    if (!editingItem && sDay < baseDate.getDate()) sMonth++;
     
     let eMonth = sMonth;
     let eYear = sYear;
