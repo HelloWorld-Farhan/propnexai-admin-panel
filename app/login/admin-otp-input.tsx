@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -12,15 +12,15 @@ const MAX_ATTEMPTS = 3;
 interface AdminOTPInputProps {
   onVerify: (otp: string) => Promise<boolean>;
   onSuccess: () => void;
-  onReset: () => void; // Called when all attempts are exhausted
+  onReset: () => void;
 }
 
 export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTPInputProps) {
   const [digits, setDigits] = useState<string[]>(["", "", "", ""]);
   const [isError, setIsError] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [successStage, setSuccessStage] = useState<"idle" | "green" | "done">("idle");
   const [isLoading, setIsLoading] = useState(false);
-  const [attempts, setAttempts] = useState(0); // how many wrong attempts so far
+  const [attempts, setAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -32,7 +32,7 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
   const attemptsLeft = MAX_ATTEMPTS - attempts;
 
   const handleChange = async (index: number, value: string) => {
-    if (isLoading || isSuccess || isLocked) return;
+    if (isLoading || successStage !== "idle" || isLocked) return;
     if (!/^\d*$/.test(value)) return;
 
     const newDigits = [...digits];
@@ -50,10 +50,15 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
       const valid = await onVerify(otpStr);
 
       if (valid) {
-        setIsSuccess(true);
+        // Stage 1: turn green
+        setSuccessStage("green");
+        // Stage 2: after green animation, signal done to parent
         setTimeout(() => {
-          onSuccess();
-        }, 2000);
+          setSuccessStage("done");
+          setTimeout(() => {
+            onSuccess();
+          }, 3200); // time for Netflix animation to play
+        }, 900);
       } else {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
@@ -61,13 +66,11 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
         setIsLoading(false);
 
         if (newAttempts >= MAX_ATTEMPTS) {
-          // Lock and reset after showing the locked state
           setIsLocked(true);
           setTimeout(() => {
             onReset();
           }, 2000);
         } else {
-          // Clear inputs and let them try again
           setTimeout(() => {
             setDigits(["", "", "", ""]);
             inputRefs.current[0]?.focus();
@@ -83,33 +86,6 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
       inputRefs.current[index - 1]?.focus();
     }
   };
-
-  if (isSuccess) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center justify-center space-y-4 py-8"
-      >
-        <motion.h2
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60"
-        >
-          Propnex Ai
-        </motion.h2>
-        <motion.p
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-lg text-muted-foreground"
-        >
-          Welcome Admin!
-        </motion.p>
-      </motion.div>
-    );
-  }
 
   if (isLocked) {
     return (
@@ -128,74 +104,161 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset }: AdminOTP
     );
   }
 
+  const isGreen = successStage === "green" || successStage === "done";
+
   return (
-    <div className="flex flex-col items-center space-y-5">
-      <motion.div
-        animate={isError ? { x: [-12, 12, -10, 10, -6, 6, 0] } : {}}
-        transition={{ duration: 0.5 }}
-        className="flex gap-2"
-      >
-        {HARDCODED.map((char, i) => {
-          const isInput = char === "";
-          const digitIndex = INPUT_INDICES.indexOf(i);
+    <>
+      {/* Netflix-style full-screen overlay on success */}
+      <AnimatePresence>
+        {successStage === "done" && (
+          <motion.div
+            key="netflix-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black"
+          >
+            {/* PropNex AI Logo */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.4 }}
+              animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1.1, 1, 1] }}
+              transition={{ duration: 1.2, times: [0, 0.4, 0.6, 1], delay: 0.2 }}
+              className="text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-600 mb-4"
+            >
+              PropNex AI
+            </motion.div>
 
-          if (!isInput) {
-            return (
-              <div
-                key={i}
-                className={cn(
-                  "flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold transition-colors duration-300",
-                  isError
-                    ? "border-destructive bg-destructive/10 text-destructive"
-                    : "border-muted bg-muted/50 text-muted-foreground"
-                )}
-              >
-                {char}
-              </div>
-            );
-          }
+            {/* Netflix-style WELCOME text */}
+            <motion.div
+              initial={{ opacity: 0, scale: 1.8 }}
+              animate={{ opacity: [0, 1, 1, 0], scale: [1.8, 1, 1, 0.85] }}
+              transition={{ duration: 2.4, times: [0, 0.2, 0.7, 1], delay: 0.8 }}
+              className="text-white font-black text-center"
+              style={{ fontSize: "clamp(3rem, 12vw, 9rem)", letterSpacing: "-0.04em", lineHeight: 1 }}
+            >
+              WELCOME
+            </motion.div>
 
-          return (
-            <Input
-              key={i}
-              ref={(el) => { inputRefs.current[digitIndex] = el; }}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digits[digitIndex]}
-              onChange={(e) => handleChange(digitIndex, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(digitIndex, e)}
-              disabled={isLoading || isLocked}
-              className={cn(
-                "h-12 w-10 text-center text-xl font-bold transition-all duration-300",
-                isError
-                  ? "border-destructive bg-destructive/10 text-destructive focus-visible:ring-destructive"
-                  : "",
-                isLoading && "opacity-50"
-              )}
+            {/* Subtitle */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: [0, 1, 1, 0], y: [20, 0, 0, -10] }}
+              transition={{ duration: 2.2, times: [0, 0.2, 0.7, 1], delay: 1.2 }}
+              className="text-emerald-400 font-medium tracking-widest uppercase text-base mt-4"
+            >
+              Admin
+            </motion.p>
+
+            {/* Loading bar */}
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: "200px" }}
+              transition={{ duration: 2.8, delay: 0.5, ease: "easeInOut" }}
+              className="h-0.5 bg-emerald-500 mt-8 rounded-full"
             />
-          );
-        })}
-      </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Attempt warning */}
-      {isError && attemptsLeft > 0 && (
-        <motion.p
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-sm font-medium text-destructive text-center"
+      {/* OTP input row */}
+      <div className="flex flex-col items-center space-y-5">
+        <motion.div
+          animate={isError ? { x: [-12, 12, -10, 10, -6, 6, 0] } : {}}
+          transition={{ duration: 0.5 }}
+          className="flex gap-2"
         >
-          ⚠️ Wrong code! You have only{" "}
-          <span className="font-bold">{attemptsLeft}</span>{" "}
-          attempt{attemptsLeft !== 1 ? "s" : ""} remaining.
-        </motion.p>
-      )}
+          {HARDCODED.map((char, i) => {
+            const isInput = char === "";
+            const digitIndex = INPUT_INDICES.indexOf(i);
 
-      {!isError && (
-        <p className="text-sm text-muted-foreground text-center">
-          Enter the 4-digit verification code sent to your admin email.
-        </p>
-      )}
-    </div>
+            if (!isInput) {
+              return (
+                <motion.div
+                  key={i}
+                  animate={
+                    isGreen
+                      ? { borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,0.15)", color: "#22c55e", scale: [1, 1.12, 1] }
+                      : isError
+                      ? { borderColor: "hsl(var(--destructive))", backgroundColor: "rgba(239,68,68,0.1)", color: "hsl(var(--destructive))" }
+                      : {}
+                  }
+                  transition={{ duration: 0.4, delay: isGreen ? i * 0.05 : 0 }}
+                  className="flex h-12 w-10 items-center justify-center rounded-md border-2 text-xl font-bold transition-colors"
+                  style={{ borderColor: "hsl(var(--muted))", backgroundColor: "hsl(var(--muted)/0.5)", color: "hsl(var(--muted-foreground))" }}
+                >
+                  {char}
+                </motion.div>
+              );
+            }
+
+            return (
+              <motion.div
+                key={i}
+                animate={
+                  isGreen
+                    ? { scale: [1, 1.12, 1] }
+                    : {}
+                }
+                transition={{ duration: 0.4, delay: isGreen ? i * 0.05 : 0 }}
+              >
+                <Input
+                  ref={(el) => { inputRefs.current[digitIndex] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digits[digitIndex]}
+                  onChange={(e) => handleChange(digitIndex, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(digitIndex, e)}
+                  disabled={isLoading || isLocked || successStage !== "idle"}
+                  className={cn(
+                    "h-12 w-10 text-center text-xl font-bold transition-all duration-300",
+                    isGreen && "border-green-500 bg-green-500/15 text-green-400 focus-visible:ring-green-500",
+                    isError && !isGreen && "border-destructive bg-destructive/10 text-destructive focus-visible:ring-destructive",
+                    isLoading && "opacity-50"
+                  )}
+                />
+              </motion.div>
+            );
+          })}
+        </motion.div>
+
+        {/* Status messages */}
+        <AnimatePresence mode="wait">
+          {isGreen ? (
+            <motion.p
+              key="success-msg"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-sm font-medium text-green-400 text-center"
+            >
+              ✅ Verified! Loading admin panel...
+            </motion.p>
+          ) : isError && attemptsLeft > 0 ? (
+            <motion.p
+              key="error-msg"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-sm font-medium text-destructive text-center"
+            >
+              ⚠️ Wrong code! You have only{" "}
+              <span className="font-bold">{attemptsLeft}</span>{" "}
+              attempt{attemptsLeft !== 1 ? "s" : ""} remaining.
+            </motion.p>
+          ) : (
+            <motion.p
+              key="hint-msg"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-sm text-muted-foreground text-center"
+            >
+              Enter the 4-digit verification code sent to your admin email.
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }
