@@ -163,10 +163,9 @@ export default function AdminOTPInput({ onVerify, onSuccess, onReset, onSuccessS
             className="w-full px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/25"
           >
             <p className="text-sm font-semibold text-destructive text-center">
-              ⚠️ Incorrect code —{" "}
-              <span className="font-bold">{attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""} remaining</span>
+              Invalid User —{" "}
+              <span className="font-bold">{attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""} left</span>
             </p>
-            <p className="text-xs text-destructive/60 text-center mt-0.5">Start typing to try again</p>
           </motion.div>
         ) : (
           <motion.p
