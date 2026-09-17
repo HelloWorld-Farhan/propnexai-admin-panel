@@ -35,6 +35,7 @@ export default function AdminOTPInput({
   const [isGreen, setIsGreen] = useState(false);
   const [scrambled, setScrambled] = useState<string[]>(["", "", "", ""]);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showWelcome2, setShowWelcome2] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -61,10 +62,12 @@ export default function AdminOTPInput({
         clearInterval(interval);
         // Land on final letters R,P,E,A → full row = PROPNEXAI
         setScrambled(FINAL_LETTERS);
-        // Show "Valid User — Welcome" below the boxes
-        setTimeout(() => setShowWelcome(true), 500);
-        // Hold screen so user can enjoy, then navigate
-        setTimeout(() => onSuccess(), 3800);
+        // Stage 1: "Valid User" fades in
+        setTimeout(() => setShowWelcome(true), 600);
+        // Stage 2: "Welcome" slides up below
+        setTimeout(() => setShowWelcome2(true), 1400);
+        // Hold so user can enjoy the full sequence, then navigate
+        setTimeout(() => onSuccess(), 4500);
       }
     }, 55);
 
@@ -123,7 +126,7 @@ export default function AdminOTPInput({
         animate={{ opacity: 1 }}
         className="flex flex-col items-center gap-2 py-6"
       >
-        <p className="text-destructive font-semibold text-center">🔒 Too many failed attempts</p>
+        <p className="text-destructive font-semibold text-center">Too many failed attempts</p>
         <p className="text-muted-foreground text-sm text-center">Redirecting back to login...</p>
       </motion.div>
     );
@@ -224,28 +227,37 @@ export default function AdminOTPInput({
       {/* ── Bottom message area ── */}
       <AnimatePresence mode="wait">
         {showWelcome ? (
-          /* Valid User — Welcome appears below the PROPNEXAI boxes */
           <motion.div
             key="welcome"
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: "easeOut" }}
-            className="flex flex-col items-center gap-1"
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="flex flex-col items-center gap-1.5"
           >
+            {/* Stage 1 — "Valid User" in normal UI muted text */}
             <motion.p
-              initial={{ letterSpacing: "0.05em", opacity: 0 }}
-              animate={{ letterSpacing: "0.25em", opacity: 1 }}
-              transition={{ duration: 0.7, ease: "easeOut" }}
-              className="text-sm font-semibold text-emerald-400 tracking-widest uppercase"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="text-xs font-semibold tracking-[0.22em] uppercase text-muted-foreground"
             >
-              Valid User — Welcome
+              Valid User
             </motion.p>
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: "100%" }}
-              transition={{ duration: 2.8, ease: "easeInOut", delay: 0.3 }}
-              className="h-px bg-gradient-to-r from-transparent via-emerald-500 to-transparent"
-            />
+
+            {/* Stage 2 — "Welcome" slides up in bold foreground */}
+            <AnimatePresence>
+              {showWelcome2 && (
+                <motion.p
+                  key="welcome2"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                  className="text-xl font-bold tracking-tight text-foreground"
+                >
+                  Welcome
+                </motion.p>
+              )}
+            </AnimatePresence>
           </motion.div>
         ) : isError && !isGreen ? (
           <motion.div

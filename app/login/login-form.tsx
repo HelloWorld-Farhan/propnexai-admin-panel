@@ -67,12 +67,13 @@ export default function LoginForm() {
   };
 
   const handleSuccess = () => {
+    // Trigger the blur/fade-out immediately, then navigate once it completes
     setNavigating(true);
     setTimeout(() => {
       const from = searchParams.get("from") || "/companies";
       router.push(from);
       router.refresh();
-    }, 700);
+    }, 650);
   };
 
   const handleReset = () => {
