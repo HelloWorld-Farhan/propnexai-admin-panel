@@ -34,6 +34,7 @@ export async function POST(request: Request) {
   session.isLoggedIn = true;
   session.pendingOtp = undefined;
   session.otpExpiresAt = undefined;
+  session.loginAt = Date.now(); // Track login time for 48h server-side expiry
   await session.save();
 
   return NextResponse.json({ ok: true });
