@@ -122,6 +122,19 @@ export async function createPhoneNumberForAdmin(input: {
   const number = input.number.trim();
   const campaignId = input.campaignId ?? null;
 
+  // Auto-inherit channels and agentUrl if this physical number is already used elsewhere
+  const anyExisting = await prisma.phoneNumber.findFirst({
+    where: { number },
+  });
+  if (anyExisting) {
+    if (input.channels === undefined || input.channels === null) {
+      input.channels = anyExisting.channels;
+    }
+    if (input.agentUrl === undefined || input.agentUrl === null) {
+      input.agentUrl = anyExisting.agentUrl;
+    }
+  }
+
   await assertAgentsBelongToCompany(
     input.companyId as string,
     input.inboundAgentId,
@@ -388,6 +401,18 @@ export async function updatePhoneNumberForAdmin(
       },
       include: numberInclude,
     });
+
+    // Auto-sync channels and agentUrl to all other companies using this exact same number
+    const fieldsToSync: any = {};
+    if (input.channels !== undefined) fieldsToSync.channels = input.channels;
+    if (input.agentUrl !== undefined) fieldsToSync.agentUrl = input.agentUrl;
+
+    if (Object.keys(fieldsToSync).length > 0) {
+      await tx.phoneNumber.updateMany({
+        where: { number: existing.number, NOT: { id } },
+        data: fieldsToSync,
+      });
+    }
 
     if (companyChanged) {
 
