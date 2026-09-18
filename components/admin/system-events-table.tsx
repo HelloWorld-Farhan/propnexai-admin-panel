@@ -23,6 +23,7 @@ const EVENT_COLORS: Record<string, string> = {
   CREDIT_DEDUCTED:        "bg-red-500/10 text-red-400 border-red-500/20",
   NUMBER_ASSIGNED:        "bg-blue-500/10 text-blue-400 border-blue-500/20",
   NUMBER_RELEASED:        "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  NUMBER_EDITED:          "bg-teal-500/10 text-teal-400 border-teal-500/20",
   AGENT_CREATED:          "bg-violet-500/10 text-violet-400 border-violet-500/20",
   AGENT_EDITED:           "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
   AGENT_DELETED:          "bg-rose-500/10 text-rose-400 border-rose-500/20",

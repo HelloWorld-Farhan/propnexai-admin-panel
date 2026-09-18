@@ -194,7 +194,14 @@ export async function createPhoneNumberForAdmin(input: {
       include: numberInclude,
     });
 
-
+    await tx.systemEvent.create({
+      data: {
+        companyId: input.companyId as string,
+        type: "NUMBER_ASSIGNED",
+        title: "Number Assigned",
+        message: `Phone number ${number} was assigned to the company.`,
+      },
+    });
 
     await tx.supportRequest.updateMany({
       where: {
@@ -408,11 +415,35 @@ export async function updatePhoneNumberForAdmin(
     if (input.agentUrl !== undefined) fieldsToSync.agentUrl = input.agentUrl;
 
     if (Object.keys(fieldsToSync).length > 0) {
+      const affectedNumbers = await tx.phoneNumber.findMany({
+        where: { number: existing.number, NOT: { id } },
+      });
+
       await tx.phoneNumber.updateMany({
         where: { number: existing.number, NOT: { id } },
         data: fieldsToSync,
       });
+
+      for (const affected of affectedNumbers) {
+        await tx.systemEvent.create({
+          data: {
+            companyId: affected.companyId,
+            type: "NUMBER_EDITED",
+            title: "Number Configuration Updated",
+            message: `Phone number ${existing.number} configuration was synced. Channels: ${fieldsToSync.channels ?? affected.channels}, Agent URL: ${fieldsToSync.agentUrl ?? affected.agentUrl}`,
+          }
+        });
+      }
     }
+
+    await tx.systemEvent.create({
+      data: {
+        companyId: nextCompanyId as string,
+        type: "NUMBER_EDITED",
+        title: "Number Configuration Updated",
+        message: `Phone number ${existing.number} was updated by admin.`,
+      }
+    });
 
     if (companyChanged) {
 
