@@ -442,7 +442,12 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                             formData.append("file", file);
                             formData.append("fileName", file.name);
 
-                            const res = await fetch(webhookUrl, {
+                            // Append type and fileName to the URL so Apps Script can definitely read them in e.parameter
+                            const targetUrl = new URL(webhookUrl);
+                            targetUrl.searchParams.append("type", "upload_agent_audio_multipart");
+                            targetUrl.searchParams.append("fileName", file.name);
+
+                            const res = await fetch(targetUrl.toString(), {
                               method: "POST",
                               body: formData
                             });
