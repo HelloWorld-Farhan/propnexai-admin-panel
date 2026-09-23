@@ -3,13 +3,13 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ url: process.env.GOOGLE_APPS_SCRIPT_URL || process.env.APPS_SCRIPT_WEBHOOK_URL || "" });
+  return NextResponse.json({ url: process.env.GOOGLE_APPS_SCRIPT_URL || process.env.APPS_SCRIPT_WEBHOOK_URL || "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec" });
 }
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-    const webhookUrl = process.env.GOOGLE_APPS_SCRIPT_URL || process.env.APPS_SCRIPT_WEBHOOK_URL;
+    const webhookUrl = process.env.GOOGLE_APPS_SCRIPT_URL || process.env.APPS_SCRIPT_WEBHOOK_URL || "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
     if (!webhookUrl) {
       return NextResponse.json({ error: "Webhook URL not configured" }, { status: 500 });
     }
