@@ -14,28 +14,47 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Webhook URL not configured" }, { status: 500 });
     }
     
-    const targetUrl = new URL(webhookUrl);
     const file = formData.get("file") as File;
-    if (file && file.name) {
-      targetUrl.searchParams.append("type", "upload_agent_audio_multipart");
-      targetUrl.searchParams.append("fileName", file.name);
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Data = buffer.toString("base64");
+
+    const payload = {
+      type: "upload_agent_audio",
+      fileName: file.name,
+      mimeType: file.type || "audio/mpeg",
+      fileData: base64Data
+    };
     
-    const res = await fetch(targetUrl.toString(), {
+    const res = await fetch(webhookUrl, {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     });
     
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("Apps Script Error Response:", text);
-      return NextResponse.json({ error: "Failed to upload to Google Drive" }, { status: 500 });
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error("Apps Script non-JSON response:", text);
+      return NextResponse.json({ error: "Invalid response from Apps Script" }, { status: 500 });
     }
     
-    const data = await res.json();
+    if (data.status !== "success") {
+      return NextResponse.json({ error: data.message || "Failed to upload" }, { status: 500 });
+    }
+    
     return NextResponse.json(data);
   } catch (err: any) {
     console.error("Upload proxy error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
