@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/server-session";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -36,6 +37,29 @@ export async function POST(request: Request) {
   session.otpExpiresAt = undefined;
   session.loginAt = Date.now(); // Track login time for 48h server-side expiry
   await session.save();
+
+  // Extract IP and Browser for logging
+  const userAgent = request.headers.get("user-agent") || "Unknown Browser";
+  const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown IP";
+
+  try {
+    await prisma.systemEvent.create({
+      data: {
+        type: "ADMIN_LOGIN",
+        title: "Admin Login",
+        message: `Admin user (${session.username}) logged into the admin panel`,
+        companyId: null,
+        actorId: session.username,
+        payload: {
+          ip,
+          browser: userAgent,
+          username: session.username,
+        } as any,
+      },
+    });
+  } catch (err) {
+    console.error("Failed to log ADMIN_LOGIN event:", err);
+  }
 
   return NextResponse.json({ ok: true });
 }

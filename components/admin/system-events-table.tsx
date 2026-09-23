@@ -33,6 +33,7 @@ const EVENT_COLORS: Record<string, string> = {
   NOTIFICATION_DELETED:  "bg-pink-500/10 text-pink-400 border-pink-500/20",
   USER_SIGNUP:           "bg-purple-500/10 text-purple-400 border-purple-500/20",
   USER_LOGIN:            "bg-amber-500/20 text-amber-400 border-amber-500/40",
+  ADMIN_LOGIN:           "bg-rose-500/20 text-rose-400 border-rose-500/40",
   COMPANY_CREATED:       "bg-lime-500/10 text-lime-400 border-lime-500/20",
   COMPANY_EDITED:        "bg-lime-500/10 text-lime-400 border-lime-500/20",
   COMPANY_DELETED:       "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20",
@@ -208,7 +209,7 @@ export function SystemEventsTable() {
                               {event.message}
                             </div>
                           )}
-                          {(event.type === "USER_LOGIN" || event.type === "USER_SIGNUP") && event.payload && (
+                          {(event.type === "USER_LOGIN" || event.type === "USER_SIGNUP" || event.type === "ADMIN_LOGIN") && event.payload && (
                             <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground/80">
                               {event.payload.ip && <span className="bg-muted px-1.5 py-0.5 rounded">IP: {event.payload.ip}</span>}
                               {event.payload.browser && <span className="bg-muted px-1.5 py-0.5 rounded truncate max-w-[150px]" title={event.payload.browser}>{event.payload.browser}</span>}
