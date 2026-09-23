@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PropNex Admin",
-  description: "PropNex platform administration panel",
+  title: "Jinnicore Admin",
+  description: "Jinnicore platform administration panel",
 };
 
 export default function RootLayout({

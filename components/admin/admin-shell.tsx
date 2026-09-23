@@ -58,7 +58,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-sidebar">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-bold uppercase tracking-widest text-primary">PropNex Admin</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-primary">Jinnicore Admin</p>
         </div>
         <div className="flex items-center gap-4">
           <AdminNotifications />
@@ -75,7 +75,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       )}>
         <div className="hidden md:block border-b border-sidebar-border px-4 py-5">
           <p className="text-xs font-medium uppercase tracking-widest text-primary">
-            PropNex
+            Jinnicore
           </p>
           <p className="text-sm text-sidebar-foreground">Admin Panel</p>
         </div>
