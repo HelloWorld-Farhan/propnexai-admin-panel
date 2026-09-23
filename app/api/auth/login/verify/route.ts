@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         title: "Admin Login",
         message: `Admin user (${session.username}) logged into the admin panel`,
         companyId: null,
-        actorId: session.username,
+        actorId: null,
         payload: {
           ip,
           browser: userAgent,

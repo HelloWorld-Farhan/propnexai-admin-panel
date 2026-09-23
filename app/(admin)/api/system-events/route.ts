@@ -54,6 +54,7 @@ export async function GET(req: Request) {
       type: e.type,
       title: e.title,
       message: e.message,
+      payload: e.payload,
       createdAt: e.createdAt.toISOString()
     }));
 
