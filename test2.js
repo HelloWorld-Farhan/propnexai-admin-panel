@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { try { await prisma.systemEvent.create({ data: { type: 'JOB_POSTED', title: 'Test', message: 'Test' } }); console.log('Created!'); } catch(e) { console.error('Error:', e); } } main().finally(() => prisma.$disconnect());

@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { const count = await prisma.systemEvent.count({ where: { type: { in: ['JOB_POSTED', 'FORM_INFO'] } } }); console.log('Count:', count); } main().finally(() => prisma.$disconnect());
