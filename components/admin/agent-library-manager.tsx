@@ -422,10 +422,6 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                           setUploadProgress(0);
 
                           try {
-                            const urlRes = await fetch("/api/upload-audio");
-                            const { url: webhookUrl } = await urlRes.json();
-                            if (!webhookUrl) throw new Error("Webhook URL not found");
-
                             const durationMs = Math.max(4000, (file.size / (1024 * 1024)) * 1200);
                             const intervalMs = 100;
                             const step = 100 / (durationMs / intervalMs);
@@ -437,17 +433,9 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                             }, intervalMs);
 
                             const formData = new FormData();
-                            // Special type for the updated Apps Script
-                            formData.append("type", "upload_agent_audio_multipart");
                             formData.append("file", file);
-                            formData.append("fileName", file.name);
-
-                            // Append type and fileName to the URL so Apps Script can definitely read them in e.parameter
-                            const targetUrl = new URL(webhookUrl);
-                            targetUrl.searchParams.append("type", "upload_agent_audio_multipart");
-                            targetUrl.searchParams.append("fileName", file.name);
-
-                            const res = await fetch(targetUrl.toString(), {
+                            
+                            const res = await fetch("/api/upload-audio", {
                               method: "POST",
                               body: formData
                             });
