@@ -420,43 +420,53 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                           
                           setIsUploading(true);
                           setUploadProgress(0);
-                          
-                          const formData = new FormData();
-                          formData.append("file", file);
 
-                          const xhr = new XMLHttpRequest();
-                          xhr.open("POST", "/api/upload-audio");
-                          
-                          xhr.upload.onprogress = (ev) => {
-                            if (ev.lengthComputable) {
-                              const percent = Math.floor((ev.loaded / ev.total) * 100);
-                              setUploadProgress(Math.min(percent, 99));
-                            }
-                          };
-                          
-                          xhr.onload = () => {
+                          try {
+                            const urlRes = await fetch("/api/upload-audio");
+                            const { url: webhookUrl } = await urlRes.json();
+                            if (!webhookUrl) throw new Error("Webhook URL not found");
+
+                            const durationMs = Math.max(4000, (file.size / (1024 * 1024)) * 1200);
+                            const intervalMs = 100;
+                            const step = 100 / (durationMs / intervalMs);
+                            let currentProgress = 0;
+                            const timer = setInterval(() => {
+                              currentProgress += step;
+                              if (currentProgress > 95) currentProgress = 95;
+                              setUploadProgress(Math.floor(currentProgress));
+                            }, intervalMs);
+
+                            const formData = new FormData();
+                            // Special type for the updated Apps Script
+                            formData.append("type", "upload_agent_audio_multipart");
+                            formData.append("file", file);
+                            formData.append("fileName", file.name);
+
+                            const res = await fetch(webhookUrl, {
+                              method: "POST",
+                              body: formData
+                            });
+                            
+                            clearInterval(timer);
+                            
+                            if (!res.ok) throw new Error("Upload failed");
+                            const data = await res.json();
+                            if (data.status === "error") throw new Error(data.message);
+                            
+                            setUploadProgress(100);
+                            
+                            const finalUrl = data.message?.url || data.url;
+                            setForm({ ...form, demoAudioUrl: finalUrl });
+                            if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
+                            toast.success("Uploaded successfully!");
+                            
+                            setTimeout(() => {
+                              setIsUploading(false);
+                            }, 800);
+                          } catch (err) {
+                            toast.error("Upload failed");
                             setIsUploading(false);
-                            if (xhr.status >= 200 && xhr.status < 300) {
-                              try {
-                                const data = JSON.parse(xhr.responseText);
-                                setUploadProgress(100);
-                                setForm({ ...form, demoAudioUrl: data.url });
-                                if (errors.demoAudioUrl) setErrors({ ...errors, demoAudioUrl: "" });
-                                toast.success("Uploaded successfully!");
-                              } catch (e) {
-                                toast.error("Invalid response from server");
-                              }
-                            } else {
-                              toast.error("Upload failed");
-                            }
-                          };
-                          
-                          xhr.onerror = () => {
-                            setIsUploading(false);
-                            toast.error("Upload failed due to network error");
-                          };
-                          
-                          xhr.send(formData);
+                          }
                         }}
                       />
                     </div>
