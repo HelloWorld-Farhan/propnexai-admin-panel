@@ -118,6 +118,16 @@ export async function acceptJobApplication(id: string) {
       data: { status: "ACCEPTED" }
     });
 
+    try {
+      await prisma.systemEvent.create({
+        data: {
+          type: "JOB_POSTED",
+          title: "Job Application Accepted",
+          message: `Admin accepted application for ${app.firstName} ${app.lastName}.`,
+        }
+      });
+    } catch (e) {}
+
     // Send email
     await fetch(WEBHOOK_URL, {
       method: "POST",
@@ -156,6 +166,16 @@ export async function declineJobApplication(id: string) {
       where: { id },
       data: { status: "REJECTED" }
     });
+
+    try {
+      await prisma.systemEvent.create({
+        data: {
+          type: "JOB_POSTED",
+          title: "Job Application Rejected",
+          message: `Admin rejected application for ${app.firstName} ${app.lastName}.`,
+        }
+      });
+    } catch (e) {}
 
     await fetch(WEBHOOK_URL, {
       method: "POST",
