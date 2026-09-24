@@ -222,18 +222,6 @@ export default function WhiteLabelManager() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="mb-6 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex gap-3 text-sm text-blue-200">
-            <AlertCircle className="h-5 w-5 shrink-0 text-blue-400" />
-            <div>
-              <p className="font-semibold text-blue-100 mb-1">Important: DNS Configuration for White-Label Domains</p>
-              <p>For any website to perfectly connect with our server, you must instruct the client (or configure it in GoDaddy, Hostinger, etc.) to add the following <strong>CNAME record</strong>.</p>
-              <p className="mt-2 font-mono text-xs bg-black/20 p-2 rounded w-fit text-blue-300">
-                Type: CNAME <br/>
-                Host / Name: @ (or www)<br/>
-                Value / Target: cname.propnexai.com
-              </p>
-            </div>
-          </div>
           {loading ? (
             <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
           ) : (
