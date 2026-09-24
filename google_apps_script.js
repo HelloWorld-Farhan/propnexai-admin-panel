@@ -11,7 +11,7 @@ function doPost(e) {
       var time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
       // 1. Send Email to ADMIN
-      var adminSubject = "New User Registration - Jinnicore";
+      var adminSubject = "New User Registration - PropNex AI";
       var adminHtml = `
         <!DOCTYPE html>
         <html lang="en">
@@ -35,10 +35,10 @@ function doPost(e) {
         </head>
         <body>
           <div class="container">
-            <div class="header"><h1>Jinnicore</h1></div>
+            <div class="header"><h1>PropNex AI</h1></div>
             <div class="content">
               <p style="color: #fafafa; font-size: 18px; font-weight: 500;">Hello Admin,</p>
-              <p>A new user has just registered on the Jinnicore platform and is waiting for their company workspace to be created.</p>
+              <p>A new user has just registered on the PropNex AI platform and is waiting for their company workspace to be created.</p>
               <div class="details">
                 <div><strong>Name:</strong> ${userName}</div>
                 <div><strong>Email:</strong> ${userEmail}</div>
@@ -50,16 +50,16 @@ function doPost(e) {
                 <a href="http://localhost:3003/login" class="button">Log in to Admin Panel</a>
               </div>
             </div>
-            <div class="footer">&copy; ${new Date().getFullYear()} Jinnicore. All rights reserved.</div>
+            <div class="footer">&copy; ${new Date().getFullYear()} PropNex AI. All rights reserved.</div>
           </div>
         </body>
         </html>
       `;
-      MailApp.sendEmail({ to: adminEmail, subject: adminSubject, htmlBody: adminHtml, name: "Jinnicore Support", replyTo: "support@propnexai.com" });
+      MailApp.sendEmail({ to: adminEmail, subject: adminSubject, htmlBody: adminHtml, name: "PropNex AI Support", replyTo: "support@propnexai.com" });
 
       // 2. Send Thank You Email to USER
       if (userEmail && userEmail !== "No Email Provided") {
-        var userSubject = "Thank you for signing up - Jinnicore";
+        var userSubject = "Thank you for signing up - PropNex AI";
         var userHtml = `
           <!DOCTYPE html>
           <html lang="en">
@@ -77,19 +77,19 @@ function doPost(e) {
           </head>
           <body>
             <div class="container">
-              <div class="header"><h1>Jinnicore</h1></div>
+              <div class="header"><h1>PropNex AI</h1></div>
               <div class="content">
                 <p style="color: #fafafa; font-size: 18px; font-weight: 500;">Hello ${userName},</p>
-                <p>Thank you for signing up for Jinnicore!</p>
+                <p>Thank you for signing up for PropNex AI!</p>
                 <p>Your account has been successfully created and is currently under review by our administrative team. <strong>Please wait for your account to be approved.</strong></p>
                 <p>Once we approve your account, you will receive an email and you will be able to access everything on the platform.</p>
               </div>
-              <div class="footer">&copy; ${new Date().getFullYear()} Jinnicore. All rights reserved.</div>
+              <div class="footer">&copy; ${new Date().getFullYear()} PropNex AI. All rights reserved.</div>
             </div>
           </body>
           </html>
         `;
-        MailApp.sendEmail({ to: userEmail, subject: userSubject, htmlBody: userHtml, name: "Jinnicore Support", replyTo: "support@propnexai.com" });
+        MailApp.sendEmail({ to: userEmail, subject: userSubject, htmlBody: userHtml, name: "PropNex AI Support", replyTo: "support@propnexai.com" });
       }
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Registration emails sent" })).setMimeType(ContentService.MimeType.JSON);
 
@@ -101,7 +101,7 @@ function doPost(e) {
       var assignedNumber = payload.assignedNumber; 
       if (!userEmail) return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Missing user email" })).setMimeType(ContentService.MimeType.JSON);
 
-      var subject = "Your Account has been Approved - Jinnicore";
+      var subject = "Your Account has been Approved - PropNex AI";
       var numberHtml = assignedNumber 
         ? `<div style="margin-top: 16px; padding: 12px; background: #052e16; border: 1px solid #166534; border-radius: 8px;"><strong>Assigned Phone Number:</strong> <span style="color: #4ade80;">${assignedNumber}</span></div>` : ``;
       
@@ -128,10 +128,10 @@ function doPost(e) {
         </head>
         <body>
           <div class="container">
-            <div class="header"><h1>Jinnicore</h1></div>
+            <div class="header"><h1>PropNex AI</h1></div>
             <div class="content">
               <p style="color: #fafafa; font-size: 18px; font-weight: 500;">Hello ${userName},</p>
-              <p>Great news! Your account has been officially approved and your Jinnicore workspace has been created.</p>
+              <p>Great news! Your account has been officially approved and your PropNex AI workspace has been created.</p>
               <div class="details">
                 <div><strong>Workspace:</strong> ${companyName}</div>
                 <div><strong>Status:</strong> <span style="color: #10b981;">Active</span></div>
@@ -142,12 +142,12 @@ function doPost(e) {
                 <a href="http://localhost:3000/auth/sign-in" class="button">Log in to Dashboard</a>
               </div>
             </div>
-            <div class="footer">&copy; ${new Date().getFullYear()} Jinnicore. All rights reserved.</div>
+            <div class="footer">&copy; ${new Date().getFullYear()} PropNex AI. All rights reserved.</div>
           </div>
         </body>
         </html>
       `;
-      MailApp.sendEmail({ to: userEmail, subject: subject, htmlBody: htmlBody, name: "Jinnicore Support", replyTo: "support@propnexai.com" });
+      MailApp.sendEmail({ to: userEmail, subject: subject, htmlBody: htmlBody, name: "PropNex AI Support", replyTo: "support@propnexai.com" });
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Acceptance email sent" })).setMimeType(ContentService.MimeType.JSON);
 
     } else if (type === "number_assigned") {
@@ -157,7 +157,7 @@ function doPost(e) {
       var assignedNumber = payload.assignedNumber;
       if (!userEmail || !assignedNumber) return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Missing info" })).setMimeType(ContentService.MimeType.JSON);
 
-      var subject = "Your Phone Number is Ready - Jinnicore";
+      var subject = "Your Phone Number is Ready - PropNex AI";
       var htmlBody = `
         <!DOCTYPE html>
         <html lang="en">
@@ -181,7 +181,7 @@ function doPost(e) {
         </head>
         <body>
           <div class="container">
-            <div class="header"><h1>Jinnicore</h1></div>
+            <div class="header"><h1>PropNex AI</h1></div>
             <div class="content">
               <p style="color: #fafafa; font-size: 18px; font-weight: 500;">Hello ${userName},</p>
               <p>Your requested service phone number has just been assigned to your workspace by our admin team!</p>
@@ -194,12 +194,12 @@ function doPost(e) {
                 <a href="http://localhost:3000/auth/sign-in" class="button">Log in to Dashboard</a>
               </div>
             </div>
-            <div class="footer">&copy; ${new Date().getFullYear()} Jinnicore. All rights reserved.</div>
+            <div class="footer">&copy; ${new Date().getFullYear()} PropNex AI. All rights reserved.</div>
           </div>
         </body>
         </html>
       `;
-      MailApp.sendEmail({ to: userEmail, subject: subject, htmlBody: htmlBody, name: "Jinnicore Support", replyTo: "support@propnexai.com" });
+      MailApp.sendEmail({ to: userEmail, subject: subject, htmlBody: htmlBody, name: "PropNex AI Support", replyTo: "support@propnexai.com" });
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Number assignment email sent" })).setMimeType(ContentService.MimeType.JSON);
 
     } else if (type === "user_rejected") {
@@ -208,7 +208,7 @@ function doPost(e) {
       var userName = payload.name || "User";
       if (!userEmail) return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Missing user email" })).setMimeType(ContentService.MimeType.JSON);
 
-      var subject = "Update Regarding Your Account Request - Jinnicore";
+      var subject = "Update Regarding Your Account Request - PropNex AI";
       var htmlBody = `
         <!DOCTYPE html>
         <html lang="en">
@@ -226,20 +226,20 @@ function doPost(e) {
         </head>
         <body>
           <div class="container">
-            <div class="header"><h1>Jinnicore</h1></div>
+            <div class="header"><h1>PropNex AI</h1></div>
             <div class="content">
               <p style="color: #fafafa; font-size: 18px; font-weight: 500;">Hello ${userName},</p>
-              <p>Thank you for your interest in Jinnicore.</p>
+              <p>Thank you for your interest in PropNex AI.</p>
               <p>We are writing to inform you that, unfortunately, your account request has been declined at this time. We are currently limiting access to ensure the best experience for our early users.</p>
               <p><strong>Please note that you will be able to reapply for an account after a 6-month period.</strong></p>
               <p>If you have any questions, please reply directly to this email and our support team will be happy to assist you.</p>
             </div>
-            <div class="footer">&copy; ${new Date().getFullYear()} Jinnicore. All rights reserved.</div>
+            <div class="footer">&copy; ${new Date().getFullYear()} PropNex AI. All rights reserved.</div>
           </div>
         </body>
         </html>
       `;
-      MailApp.sendEmail({ to: userEmail, subject: subject, htmlBody: htmlBody, name: "Jinnicore Support", replyTo: "support@propnexai.com" });
+      MailApp.sendEmail({ to: userEmail, subject: subject, htmlBody: htmlBody, name: "PropNex AI Support", replyTo: "support@propnexai.com" });
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Rejection email sent" })).setMimeType(ContentService.MimeType.JSON);
 
     } else if (type === "reminder_approval") {
@@ -248,7 +248,7 @@ function doPost(e) {
       var userName = payload.name || "User";
       var userEmail = payload.email || "No Email Provided";
 
-      var adminSubject = "Reminder: Account Pending Approval - Jinnicore";
+      var adminSubject = "Reminder: Account Pending Approval - PropNex AI";
       var adminHtml = `
         <!DOCTYPE html>
         <html lang="en">
@@ -269,7 +269,7 @@ function doPost(e) {
         </head>
         <body>
           <div class="container">
-            <div class="header"><h1>Jinnicore</h1></div>
+            <div class="header"><h1>PropNex AI</h1></div>
             <div class="content">
               <p style="color: #fafafa; font-size: 18px; font-weight: 500;">Hello Admin,</p>
               <p>A user is waiting for their account to be approved. They have requested a reminder to speed up the process.</p>
@@ -286,7 +286,7 @@ function doPost(e) {
         </body>
         </html>
       `;
-      MailApp.sendEmail({ to: adminEmail, subject: adminSubject, htmlBody: adminHtml, name: "Jinnicore Support", replyTo: "support@propnexai.com" });
+      MailApp.sendEmail({ to: adminEmail, subject: adminSubject, htmlBody: adminHtml, name: "PropNex AI Support", replyTo: "support@propnexai.com" });
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Approval reminder sent" })).setMimeType(ContentService.MimeType.JSON);
 
     } else if (type === "reminder_number") {
@@ -295,7 +295,7 @@ function doPost(e) {
       var userName = payload.name || "User";
       var userEmail = payload.email || "No Email Provided";
 
-      var adminSubject = "Reminder: Phone Number Assignment Required - Jinnicore";
+      var adminSubject = "Reminder: Phone Number Assignment Required - PropNex AI";
       var adminHtml = `
         <!DOCTYPE html>
         <html lang="en">
@@ -316,7 +316,7 @@ function doPost(e) {
         </head>
         <body>
           <div class="container">
-            <div class="header"><h1>Jinnicore</h1></div>
+            <div class="header"><h1>PropNex AI</h1></div>
             <div class="content">
               <p style="color: #fafafa; font-size: 18px; font-weight: 500;">Hello Admin,</p>
               <p>A user is waiting for a phone number to be assigned to their workspace. They have clicked the 'Remind Admin' button to notify you.</p>
@@ -333,7 +333,7 @@ function doPost(e) {
         </body>
         </html>
       `;
-      MailApp.sendEmail({ to: adminEmail, subject: adminSubject, htmlBody: adminHtml, name: "Jinnicore Support", replyTo: "support@propnexai.com" });
+      MailApp.sendEmail({ to: adminEmail, subject: adminSubject, htmlBody: adminHtml, name: "PropNex AI Support", replyTo: "support@propnexai.com" });
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Number reminder sent" })).setMimeType(ContentService.MimeType.JSON);
 
     } else if (type === "user_deleted") {
@@ -342,7 +342,7 @@ function doPost(e) {
       var userName = payload.name || "User";
       if (!userEmail) return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Missing user email" })).setMimeType(ContentService.MimeType.JSON);
 
-      var subject = "Your Account has been Deleted - Jinnicore";
+      var subject = "Your Account has been Deleted - PropNex AI";
       var htmlBody = `
         <!DOCTYPE html>
         <html lang="en">
@@ -360,19 +360,19 @@ function doPost(e) {
         </head>
         <body>
           <div class="container">
-            <div class="header"><h1>Jinnicore</h1></div>
+            <div class="header"><h1>PropNex AI</h1></div>
             <div class="content">
               <p style="color: #fafafa; font-size: 18px; font-weight: 500;">Hello ${userName},</p>
-              <p>We are writing to inform you that your Jinnicore workspace and user account have been removed by our administrative team.</p>
-              <p>Your email address has been completely cleared from our database. If you wish to use Jinnicore in the future, you are free to <strong>start completely fresh</strong> by signing up again with this email address.</p>
+              <p>We are writing to inform you that your PropNex AI workspace and user account have been removed by our administrative team.</p>
+              <p>Your email address has been completely cleared from our database. If you wish to use PropNex AI in the future, you are free to <strong>start completely fresh</strong> by signing up again with this email address.</p>
               <p>If you have any questions or believe this was an error, please reply directly to this email and our support team will be happy to assist you.</p>
             </div>
-            <div class="footer">&copy; ${new Date().getFullYear()} Jinnicore. All rights reserved.</div>
+            <div class="footer">&copy; ${new Date().getFullYear()} PropNex AI. All rights reserved.</div>
           </div>
         </body>
         </html>
       `;
-      MailApp.sendEmail({ to: userEmail, subject: subject, htmlBody: htmlBody, name: "Jinnicore Support", replyTo: "support@propnexai.com" });
+      MailApp.sendEmail({ to: userEmail, subject: subject, htmlBody: htmlBody, name: "PropNex AI Support", replyTo: "support@propnexai.com" });
       return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Account deleted email sent" })).setMimeType(ContentService.MimeType.JSON);
     } else {
       return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Invalid type provided" })).setMimeType(ContentService.MimeType.JSON);

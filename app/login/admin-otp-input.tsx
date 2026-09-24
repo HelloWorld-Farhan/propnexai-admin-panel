@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const HARDCODED = ["P", "", "O", "", "N", "", "X", "", "I"];
 const INPUT_INDICES = [1, 3, 5, 7];
-// These fill in the gaps: P-[R]-O-[P]-N-[E]-X-[A]-I = JINNICOREAI
+// These fill in the gaps: P-[R]-O-[P]-N-[E]-X-[A]-I = PROPNEXAI
 const FINAL_LETTERS = ["R", "P", "E", "A"];
 const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#@!%$";
 const MAX_ATTEMPTS = 3;
@@ -60,7 +60,7 @@ export default function AdminOTPInput({
         frame++;
       } else {
         clearInterval(interval);
-        // Land on final letters R,P,E,A → full row = JINNICOREAI
+        // Land on final letters R,P,E,A → full row = PROPNEXAI
         setScrambled(FINAL_LETTERS);
         // Stage 1: "Valid User" fades in
         setTimeout(() => setShowWelcome(true), 600);

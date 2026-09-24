@@ -95,7 +95,7 @@ export default function LoginForm() {
     >
       <Card className="w-full max-w-md border-border">
         <CardHeader>
-          <CardTitle>Jinnicore Admin</CardTitle>
+          <CardTitle>PropNex Admin</CardTitle>
           <CardDescription>Sign in to manage companies and agents</CardDescription>
         </CardHeader>
 
