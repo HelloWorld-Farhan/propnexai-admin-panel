@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Globe, CheckCircle2, Edit, Trash2, Eye, X, AlertCircle } from "lucide-react";
+import { Loader2, Plus, Globe, CheckCircle2, Edit, Trash2, Eye, X, AlertCircle, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -96,8 +96,40 @@ export default function WhiteLabelManager() {
     }
   };
 
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'favicon') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (type === 'logo') setUploadingLogo(true);
+    else setUploadingFavicon(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload-image", { method: "POST", body: formData });
+      if (res.ok) {
+        const { url } = await res.json();
+        setCurrentDomain(prev => ({
+          ...prev,
+          [type === 'logo' ? 'logoUrl' : 'faviconUrl']: url
+        }));
+        toast.success(`${type === 'logo' ? 'Logo' : 'Favicon'} uploaded successfully`);
+      } else {
+        toast.error("Failed to upload image");
+      }
+    } catch (err) {
+      toast.error("Upload error");
+    } finally {
+      if (type === 'logo') setUploadingLogo(false);
+      else setUploadingFavicon(false);
+    }
+  };
+
   const handleAddSubmit = async () => {
-    if (!currentDomain.domain || !currentDomain.companyName || !currentDomain.supportEmail) {
+    if (!currentDomain.domain || !currentDomain.companyName || !currentDomain.supportEmail || !currentDomain.logoUrl || !currentDomain.faviconUrl || !currentDomain.instagramUrl || !currentDomain.linkedinUrl) {
       toast.error("Please fill all required fields (marked with *)");
       return;
     }
@@ -107,7 +139,6 @@ export default function WhiteLabelManager() {
       return;
     }
 
-    // Move to DNS instructions first before saving
     setIsModalOpen(false);
     setIsDnsModalOpen(true);
   };
@@ -235,14 +266,16 @@ export default function WhiteLabelManager() {
 
       {/* Horizontal Perfect Large Add Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-[900px] border-border bg-background">
+        <DialogContent className="max-w-[1100px] border-border bg-background max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditing ? "Edit Domain" : "Add Website in Domain"}</DialogTitle>
             <DialogDescription>Configure the white-label settings for this specific domain.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-8 py-4">
-            <div className="space-y-4 border-r border-border pr-8">
-              <h3 className="text-lg font-semibold border-b border-border pb-2">Branding Info</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-4">
+            
+            {/* Column 1: Core Info */}
+            <div className="space-y-4 border-r border-border pr-6">
+              <h3 className="text-lg font-semibold border-b border-border pb-2">Core Info</h3>
               <div className="space-y-2">
                 <Label>Domain Name <span className="text-red-500">*</span></Label>
                 <Input placeholder="e.g. jinnicore.com" value={currentDomain.domain || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, domain: e.target.value })} disabled={isEditing} />
@@ -259,28 +292,46 @@ export default function WhiteLabelManager() {
                 <Label>Support Phone (Optional)</Label>
                 <Input placeholder="+91 9876543210" value={currentDomain.supportPhone || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, supportPhone: e.target.value })} />
               </div>
+            </div>
+
+            {/* Column 2: Branding */}
+            <div className="space-y-4 border-r border-border pr-6">
+              <h3 className="text-lg font-semibold border-b border-border pb-2">Branding</h3>
               <div className="space-y-2">
-                <Label>Navbar Logo URL (Optional)</Label>
-                <Input placeholder="https://..." value={currentDomain.logoUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, logoUrl: e.target.value })} />
+                <Label>Navbar Logo URL <span className="text-red-500">*</span></Label>
+                <div className="flex gap-2">
+                  <Input placeholder="https://... or upload" value={currentDomain.logoUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, logoUrl: e.target.value })} />
+                  <Button variant="outline" size="icon" className="shrink-0" onClick={() => document.getElementById('logo-upload')?.click()}>
+                    {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  </Button>
+                  <input type="file" id="logo-upload" className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'logo')} />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Favicon URL (Optional)</Label>
-                <Input placeholder="https://..." value={currentDomain.faviconUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, faviconUrl: e.target.value })} />
+                <Label>Favicon URL <span className="text-red-500">*</span></Label>
+                <div className="flex gap-2">
+                  <Input placeholder="https://... or upload" value={currentDomain.faviconUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, faviconUrl: e.target.value })} />
+                  <Button variant="outline" size="icon" className="shrink-0" onClick={() => document.getElementById('favicon-upload')?.click()}>
+                    {uploadingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  </Button>
+                  <input type="file" id="favicon-upload" className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'favicon')} />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Instagram Link (Optional)</Label>
+                <Label>Instagram Link <span className="text-red-500">*</span></Label>
                 <Input placeholder="https://instagram.com/..." value={currentDomain.instagramUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, instagramUrl: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>LinkedIn Link (Optional)</Label>
+                <Label>LinkedIn Link <span className="text-red-500">*</span></Label>
                 <Input placeholder="https://linkedin.com/..." value={currentDomain.linkedinUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, linkedinUrl: e.target.value })} />
               </div>
             </div>
 
-            <div className="space-y-4 pl-4">
+            {/* Column 3: Page Visibility */}
+            <div className="space-y-4">
               <h3 className="text-lg font-semibold border-b border-border pb-2">Page Visibility</h3>
-              <p className="text-sm text-muted-foreground">Select which pages should be visible on this domain. Unchecked pages will be hidden from navbars and footers.</p>
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <p className="text-xs text-muted-foreground">Select which pages should be visible on this domain. Unchecked pages will be hidden from navbars and footers.</p>
+              <div className="grid grid-cols-2 gap-y-4 gap-x-2 mt-4">
                 {Object.keys(defaultPages).map((page) => (
                   <div key={page} className="flex items-center space-x-2">
                     <Switch
@@ -288,13 +339,21 @@ export default function WhiteLabelManager() {
                       checked={pagesConfig[page as keyof typeof defaultPages]}
                       onCheckedChange={(c) => setPagesConfig({ ...pagesConfig, [page]: c })}
                     />
-                    <Label htmlFor={page} className="capitalize">{page}</Label>
+                    <Label htmlFor={page} className="capitalize text-sm">{page}</Label>
                   </div>
                 ))}
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-4 border-t border-border pt-4">
+          
+          <div className="bg-muted/50 p-3 rounded-md flex items-center justify-center border border-border mt-2">
+             <span className="text-sm font-medium">Preview:</span>
+             <span className="ml-2 text-sm text-muted-foreground line-through decoration-red-500">PropNex AI</span>
+             <span className="mx-2 text-sm">→</span>
+             <span className="text-sm font-bold text-primary">{currentDomain.companyName || "Your Company Name"}</span>
+          </div>
+
+          <div className="flex justify-end gap-4 border-t border-border pt-4 mt-2">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
             <Button onClick={handleAddSubmit}>Save & Configure DNS</Button>
           </div>
