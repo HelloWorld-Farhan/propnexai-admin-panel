@@ -358,16 +358,23 @@ export default function WhiteLabelManager() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold border-b border-[#333] pb-2 text-white">Page Visibility</h3>
               <p className="text-xs text-gray-400">Select which pages should be visible on this domain. By turning a switch OFF, that specific page will not show in navbars and footers for the user.</p>
-              <div className="grid grid-cols-2 gap-y-4 gap-x-2 mt-4">
+              <div className="grid grid-cols-2 gap-y-5 gap-x-2 mt-4">
                 {Object.keys(defaultPages).map((page) => (
-                  <div key={page} className="flex items-center space-x-2">
-                    <Switch
-                      id={page}
-                      checked={pagesConfig[page as keyof typeof defaultPages]}
-                      onCheckedChange={(c) => setPagesConfig({ ...pagesConfig, [page]: c })}
-                      className="data-[state=checked]:bg-emerald-500"
-                    />
-                    <Label htmlFor={page} className="capitalize text-sm text-gray-300">{page}</Label>
+                  <div key={page} className="flex flex-col gap-1">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id={page}
+                        checked={pagesConfig[page as keyof typeof defaultPages]}
+                        onCheckedChange={(c) => setPagesConfig({ ...pagesConfig, [page]: c })}
+                        className="data-[state=checked]:bg-emerald-500"
+                      />
+                      <Label htmlFor={page} className="capitalize text-sm text-gray-300">{page}</Label>
+                    </div>
+                    {!pagesConfig[page as keyof typeof defaultPages] && (
+                      <span className="text-[10px] text-red-400/80 leading-tight">
+                        Will not show in <span className="font-semibold">{currentDomain.domain || "domain.com"}</span>
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
