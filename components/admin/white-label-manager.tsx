@@ -279,7 +279,7 @@ export default function WhiteLabelManager() {
 
       {/* Horizontal Perfect Large Add Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-[1100px] border-[#333] bg-[#1c1c1c] text-white shadow-2xl">
+        <DialogContent className="max-w-[1100px]">
           <DialogHeader>
             <DialogTitle>{isEditing ? "Edit Domain" : "Add Website in Domain"}</DialogTitle>
             <DialogDescription>Configure the white-label settings for this specific domain.</DialogDescription>
@@ -287,52 +287,52 @@ export default function WhiteLabelManager() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-4">
             
             {/* Column 1: Core Info */}
-            <div className="space-y-4 border-r border-[#333] pr-6">
-              <h3 className="text-lg font-semibold border-b border-[#333] pb-2 text-white">Core Info</h3>
+            <div className="space-y-4 border-r border-border pr-6">
+              <h3 className="text-lg font-semibold border-b border-border pb-2">Core Info</h3>
               <div className="space-y-2">
-                <Label className="text-gray-300">Domain Name <span className="text-red-500">*</span></Label>
+                <Label>Domain Name <span className="text-red-500">*</span></Label>
                 <div className="flex gap-2">
-                  <Input placeholder="e.g. jinnicore.com" value={currentDomain.domain || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, domain: e.target.value })} disabled={isEditing} className="bg-[#2a2a2a] border-[#333] text-white placeholder:text-gray-500" />
-                  <Button variant="outline" size="icon" className="shrink-0 bg-[#2a2a2a] border-[#333] text-gray-300 hover:bg-[#333] hover:text-white" onClick={(e) => { e.preventDefault(); if (currentDomain.domain) window.open(`https://${currentDomain.domain}`, "_blank"); }} title="Preview Domain">
+                  <Input placeholder="e.g. jinnicore.com" value={currentDomain.domain || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, domain: e.target.value })} disabled={isEditing} />
+                  <Button variant="outline" size="icon" className="shrink-0" onClick={(e) => { e.preventDefault(); if (currentDomain.domain) window.open(`https://${currentDomain.domain}`, "_blank"); }} title="Preview Domain">
                     <Eye className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-gray-300">Company Name <span className="text-red-500">*</span></Label>
-                <Input placeholder="e.g. Jinnicore Technologies" value={currentDomain.companyName || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, companyName: e.target.value })} className="bg-[#2a2a2a] border-[#333] text-white placeholder:text-gray-500" />
-                <div className="text-xs text-gray-400 mt-1 flex items-center">
-                  Preview: <span className="line-through decoration-red-500 ml-1">PropNex AI</span> <span className="mx-1">→</span> <span className="font-semibold text-emerald-400">{currentDomain.companyName || "Your Company Name"}</span>
+                <Label>Company Name <span className="text-red-500">*</span></Label>
+                <Input placeholder="e.g. Jinnicore Technologies" value={currentDomain.companyName || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, companyName: e.target.value })} />
+                <div className="text-xs text-muted-foreground mt-1 flex items-center">
+                  Preview: <span className="line-through decoration-red-500 ml-1">PropNex AI</span> <span className="mx-1">→</span> <span className="font-semibold text-emerald-500">{currentDomain.companyName || "Your Company Name"}</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-gray-300">Support Email <span className="text-red-500">*</span></Label>
-                <Input type="email" placeholder="support@domain.com" value={currentDomain.supportEmail || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, supportEmail: e.target.value })} className="bg-[#2a2a2a] border-[#333] text-white placeholder:text-gray-500" />
+                <Label>Support Email <span className="text-red-500">*</span></Label>
+                <Input type="email" placeholder="support@domain.com" value={currentDomain.supportEmail || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, supportEmail: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label className="text-gray-300">Support Phone (Optional)</Label>
-                <Input placeholder="+91 9876543210" value={currentDomain.supportPhone || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, supportPhone: e.target.value })} className="bg-[#2a2a2a] border-[#333] text-white placeholder:text-gray-500" />
+                <Label>Support Phone (Optional)</Label>
+                <Input placeholder="+91 9876543210" value={currentDomain.supportPhone || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, supportPhone: e.target.value })} />
               </div>
             </div>
 
             {/* Column 2: Branding */}
-            <div className="space-y-4 border-r border-[#333] pr-6">
-              <h3 className="text-lg font-semibold border-b border-[#333] pb-2 text-white">Branding</h3>
+            <div className="space-y-4 border-r border-border pr-6">
+              <h3 className="text-lg font-semibold border-b border-border pb-2">Branding</h3>
               <div className="space-y-2">
-                <Label className="text-gray-300">Navbar Logo URL <span className="text-red-500">*</span></Label>
+                <Label>Navbar Logo URL <span className="text-red-500">*</span></Label>
                 <div className="flex gap-2">
-                  <Input placeholder="https://... or upload" value={currentDomain.logoUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, logoUrl: e.target.value })} className="bg-[#2a2a2a] border-[#333] text-white placeholder:text-gray-500" />
-                  <Button variant="outline" size="icon" className="shrink-0 bg-[#2a2a2a] border-[#333] text-gray-300 hover:bg-[#333] hover:text-white" onClick={() => document.getElementById('logo-upload')?.click()}>
+                  <Input placeholder="https://... or upload" value={currentDomain.logoUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, logoUrl: e.target.value })} />
+                  <Button variant="outline" size="icon" className="shrink-0" onClick={() => document.getElementById('logo-upload')?.click()}>
                     {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   </Button>
                   <input type="file" id="logo-upload" className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'logo')} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-gray-300">Favicon URL <span className="text-red-500">*</span></Label>
+                <Label>Favicon URL <span className="text-red-500">*</span></Label>
                 <div className="flex gap-2">
-                  <Input placeholder="https://... or upload" value={currentDomain.faviconUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, faviconUrl: e.target.value })} className="bg-[#2a2a2a] border-[#333] text-white placeholder:text-gray-500" />
-                  <Button variant="outline" size="icon" className="shrink-0 bg-[#2a2a2a] border-[#333] text-gray-300 hover:bg-[#333] hover:text-white" onClick={() => document.getElementById('favicon-upload')?.click()}>
+                  <Input placeholder="https://... or upload" value={currentDomain.faviconUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, faviconUrl: e.target.value })} />
+                  <Button variant="outline" size="icon" className="shrink-0" onClick={() => document.getElementById('favicon-upload')?.click()}>
                     {uploadingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   </Button>
                   <input type="file" id="favicon-upload" className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'favicon')} />
@@ -340,24 +340,24 @@ export default function WhiteLabelManager() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-gray-300">Instagram Link {enableInstagram && <span className="text-red-500">*</span>}</Label>
-                  <Switch checked={enableInstagram} onCheckedChange={setEnableInstagram} className="data-[state=checked]:bg-emerald-500" />
+                  <Label>Instagram Link {enableInstagram && <span className="text-red-500">*</span>}</Label>
+                  <Switch checked={enableInstagram} onCheckedChange={setEnableInstagram} />
                 </div>
-                <Input placeholder="https://instagram.com/..." value={currentDomain.instagramUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, instagramUrl: e.target.value })} disabled={!enableInstagram} className="bg-[#2a2a2a] border-[#333] text-white placeholder:text-gray-500" />
+                <Input placeholder="https://instagram.com/..." value={currentDomain.instagramUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, instagramUrl: e.target.value })} disabled={!enableInstagram} />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-gray-300">LinkedIn Link {enableLinkedIn && <span className="text-red-500">*</span>}</Label>
-                  <Switch checked={enableLinkedIn} onCheckedChange={setEnableLinkedIn} className="data-[state=checked]:bg-emerald-500" />
+                  <Label>LinkedIn Link {enableLinkedIn && <span className="text-red-500">*</span>}</Label>
+                  <Switch checked={enableLinkedIn} onCheckedChange={setEnableLinkedIn} />
                 </div>
-                <Input placeholder="https://linkedin.com/..." value={currentDomain.linkedinUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, linkedinUrl: e.target.value })} disabled={!enableLinkedIn} className="bg-[#2a2a2a] border-[#333] text-white placeholder:text-gray-500" />
+                <Input placeholder="https://linkedin.com/..." value={currentDomain.linkedinUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, linkedinUrl: e.target.value })} disabled={!enableLinkedIn} />
               </div>
             </div>
 
             {/* Column 3: Page Visibility */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b border-[#333] pb-2 text-white">Page Visibility</h3>
-              <p className="text-xs text-gray-400">Select which pages should be visible on this domain. By turning a switch OFF, that specific page will not show in navbars and footers for the user.</p>
+              <h3 className="text-lg font-semibold border-b border-border pb-2">Page Visibility</h3>
+              <p className="text-xs text-muted-foreground">Select which pages should be visible on this domain. By turning a switch OFF, that specific page will not show in navbars and footers for the user.</p>
               <div className="grid grid-cols-2 gap-y-5 gap-x-2 mt-4">
                 {Object.keys(defaultPages).map((page) => (
                   <div key={page} className="flex flex-col gap-1">
@@ -366,12 +366,11 @@ export default function WhiteLabelManager() {
                         id={page}
                         checked={pagesConfig[page as keyof typeof defaultPages]}
                         onCheckedChange={(c) => setPagesConfig({ ...pagesConfig, [page]: c })}
-                        className="data-[state=checked]:bg-emerald-500"
                       />
-                      <Label htmlFor={page} className="capitalize text-sm text-gray-300">{page}</Label>
+                      <Label htmlFor={page} className="capitalize text-sm">{page}</Label>
                     </div>
                     {!pagesConfig[page as keyof typeof defaultPages] && (
-                      <span className="text-[10px] text-red-400/80 leading-tight">
+                      <span className="text-[10px] text-red-500 leading-tight">
                         Will not show in <span className="font-semibold">{currentDomain.domain || "domain.com"}</span>
                       </span>
                     )}
@@ -382,9 +381,9 @@ export default function WhiteLabelManager() {
           </div>
 
 
-          <div className="flex justify-end gap-4 border-t border-[#333] pt-4 mt-2">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)} className="bg-[#2a2a2a] border-[#333] text-gray-300 hover:bg-[#333] hover:text-white">Cancel</Button>
-            <Button onClick={handleAddSubmit} className="bg-emerald-600 hover:bg-emerald-700 text-white border-0">Save & Configure DNS</Button>
+          <div className="flex justify-end gap-4 border-t border-border pt-4 mt-2">
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddSubmit}>Save & Configure DNS</Button>
           </div>
         </DialogContent>
       </Dialog>
