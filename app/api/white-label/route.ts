@@ -40,6 +40,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    if (domain.toLowerCase() === "propnexai.com" || domain.toLowerCase() === "www.propnexai.com") {
+      return NextResponse.json({ error: "Cannot use the primary platform domain (propnexai.com)" }, { status: 400 });
+    }
+
     // Check if domain exists
     const existing = await prisma.whiteLabelDomain.findUnique({
       where: { domain },

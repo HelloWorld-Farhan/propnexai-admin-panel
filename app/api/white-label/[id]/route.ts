@@ -28,6 +28,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    if (domain && (domain.toLowerCase() === "propnexai.com" || domain.toLowerCase() === "www.propnexai.com")) {
+      return NextResponse.json({ error: "Cannot use the primary platform domain (propnexai.com)" }, { status: 400 });
+    }
+
     const updatedDomain = await prisma.whiteLabelDomain.update({
       where: { id },
       data: {
