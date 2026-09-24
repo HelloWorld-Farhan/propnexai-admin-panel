@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Server,
+  Globe,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/agents", label: "Agent Library", icon: Bot },
   { href: "/jobs", label: "Jobs", icon: Briefcase }, // Added Jobs
   { href: "/infra-costs", label: "Infra Costs", icon: Server },
+  { href: "/white-label", label: "White Labeling", icon: Globe },
   { href: "/support", label: "Support", icon: LifeBuoy },
 ];
 

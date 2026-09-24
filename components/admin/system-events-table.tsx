@@ -43,6 +43,9 @@ const EVENT_COLORS: Record<string, string> = {
   VERIFICATION_UPDATED:  "bg-blue-500/10 text-blue-400 border-blue-500/20",
   JOB_POSTED:            "bg-orange-500/10 text-orange-400 border-orange-500/20",
   FORM_INFO:             "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  DOMAIN_ADDED:          "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+  DOMAIN_EDITED:         "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  DOMAIN_DELETED:        "bg-rose-500/10 text-rose-400 border-rose-500/20",
 };
 
 const getEventColor = (type: string) =>
