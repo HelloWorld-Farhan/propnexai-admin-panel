@@ -83,7 +83,17 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
   const columns: ColumnDef<AgentEntry>[] = [
     { 
       accessorKey: "name", 
-      header: "Name" 
+      header: "Name",
+      cell: ({ row }) => (
+        <div className="flex flex-col gap-1 items-start">
+          <span className="font-medium">{row.original.name}</span>
+          {row.original.industryCategory && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-zinc-800 text-zinc-300 border-zinc-700">
+              {row.original.industryCategory}
+            </Badge>
+          )}
+        </div>
+      )
     },
     {
       accessorKey: "id",
@@ -500,7 +510,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={entries} searchKeys={["name", "category", "profile", "id"]} searchPlaceholder="Search by name, ID or work..." />
+      <DataTable columns={columns} data={entries} searchKeys={["name", "category", "industryCategory", "profile", "id"]} searchPlaceholder="Search by name, ID, work or category..." />
 
       <Dialog open={!!deleteId} onOpenChange={(val) => !val && setDeleteId(null)}>
         <DialogContent>
