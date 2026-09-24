@@ -16,6 +16,7 @@ const agentSchema = z.object({
   name: z.string().min(1),
   profile: z.string().min(1),
   category: z.string().min(1),
+  industryCategory: z.string().optional(),
   tone: z.string().default("Professional"),
   language: z.string().default("English (US)"),
   voice: z.string().default("Female"),
