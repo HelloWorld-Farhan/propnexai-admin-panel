@@ -34,7 +34,8 @@ type AgentEntry = {
   slug: string;
   name: string;
   profile: string;
-  category: string;
+  category: string; // Used as Agent Role
+  industryCategory: string; // E.g., Health, Loan
   tone: string;
   language: string;
   voice: string;
@@ -51,6 +52,7 @@ const emptyForm = {
   name: "",
   profile: "",
   category: "",
+  industryCategory: "",
   tone: "",
   language: "",
   voice: "",
@@ -183,6 +185,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
       name: entry.name,
       profile: entry.profile ?? "",
       category: entry.category,
+      industryCategory: entry.industryCategory ?? "",
       tone: entry.tone ?? "",
       language: entry.language ?? "",
       voice: entry.voice ?? "",
@@ -249,6 +252,8 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
     }
   }
 
+  const uniqueCategories = Array.from(new Set(entries.map(e => e.industryCategory).filter(Boolean)));
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -292,6 +297,23 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                     }}
                   />
                   {errors.category && <p className="text-sm text-red-500">{errors.category}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Category (e.g. Health, Loan, Property)</Label>
+                  <Input
+                    list="industry-categories"
+                    placeholder="Type or select a category"
+                    value={form.industryCategory}
+                    onChange={(e) => {
+                      setForm({ ...form, industryCategory: e.target.value });
+                    }}
+                  />
+                  <datalist id="industry-categories">
+                    {uniqueCategories.map(cat => (
+                      <option key={cat} value={cat} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div className="space-y-2">
