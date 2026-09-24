@@ -196,9 +196,9 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
 
   function validateForm() {
     const newErrors: Record<string, string> = {};
-    if (!form.name.trim()) newErrors.name = "Name cannot be empty";
-    if (!form.category.trim()) newErrors.category = "Company Occupation cannot be empty";
-    if (!form.profile.trim()) newErrors.profile = "Company Info cannot be empty";
+    if (!form.name.trim()) newErrors.name = "Agent Name cannot be empty";
+    if (!form.category.trim()) newErrors.category = "Agent Role cannot be empty";
+    if (!form.profile.trim()) newErrors.profile = "Agent Info cannot be empty";
     if (!form.tone.trim()) newErrors.tone = "Tone cannot be empty";
     if (!form.language.trim()) newErrors.language = "Language cannot be empty";
     if (!form.voice.trim()) newErrors.voice = "Voice cannot be empty";
@@ -265,7 +265,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label>Name of Company</Label>
+                  <Label>Agent Name</Label>
                   <Input
                     value={form.name}
                     onChange={(e) => {
@@ -283,7 +283,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Company Occupation</Label>
+                  <Label>Agent Role</Label>
                   <Input
                     value={form.category}
                     onChange={(e) => {
@@ -359,7 +359,7 @@ export function AgentLibraryManager({ entries }: { entries: AgentEntry[] }) {
 
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label>Company Info</Label>
+                  <Label>Agent Info</Label>
                   <Textarea
                     className="h-32 min-h-[128px]"
                     value={form.profile}
