@@ -52,6 +52,8 @@ export default function WhiteLabelManager() {
   const [pagesConfig, setPagesConfig] = useState<typeof defaultPages>(defaultPages);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [enableInstagram, setEnableInstagram] = useState(true);
+  const [enableLinkedIn, setEnableLinkedIn] = useState(true);
 
 
   useEffect(() => {
@@ -76,6 +78,8 @@ export default function WhiteLabelManager() {
     setCurrentDomain({});
     setPagesConfig(defaultPages);
     setIsEditing(false);
+    setEnableInstagram(true);
+    setEnableLinkedIn(true);
     setIsModalOpen(true);
   };
 
@@ -83,6 +87,8 @@ export default function WhiteLabelManager() {
     setCurrentDomain(d);
     setPagesConfig(JSON.parse(d.pagesConfig || "{}"));
     setIsEditing(true);
+    setEnableInstagram(!!d.instagramUrl);
+    setEnableLinkedIn(!!d.linkedinUrl);
     setIsModalOpen(true);
   };
 
@@ -129,13 +135,18 @@ export default function WhiteLabelManager() {
   };
 
   const handleAddSubmit = async () => {
-    if (!currentDomain.domain || !currentDomain.companyName || !currentDomain.supportEmail || !currentDomain.logoUrl || !currentDomain.faviconUrl || !currentDomain.instagramUrl || !currentDomain.linkedinUrl) {
+    if (!currentDomain.domain || !currentDomain.companyName || !currentDomain.supportEmail || !currentDomain.logoUrl || !currentDomain.faviconUrl) {
       toast.error("Please fill all required fields (marked with *)");
       return;
     }
 
-    if (!validateUrl(currentDomain.instagramUrl) || !validateUrl(currentDomain.linkedinUrl)) {
-      toast.error("Social links must be valid URLs (e.g. https://instagram.com/...)");
+    if (enableInstagram && (!currentDomain.instagramUrl || !validateUrl(currentDomain.instagramUrl))) {
+      toast.error("Instagram link must be a valid URL (e.g. https://instagram.com/...)");
+      return;
+    }
+
+    if (enableLinkedIn && (!currentDomain.linkedinUrl || !validateUrl(currentDomain.linkedinUrl))) {
+      toast.error("LinkedIn link must be a valid URL (e.g. https://linkedin.com/...)");
       return;
     }
 
@@ -148,6 +159,8 @@ export default function WhiteLabelManager() {
     try {
       const payload = {
         ...currentDomain,
+        instagramUrl: enableInstagram ? currentDomain.instagramUrl : "",
+        linkedinUrl: enableLinkedIn ? currentDomain.linkedinUrl : "",
         pagesConfig,
       };
 
@@ -209,6 +222,18 @@ export default function WhiteLabelManager() {
           </Button>
         </CardHeader>
         <CardContent>
+          <div className="mb-6 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex gap-3 text-sm text-blue-200">
+            <AlertCircle className="h-5 w-5 shrink-0 text-blue-400" />
+            <div>
+              <p className="font-semibold text-blue-100 mb-1">Important: DNS Configuration for White-Label Domains</p>
+              <p>For any website to perfectly connect with our server, you must instruct the client (or configure it in GoDaddy, Hostinger, etc.) to add the following <strong>CNAME record</strong>.</p>
+              <p className="mt-2 font-mono text-xs bg-black/20 p-2 rounded w-fit text-blue-300">
+                Type: CNAME <br/>
+                Host / Name: @ (or www)<br/>
+                Value / Target: cname.propnexai.com
+              </p>
+            </div>
+          </div>
           {loading ? (
             <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
           ) : (
@@ -318,12 +343,18 @@ export default function WhiteLabelManager() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Instagram Link <span className="text-red-500">*</span></Label>
-                <Input placeholder="https://instagram.com/..." value={currentDomain.instagramUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, instagramUrl: e.target.value })} />
+                <div className="flex items-center justify-between">
+                  <Label>Instagram Link {enableInstagram && <span className="text-red-500">*</span>}</Label>
+                  <Switch checked={enableInstagram} onCheckedChange={setEnableInstagram} />
+                </div>
+                <Input placeholder="https://instagram.com/..." value={currentDomain.instagramUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, instagramUrl: e.target.value })} disabled={!enableInstagram} />
               </div>
               <div className="space-y-2">
-                <Label>LinkedIn Link <span className="text-red-500">*</span></Label>
-                <Input placeholder="https://linkedin.com/..." value={currentDomain.linkedinUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, linkedinUrl: e.target.value })} />
+                <div className="flex items-center justify-between">
+                  <Label>LinkedIn Link {enableLinkedIn && <span className="text-red-500">*</span>}</Label>
+                  <Switch checked={enableLinkedIn} onCheckedChange={setEnableLinkedIn} />
+                </div>
+                <Input placeholder="https://linkedin.com/..." value={currentDomain.linkedinUrl || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, linkedinUrl: e.target.value })} disabled={!enableLinkedIn} />
               </div>
             </div>
 
