@@ -1072,7 +1072,7 @@ export function JobApplicationNotification() {
       });
       if (res.ok) {
         setOpen(false);
-        router.push("/jobs?tab=applications");
+        router.push("/jobs?tab=applications&highlight=" + id);
         fetchPending(); // Refresh list
       }
     } catch (err) {

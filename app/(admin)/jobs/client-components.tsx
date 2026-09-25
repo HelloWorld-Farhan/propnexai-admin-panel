@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Briefcase, Info, Pencil, Trash, Search } from "lucide-react";
@@ -150,10 +151,35 @@ export function JobPostingsTable({ jobs }: { jobs: any[] }) {
 }
 
 export function ApplicationsTable({ applications }: { applications: any[] }) {
+  const searchParams = useSearchParams();
+  const initialHighlight = searchParams.get("highlight");
+
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [infoApp, setInfoApp] = useState<any>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  const rowRefs = useRef<{ [key: string]: HTMLTableRowElement | null }>({});
+
+  useEffect(() => {
+    if (initialHighlight) {
+      setHighlightId(initialHighlight);
+      
+      // Scroll into view after a short delay
+      setTimeout(() => {
+        if (rowRefs.current[initialHighlight]) {
+          rowRefs.current[initialHighlight]?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 300);
+
+      // Stop blinking after 5 seconds
+      const timer = setTimeout(() => {
+        setHighlightId(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [initialHighlight]);
 
   const filteredApps = applications.filter((app) => {
     const s = search.toLowerCase();
@@ -215,7 +241,17 @@ export function ApplicationsTable({ applications }: { applications: any[] }) {
                 </tr>
               ) : (
                 filteredApps.map((app: any) => (
-                  <tr key={app.id} className="border-b transition-colors hover:bg-muted/50">
+                  <tr 
+                    key={app.id} 
+                    ref={(el) => {
+                      if (el) rowRefs.current[app.id] = el;
+                    }}
+                    className={`border-b transition-all duration-500 ${
+                      app.id === highlightId 
+                        ? "bg-blue-500/20 shadow-[inset_0_0_10px_rgba(59,130,246,0.5)] animate-pulse" 
+                        : "hover:bg-muted/50"
+                    }`}
+                  >
                     <td className="p-4 align-middle font-medium">
                       {app.firstName} {app.lastName}
                     </td>
