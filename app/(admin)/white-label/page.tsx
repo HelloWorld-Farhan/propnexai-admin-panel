@@ -20,7 +20,7 @@ export default function WhiteLabelPage() {
             <span className="font-semibold text-blue-400 flex items-center justify-end gap-1 text-sm"><Send className="h-3 w-3" /> Send to Domain Owner</span>
             <span className="text-xs text-muted-foreground">Client needs this for DNS</span>
           </div>
-          <a href="https://drive.google.com/file/d/19KNdR7N_-f0EszbKkyQoxaqmKvZw-JCu/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-blue-600 text-white shadow hover:bg-blue-600/90 h-9 px-4 py-2 gap-2 whitespace-nowrap">
+          <a href="https://drive.google.com/file/d/14bqt_FBH0IcHGjEOrVAwJQdHrA-rfPhb/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-blue-600 text-white shadow hover:bg-blue-600/90 h-9 px-4 py-2 gap-2 whitespace-nowrap">
             <FileText className="h-4 w-4" />
             PDF Guide
           </a>
