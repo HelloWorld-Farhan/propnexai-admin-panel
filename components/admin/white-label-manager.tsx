@@ -34,13 +34,10 @@ type Domain = {
 };
 
 const defaultPages = {
-  home: true,
   features: true,
   product: true,
   pricing: true,
-  partners: true,
   docs: true,
-  company: true,
   dashboard: true,
 };
 
