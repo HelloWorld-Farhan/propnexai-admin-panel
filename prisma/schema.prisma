@@ -1930,6 +1930,7 @@ model WhiteLabelDomain {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   domain          String   @unique
   companyName     String
+  tabTitle        String?
   supportEmail    String
   supportPhone    String?
   logoUrl         String?

@@ -13,6 +13,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const {
       domain,
       companyName,
+      tabTitle,
       supportEmail,
       supportPhone,
       logoUrl,
@@ -37,6 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       data: {
         domain,
         companyName,
+        tabTitle: tabTitle !== undefined ? tabTitle : existing.tabTitle,
         supportEmail,
         supportPhone: supportPhone || null,
         logoUrl: logoUrl || null,

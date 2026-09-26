@@ -21,6 +21,7 @@ type Domain = {
   id: string;
   domain: string;
   companyName: string;
+  tabTitle?: string;
   supportEmail: string;
   supportPhone?: string;
   logoUrl?: string;
@@ -305,8 +306,12 @@ export default function WhiteLabelManager() {
               <div className="space-y-2">
                 <Label>Company Name <span className="text-red-500">*</span></Label>
                 <Input placeholder="e.g. Jinnicore Technologies" value={currentDomain.companyName || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, companyName: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Tab Title (Shows next to Favicon) <span className="text-red-500">*</span></Label>
+                <Input placeholder="e.g. Jinni Dashboard" value={currentDomain.tabTitle || ""} onChange={(e) => setCurrentDomain({ ...currentDomain, tabTitle: e.target.value })} />
                 <div className="text-xs text-muted-foreground mt-1 flex items-center">
-                  Preview: <span className="line-through decoration-red-500 ml-1">PropNex AI</span> <span className="mx-1">→</span> <span className="font-semibold text-emerald-500">{currentDomain.companyName || "Your Company Name"}</span>
+                  Preview: <span className="line-through decoration-red-500 ml-1">PropNex AI</span> <span className="mx-1">→</span> <span className="font-semibold text-emerald-500">{currentDomain.tabTitle || currentDomain.companyName || "Your Tab Title"}</span>
                 </div>
               </div>
               <div className="space-y-2">

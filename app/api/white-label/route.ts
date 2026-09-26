@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     const {
       domain,
       companyName,
+      tabTitle,
       supportEmail,
       supportPhone,
       logoUrl,
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
       data: {
         domain,
         companyName,
+        tabTitle: tabTitle || null,
         supportEmail,
         supportPhone: supportPhone || null,
         logoUrl: logoUrl || null,
