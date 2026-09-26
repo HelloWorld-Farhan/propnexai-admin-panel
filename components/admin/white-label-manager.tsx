@@ -52,6 +52,7 @@ export default function WhiteLabelManager() {
   const [pagesConfig, setPagesConfig] = useState<typeof defaultPages>(defaultPages);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [domainToDelete, setDomainToDelete] = useState<string | null>(null);
   const [enableInstagram, setEnableInstagram] = useState(true);
   const [enableLinkedIn, setEnableLinkedIn] = useState(true);
 
@@ -85,7 +86,11 @@ export default function WhiteLabelManager() {
 
   const handleOpenEdit = (d: Domain) => {
     setCurrentDomain(d);
-    setPagesConfig(JSON.parse(d.pagesConfig || "{}"));
+    try {
+      setPagesConfig(JSON.parse(d.pagesConfig || "{}"));
+    } catch {
+      setPagesConfig(defaultPages);
+    }
     setIsEditing(true);
     setEnableInstagram(!!d.instagramUrl);
     setEnableLinkedIn(!!d.linkedinUrl);
@@ -188,16 +193,18 @@ export default function WhiteLabelManager() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to permanently delete this domain?")) return;
+  const handleDeleteConfirm = async () => {
+    if (!domainToDelete) return;
     try {
-      const res = await fetch(`/api/white-label/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/white-label/${domainToDelete}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("Domain removed permanently.");
         fetchDomains();
       }
     } catch (e) {
       toast.error("Delete failed");
+    } finally {
+      setDomainToDelete(null);
     }
   };
 
@@ -253,16 +260,13 @@ export default function WhiteLabelManager() {
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => checkRealTimeStatus(d.id)} title="Check Status">
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => window.open(`https://${d.domain}`, "_blank")} title="Preview">
+                            <Button variant="ghost" size="sm" onClick={() => window.open(`https://${d.domain}`, "_blank")} title="Preview" className="hover:bg-muted/50 hover:text-foreground text-muted-foreground transition-colors">
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(d)} title="Edit">
+                            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(d)} title="Edit" className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
                               <Edit className="h-4 w-4 text-blue-400" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(d.id)} title="Delete">
+                            <Button variant="ghost" size="sm" onClick={() => setDomainToDelete(d.id)} title="Delete" className="hover:bg-red-500/10 hover:text-red-500 transition-colors">
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
                           </div>
@@ -411,6 +415,22 @@ export default function WhiteLabelManager() {
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
               Done
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={!!domainToDelete} onOpenChange={(open) => !open && setDomainToDelete(null)}>
+        <DialogContent className="border-border bg-background">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Trash2 className="h-5 w-5 text-red-500" /> Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete this domain? This action cannot be undone and will immediately remove white-label access for this client.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-4 mt-4">
+            <Button variant="outline" onClick={() => setDomainToDelete(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>Delete Domain</Button>
           </div>
         </DialogContent>
       </Dialog>
