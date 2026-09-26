@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PropNex Admin",
-  description: "PropNex AI platform administration panel",
+  title: "Jinni Admin",
+  description: "Jinni AI platform administration panel",
 };
 
 export default function RootLayout({
