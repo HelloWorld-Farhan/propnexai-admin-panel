@@ -177,7 +177,7 @@ export default function WhiteLabelManager() {
         instagramUrl: enableInstagram ? currentDomain.instagramUrl : "",
         linkedinUrl: enableLinkedIn ? currentDomain.linkedinUrl : "",
         pagesConfig,
-        status: isDeploying ? "ACTIVE" : (currentDomain.status || "PENDING")
+        status: "ACTIVE"
       };
 
       const url = isEditing ? `/api/white-label/${currentDomain.id}` : "/api/white-label";
@@ -311,12 +311,8 @@ export default function WhiteLabelManager() {
                         </td>
                         <td className="p-4 text-muted-foreground">{d.companyName}</td>
                         <td className="p-4">
-                          <Badge variant="outline" className={
-                            d.status === "ACTIVE" ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20" :
-                            d.status === "FAILED" ? "bg-red-500/10 text-red-500 hover:bg-red-500/20" :
-                            "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
-                          }>
-                            {d.status || "PENDING"}
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">
+                            ACTIVE
                           </Badge>
                         </td>
                         <td className="p-4 text-right">
