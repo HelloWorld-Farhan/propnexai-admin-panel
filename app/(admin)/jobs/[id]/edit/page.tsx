@@ -17,6 +17,8 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [isCustomLocation, setIsCustomLocation] = useState(false);
+  const [customLocationValue, setCustomLocationValue] = useState("");
   
   const [formData, setFormData] = useState({
     title: "",
@@ -48,6 +50,10 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
             knowledge: job.knowledge || "",
             lastDate: job.lastDate ? new Date(job.lastDate).toISOString().split('T')[0] : "",
           });
+          if (job.location && !["Remote", "On-site", "Hybrid"].includes(job.location)) {
+            setIsCustomLocation(true);
+            setCustomLocationValue(job.location);
+          }
         }
         setFetching(false);
       })
@@ -205,7 +211,18 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
               </div>
               <div className="space-y-2">
                 <Label>Location</Label>
-                <Select value={formData.location} onValueChange={(value) => handleChange("location", value)}>
+                <Select 
+                  value={isCustomLocation ? "Custom" : formData.location} 
+                  onValueChange={(value) => {
+                    if (value === "Custom") {
+                      setIsCustomLocation(true);
+                      handleChange("location", customLocationValue);
+                    } else {
+                      setIsCustomLocation(false);
+                      handleChange("location", value);
+                    }
+                  }}
+                >
                   <SelectTrigger className={errors.location ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select location" />
                   </SelectTrigger>
@@ -213,8 +230,20 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
                     <SelectItem value="Remote">Remote</SelectItem>
                     <SelectItem value="On-site">On-site</SelectItem>
                     <SelectItem value="Hybrid">Hybrid</SelectItem>
+                    <SelectItem value="Custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
+                {isCustomLocation && (
+                  <Input 
+                    placeholder="Enter custom location" 
+                    value={customLocationValue}
+                    onChange={(e) => {
+                      setCustomLocationValue(e.target.value);
+                      handleChange("location", e.target.value);
+                    }}
+                    className="mt-2"
+                  />
+                )}
                 {errors.location && <p className="text-xs text-red-500">{errors.location}</p>}
               </div>
             </div>
