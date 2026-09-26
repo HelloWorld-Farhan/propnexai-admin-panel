@@ -63,6 +63,7 @@ export default function WhiteLabelManager() {
   const [passwordInput, setPasswordInput] = useState("");
   const [deploymentStep, setDeploymentStep] = useState(0);
   const [deploymentError, setDeploymentError] = useState("");
+  const [pendingAction, setPendingAction] = useState<"DEPLOY" | "DELETE" | null>(null);
 
   const filteredDomains = domains.filter(d => 
     (d.domain && d.domain.toLowerCase().includes(searchQuery.toLowerCase())) || 
@@ -222,6 +223,7 @@ export default function WhiteLabelManager() {
             setIsPasswordModalOpen(false);
             setDeploymentStep(0);
             setPasswordInput("");
+            setPendingAction(null);
             toast.success("Domain successfully deployed and live!");
             fetchDomains();
           }, 2000);
@@ -230,19 +232,32 @@ export default function WhiteLabelManager() {
     }, 1500);
   };
 
-  const handleDeleteConfirm = async () => {
+  const executeDelete = async () => {
     if (!domainToDelete) return;
-    try {
-      const res = await fetch(`/api/white-label/${domainToDelete}`, { method: "DELETE" });
-      if (res.ok) {
-        toast.success("Domain removed permanently.");
-        fetchDomains();
-      }
-    } catch (e) {
-      toast.error("Delete failed");
-    } finally {
-      setDomainToDelete(null);
-    }
+    setDeploymentStep(5);
+    
+    setTimeout(() => {
+      setDeploymentStep(6);
+      setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/white-label/${domainToDelete}`, { method: "DELETE" });
+          if (res.ok) {
+            toast.success("Domain removed permanently.");
+            fetchDomains();
+          } else {
+            toast.error("Failed to delete from database");
+          }
+        } catch (e) {
+          toast.error("Delete failed");
+        } finally {
+          setIsPasswordModalOpen(false);
+          setDomainToDelete(null);
+          setPendingAction(null);
+          setDeploymentStep(0);
+          setPasswordInput("");
+        }
+      }, 1500);
+    }, 1500);
   };
 
   const checkRealTimeStatus = async (id: string) => {
@@ -464,7 +479,7 @@ export default function WhiteLabelManager() {
           </div>
           <div className="flex justify-end gap-4">
             <Button variant="outline" onClick={() => { setIsDnsModalOpen(false); setIsModalOpen(true); }}>Back / Cancel</Button>
-            <Button onClick={() => { setIsDnsModalOpen(false); setIsPasswordModalOpen(true); }} disabled={saving}>
+            <Button onClick={() => { setIsDnsModalOpen(false); setPendingAction("DEPLOY"); setIsPasswordModalOpen(true); }} disabled={saving}>
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Done
             </Button>
@@ -473,7 +488,7 @@ export default function WhiteLabelManager() {
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={!!domainToDelete} onOpenChange={(open) => !open && setDomainToDelete(null)}>
+      <Dialog open={!!domainToDelete && pendingAction !== "DELETE"} onOpenChange={(open) => !open && setDomainToDelete(null)}>
         <DialogContent className="border-border bg-background">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Trash2 className="h-5 w-5 text-red-500" /> Confirm Deletion</DialogTitle>
@@ -483,7 +498,10 @@ export default function WhiteLabelManager() {
           </DialogHeader>
           <div className="flex justify-end gap-4 mt-4">
             <Button variant="outline" onClick={() => setDomainToDelete(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>Delete Domain</Button>
+            <Button variant="destructive" onClick={() => {
+              setPendingAction("DELETE");
+              setIsPasswordModalOpen(true);
+            }}>Delete Domain</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -494,12 +512,20 @@ export default function WhiteLabelManager() {
            setIsPasswordModalOpen(false);
            setPasswordInput("");
            setDeploymentError("");
+           if (pendingAction === "DELETE") setDomainToDelete(null);
+           setPendingAction(null);
         }
       }}>
         <DialogContent className="border-border bg-background">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">Server Configuration Authentication</DialogTitle>
-            <DialogDescription>To finalize deployment and configure the servers for this domain, please enter the administrator password.</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              {pendingAction === "DELETE" ? "Authenticate Deletion" : "Server Configuration Authentication"}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingAction === "DELETE" 
+                ? "Please enter the administrator password to confirm the permanent deletion of this domain." 
+                : "To finalize deployment and configure the servers for this domain, please enter the administrator password."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {deploymentStep === 0 ? (
@@ -512,41 +538,63 @@ export default function WhiteLabelManager() {
                   placeholder="Enter password..."
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      if (passwordInput === "Propnexai@123") startDeploymentAnimation();
-                      else setDeploymentError("Incorrect password");
+                      if (passwordInput === "Propnexai@123") {
+                        if (pendingAction === "DELETE") executeDelete();
+                        else startDeploymentAnimation();
+                      } else setDeploymentError("Incorrect password");
                     }
                   }}
                 />
                 {deploymentError && <p className="text-sm text-red-500">{deploymentError}</p>}
                 <div className="flex justify-end gap-2 mt-2">
-                  <Button variant="outline" onClick={() => setIsPasswordModalOpen(false)}>Cancel</Button>
-                  <Button onClick={() => {
+                  <Button variant="outline" onClick={() => {
+                    setIsPasswordModalOpen(false);
+                    if (pendingAction === "DELETE") setDomainToDelete(null);
+                    setPendingAction(null);
+                  }}>Cancel</Button>
+                  <Button variant={pendingAction === "DELETE" ? "destructive" : "default"} onClick={() => {
                     if (passwordInput === "Propnexai@123") {
-                      startDeploymentAnimation();
+                      if (pendingAction === "DELETE") executeDelete();
+                      else startDeploymentAnimation();
                     } else {
                       setDeploymentError("Incorrect password");
                     }
-                  }}>Authenticate & Deploy</Button>
+                  }}>{pendingAction === "DELETE" ? "Authenticate & Delete" : "Authenticate & Deploy"}</Button>
                 </div>
               </div>
             ) : (
               <div className="space-y-6 py-4">
-                <div className="flex items-center gap-3">
-                  {deploymentStep === 1 ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                  <span className={deploymentStep === 1 ? "text-blue-500 font-medium" : "text-muted-foreground"}>Saving domain configuration...</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  {deploymentStep < 2 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : deploymentStep === 2 ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                  <span className={deploymentStep === 2 ? "text-blue-500 font-medium" : deploymentStep < 2 ? "text-muted-foreground opacity-50" : "text-muted-foreground"}>Generating Nginx SSL & routing...</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  {deploymentStep < 3 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : deploymentStep === 3 ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                  <span className={deploymentStep === 3 ? "text-blue-500 font-medium" : deploymentStep < 3 ? "text-muted-foreground opacity-50" : "text-muted-foreground"}>Restarting web servers...</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  {deploymentStep < 4 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                  <span className={deploymentStep === 4 ? "text-emerald-500 font-medium" : "text-muted-foreground opacity-50"}>Website ready for deployment!</span>
-                </div>
+                {pendingAction === "DELETE" ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      {deploymentStep === 5 ? <Loader2 className="h-5 w-5 animate-spin text-red-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                      <span className={deploymentStep === 5 ? "text-red-500 font-medium" : "text-muted-foreground"}>Removing domain from Nginx...</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {deploymentStep < 6 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : <Loader2 className="h-5 w-5 animate-spin text-red-500" />}
+                      <span className={deploymentStep === 6 ? "text-red-500 font-medium" : "text-muted-foreground opacity-50"}>Restarting web servers...</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3">
+                      {deploymentStep === 1 ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                      <span className={deploymentStep === 1 ? "text-blue-500 font-medium" : "text-muted-foreground"}>Saving domain configuration...</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {deploymentStep < 2 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : deploymentStep === 2 ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                      <span className={deploymentStep === 2 ? "text-blue-500 font-medium" : deploymentStep < 2 ? "text-muted-foreground opacity-50" : "text-muted-foreground"}>Generating Nginx SSL & routing...</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {deploymentStep < 3 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : deploymentStep === 3 ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                      <span className={deploymentStep === 3 ? "text-blue-500 font-medium" : deploymentStep < 3 ? "text-muted-foreground opacity-50" : "text-muted-foreground"}>Restarting web servers...</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {deploymentStep < 4 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                      <span className={deploymentStep === 4 ? "text-emerald-500 font-medium" : "text-muted-foreground opacity-50"}>Website ready for deployment!</span>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
