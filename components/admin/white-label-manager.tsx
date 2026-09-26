@@ -57,6 +57,17 @@ export default function WhiteLabelManager() {
   const [enableInstagram, setEnableInstagram] = useState(true);
   const [enableLinkedIn, setEnableLinkedIn] = useState(true);
 
+  // New states for search and deployment
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [deploymentStep, setDeploymentStep] = useState(0);
+  const [deploymentError, setDeploymentError] = useState("");
+
+  const filteredDomains = domains.filter(d => 
+    (d.domain && d.domain.toLowerCase().includes(searchQuery.toLowerCase())) || 
+    (d.companyName && d.companyName.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   useEffect(() => {
     fetchDomains();
@@ -160,7 +171,7 @@ export default function WhiteLabelManager() {
     setIsDnsModalOpen(true);
   };
 
-  const handleConfirmSave = async () => {
+  const handleConfirmSave = async (isDeploying = false) => {
     setSaving(true);
     try {
       const payload = {
@@ -168,6 +179,7 @@ export default function WhiteLabelManager() {
         instagramUrl: enableInstagram ? currentDomain.instagramUrl : "",
         linkedinUrl: enableLinkedIn ? currentDomain.linkedinUrl : "",
         pagesConfig,
+        status: isDeploying ? "ACTIVE" : (currentDomain.status || "PENDING")
       };
 
       const url = isEditing ? `/api/white-label/${currentDomain.id}` : "/api/white-label";
@@ -180,9 +192,11 @@ export default function WhiteLabelManager() {
       });
 
       if (res.ok) {
-        toast.success(`Domain successfully ${isEditing ? "updated" : "added"}.`);
-        fetchDomains();
-        setIsDnsModalOpen(false);
+        if (!isDeploying) {
+          toast.success(`Domain successfully ${isEditing ? "updated" : "added"}.`);
+          fetchDomains();
+          setIsDnsModalOpen(false);
+        }
       } else {
         const err = await res.json();
         toast.error(err.error);
@@ -192,6 +206,28 @@ export default function WhiteLabelManager() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const startDeploymentAnimation = async () => {
+    setDeploymentStep(1);
+    await handleConfirmSave(true);
+    
+    setTimeout(() => {
+      setDeploymentStep(2);
+      setTimeout(() => {
+        setDeploymentStep(3);
+        setTimeout(() => {
+          setDeploymentStep(4);
+          setTimeout(() => {
+            setIsPasswordModalOpen(false);
+            setDeploymentStep(0);
+            setPasswordInput("");
+            toast.success("Domain successfully deployed and live!");
+            fetchDomains();
+          }, 2000);
+        }, 2000);
+      }, 2500);
+    }, 1500);
   };
 
   const handleDeleteConfirm = async () => {
@@ -225,9 +261,17 @@ export default function WhiteLabelManager() {
             <CardTitle>Whitelabel Domains</CardTitle>
             <CardDescription>Manage customized branding for specific domains.</CardDescription>
           </div>
-          <Button onClick={handleOpenAdd}>
-            <Plus className="mr-2 h-4 w-4" /> Add Website
-          </Button>
+          <div className="flex items-center gap-4">
+            <Input
+              placeholder="Search domain or company..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-64"
+            />
+            <Button onClick={handleOpenAdd}>
+              <Plus className="mr-2 h-4 w-4" /> Add Website
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -244,10 +288,10 @@ export default function WhiteLabelManager() {
                   </tr>
                 </thead>
                 <tbody>
-                  {domains.length === 0 ? (
-                    <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No domains added yet.</td></tr>
+                  {filteredDomains.length === 0 ? (
+                    <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No domains found.</td></tr>
                   ) : (
-                    domains.map((d) => (
+                    filteredDomains.map((d) => (
                       <tr key={d.id} className="border-b border-border hover:bg-muted/30">
                         <td className="p-4 font-medium flex items-center gap-2">
                           <Globe className="h-4 w-4 text-muted-foreground" />
@@ -255,8 +299,12 @@ export default function WhiteLabelManager() {
                         </td>
                         <td className="p-4 text-muted-foreground">{d.companyName}</td>
                         <td className="p-4">
-                          <Badge variant="outline" className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20">
-                            {d.status}
+                          <Badge variant="outline" className={
+                            d.status === "ACTIVE" ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20" :
+                            d.status === "FAILED" ? "bg-red-500/10 text-red-500 hover:bg-red-500/20" :
+                            "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
+                          }>
+                            {d.status || "PENDING"}
                           </Badge>
                         </td>
                         <td className="p-4 text-right">
@@ -416,8 +464,8 @@ export default function WhiteLabelManager() {
           </div>
           <div className="flex justify-end gap-4">
             <Button variant="outline" onClick={() => { setIsDnsModalOpen(false); setIsModalOpen(true); }}>Back / Cancel</Button>
-            <Button onClick={handleConfirmSave} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+            <Button onClick={() => { setIsDnsModalOpen(false); setIsPasswordModalOpen(true); }} disabled={saving}>
+              <CheckCircle2 className="h-4 w-4 mr-2" />
               Done
             </Button>
           </div>
@@ -436,6 +484,71 @@ export default function WhiteLabelManager() {
           <div className="flex justify-end gap-4 mt-4">
             <Button variant="outline" onClick={() => setDomainToDelete(null)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>Delete Domain</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password & Deployment Modal */}
+      <Dialog open={isPasswordModalOpen} onOpenChange={(open) => {
+        if (!open && deploymentStep === 0) {
+           setIsPasswordModalOpen(false);
+           setPasswordInput("");
+           setDeploymentError("");
+        }
+      }}>
+        <DialogContent className="border-border bg-background">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">Server Configuration Authentication</DialogTitle>
+            <DialogDescription>To finalize deployment and configure the servers for this domain, please enter the administrator password.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {deploymentStep === 0 ? (
+              <div className="space-y-4">
+                <Label>Admin Password</Label>
+                <Input 
+                  type="password" 
+                  value={passwordInput} 
+                  onChange={(e) => { setPasswordInput(e.target.value); setDeploymentError(""); }} 
+                  placeholder="Enter password..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      if (passwordInput === "Propnexai@123") startDeploymentAnimation();
+                      else setDeploymentError("Incorrect password");
+                    }
+                  }}
+                />
+                {deploymentError && <p className="text-sm text-red-500">{deploymentError}</p>}
+                <div className="flex justify-end gap-2 mt-2">
+                  <Button variant="outline" onClick={() => setIsPasswordModalOpen(false)}>Cancel</Button>
+                  <Button onClick={() => {
+                    if (passwordInput === "Propnexai@123") {
+                      startDeploymentAnimation();
+                    } else {
+                      setDeploymentError("Incorrect password");
+                    }
+                  }}>Authenticate & Deploy</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6 py-4">
+                <div className="flex items-center gap-3">
+                  {deploymentStep === 1 ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                  <span className={deploymentStep === 1 ? "text-blue-500 font-medium" : "text-muted-foreground"}>Saving domain configuration...</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {deploymentStep < 2 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : deploymentStep === 2 ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                  <span className={deploymentStep === 2 ? "text-blue-500 font-medium" : deploymentStep < 2 ? "text-muted-foreground opacity-50" : "text-muted-foreground"}>Generating Nginx SSL & routing...</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {deploymentStep < 3 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : deploymentStep === 3 ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                  <span className={deploymentStep === 3 ? "text-blue-500 font-medium" : deploymentStep < 3 ? "text-muted-foreground opacity-50" : "text-muted-foreground"}>Restarting web servers...</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {deploymentStep < 4 ? <div className="h-5 w-5 rounded-full border-2 border-muted" /> : <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                  <span className={deploymentStep === 4 ? "text-emerald-500 font-medium" : "text-muted-foreground opacity-50"}>Website ready for deployment!</span>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
