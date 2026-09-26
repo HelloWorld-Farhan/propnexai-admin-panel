@@ -41,6 +41,13 @@ export async function createJobPosting(formData: FormData) {
   redirect("/jobs");
 }
 
+export async function getJobPosting(id: string) {
+  const job = await prisma.jobPosting.findUnique({
+    where: { id },
+  });
+  return { success: !!job, job };
+}
+
 export async function deleteJobPosting(id: string) {
   try {
     await prisma.jobPosting.delete({

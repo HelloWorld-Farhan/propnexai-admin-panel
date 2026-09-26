@@ -1,6 +1,6 @@
 "use client";
 
-import { updateJobPosting } from "../../actions";
+import { updateJobPosting, getJobPosting } from "../../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,8 +34,7 @@ export default function EditJobPage({ params }: { params: Promise<{ id: string }
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch(`/api/jobs/${resolvedParams.id}`)
-      .then(res => res.json())
+    getJobPosting(resolvedParams.id)
       .then(data => {
         if (data.success && data.job) {
           const job = data.job;
