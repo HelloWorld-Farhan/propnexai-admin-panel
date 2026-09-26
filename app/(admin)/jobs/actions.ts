@@ -37,6 +37,16 @@ export async function createJobPosting(formData: FormData) {
     },
   });
 
+  await prisma.systemEvent.create({
+    data: {
+      type: "JOB_POSTED",
+      title: "New Job Posted",
+      message: `Job posting created for "${title}" (ID: ${jobId})`,
+      entityType: "jobPosting",
+      entityId: jobId,
+    }
+  });
+
   revalidatePath("/jobs");
   redirect("/jobs");
 }
@@ -50,9 +60,21 @@ export async function getJobPosting(id: string) {
 
 export async function deleteJobPosting(id: string) {
   try {
+    const job = await prisma.jobPosting.findUnique({ where: { id } });
     await prisma.jobPosting.delete({
       where: { id },
     });
+    if (job) {
+      await prisma.systemEvent.create({
+        data: {
+          type: "JOB_DELETED",
+          title: "Job Deleted",
+          message: `Job posting "${job.title}" was deleted`,
+          entityType: "jobPosting",
+          entityId: id,
+        }
+      });
+    }
     revalidatePath("/jobs");
     return { success: true };
   } catch (error) {
@@ -100,6 +122,16 @@ export async function updateJobPosting(id: string, formData: FormData) {
       location: location || "Remote",
       lastDate: new Date(lastDateStr),
     },
+  });
+
+  await prisma.systemEvent.create({
+    data: {
+      type: "JOB_EDITED",
+      title: "Job Edited",
+      message: `Job posting updated for "${title}"`,
+      entityType: "jobPosting",
+      entityId: id,
+    }
   });
 
   revalidatePath("/jobs");
