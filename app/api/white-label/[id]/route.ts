@@ -3,12 +3,12 @@ import { requireAdminSession } from "@/lib/auth/server-session";
 import { prisma } from "@/lib/prisma";
 import { SystemEventType } from "@prisma/client";
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdminSession();
 
-
-    const id = params.id;
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
     const body = await req.json();
     const {
       domain,
@@ -65,11 +65,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdminSession();
 
-    const id = params.id;
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
     const existing = await prisma.whiteLabelDomain.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
