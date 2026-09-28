@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { safeCompare } from "@/lib/auth/credentials";
 import { getSession } from "@/lib/auth/server-session";
 import { UAParser } from "ua-parser-js";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
