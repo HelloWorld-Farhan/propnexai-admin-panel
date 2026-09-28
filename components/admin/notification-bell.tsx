@@ -1080,6 +1080,22 @@ export function JobApplicationNotification() {
     }
   }
 
+  async function handleDismiss(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    try {
+      const res = await fetch("/api/job-applications/unread", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        fetchPending(); // Refresh list silently
+      }
+    } catch (err) {
+      console.error("Failed to dismiss application", err);
+    }
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -1107,8 +1123,16 @@ export function JobApplicationNotification() {
           ) : (
             <div className="flex flex-col">
               {pending.map((app) => (
-                <div key={app.id} className="flex flex-col gap-2 border-b p-3 last:border-0">
-                  <div className="flex flex-col gap-1 min-w-0">
+                <div key={app.id} className="flex flex-col gap-2 border-b p-3 last:border-0 relative">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute right-2 top-2 h-6 w-6 text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                    onClick={(e) => handleDismiss(e, app.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <div className="flex flex-col gap-1 min-w-0 pr-6">
                     <p className="text-sm font-medium leading-snug truncate">
                       {app.firstName} {app.lastName}
                     </p>
