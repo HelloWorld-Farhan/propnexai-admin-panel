@@ -11,6 +11,7 @@ export async function createCompanyForAdmin(input: {
   cli: string; 
   pendingUserEmail?: string; 
   assignedNumber?: string;
+  domain?: string;
 }) {
   const name = input.name.trim();
   const cli = normalizeCli(input.cli);
@@ -31,6 +32,7 @@ export async function createCompanyForAdmin(input: {
         cli,
         companyCode,
         ownerUserId: null,
+        settings: input.domain ? { signupDomain: input.domain } : {},
       },
     });
 
@@ -168,6 +170,7 @@ export async function listCompaniesForAdmin() {
       assignedNumbers: ((company as any).phoneNumbers || []), // Return the full array with direction
       inboundNumbers: ((company as any).phoneNumbers || []).filter((p: any) => p.direction === "INBOUND" || p.direction === "BOTH" || p.direction == null).map((p: any) => ({ number: p.number, channels: p.channels })),
       outboundNumbers: ((company as any).phoneNumbers || []).filter((p: any) => p.direction === "OUTBOUND" || p.direction === "BOTH" || p.direction == null).map((p: any) => ({ number: p.number, channels: p.channels })),
+      settings: company.settings,
     };
   });
 }

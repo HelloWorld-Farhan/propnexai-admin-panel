@@ -39,6 +39,7 @@ export type CompanyRow = {
   outboundNumbers?: { number: string; channels: number | null }[];
   childCompanyCount: number;
   unverifiedChildCompanyCount: number;
+  settings?: any;
 };
 
 // Masked number display: shows •••last3, hover reveals full
@@ -148,7 +149,12 @@ export function CompaniesTable({
               {row.original.childCompanyCount} Sub-Companies <span>&rarr;</span>
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground">{row.original.slug}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-xs text-muted-foreground">{row.original.slug}</p>
+            <Badge variant="secondary" className="px-1.5 py-0 text-[9px] h-4 leading-none bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 rounded-sm font-medium border border-blue-500/20">
+              Domain - {row.original.settings?.signupDomain || "propnexai.com"}
+            </Badge>
+          </div>
         </div>
       ),
     },

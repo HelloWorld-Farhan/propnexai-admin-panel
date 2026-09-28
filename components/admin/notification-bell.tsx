@@ -38,6 +38,7 @@ export function ApprovalNotification() {
   const [name, setName] = useState("");
   const [cli, setCli] = useState("");
   const [assignedNumber, setAssignedNumber] = useState("");
+  const [domain, setDomain] = useState("propnexai.com");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +76,7 @@ export function ApprovalNotification() {
         name: name.trim(),
         cli: cli.trim().toUpperCase(),
         pendingUserEmail: verifyUser.email,
+        domain: domain.trim(),
       };
       if (assignedNumber.trim()) {
         payload.assignedNumber = assignedNumber.trim();
@@ -97,6 +99,7 @@ export function ApprovalNotification() {
       setName("");
       setCli("");
       setAssignedNumber("");
+      setDomain("propnexai.com");
       fetchPending();
       router.refresh();
     } catch {
@@ -270,6 +273,17 @@ export function ApprovalNotification() {
                   placeholder="+1 (555) 123-4567"
                   disabled={isSubmitting}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company-domain">Domain Origin</Label>
+                <Input
+                  id="company-domain"
+                  value={domain}
+                  onChange={(event) => setDomain(event.target.value)}
+                  placeholder="propnexai.com"
+                  disabled={isSubmitting}
+                />
+                <p className="text-[10px] text-muted-foreground">The white-label domain where the user registered.</p>
               </div>
               {error && (
                 <p className="text-sm text-destructive" role="alert">

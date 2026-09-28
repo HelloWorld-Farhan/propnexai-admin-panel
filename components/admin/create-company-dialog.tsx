@@ -32,6 +32,7 @@ export function CreateCompanyDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [cli, setCli] = useState("");
+  const [domain, setDomain] = useState("propnexai.com");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingCli, setIsGeneratingCli] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +44,7 @@ export function CreateCompanyDialog() {
   function resetForm() {
     setName("");
     setCli("");
+    setDomain("propnexai.com");
     setError(null);
     setCreated(null);
     setCopiedField(null);
@@ -78,6 +80,7 @@ export function CreateCompanyDialog() {
         body: JSON.stringify({
           name: name.trim(),
           cli: cli.trim().toUpperCase(),
+          domain: domain.trim(),
         }),
       });
 
@@ -276,6 +279,17 @@ export function CreateCompanyDialog() {
                   2-5 uppercase letters. Autogenerate derives a unique code from
                   the company name.
                 </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company-domain">Domain Origin</Label>
+                <Input
+                  id="company-domain"
+                  value={domain}
+                  onChange={(event) => setDomain(event.target.value)}
+                  placeholder="propnexai.com"
+                  disabled={isSubmitting}
+                />
+                <p className="text-[10px] text-muted-foreground">The white-label domain associated with this company.</p>
               </div>
               {error ? (
                 <p className="text-sm text-destructive" role="alert">

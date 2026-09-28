@@ -17,6 +17,7 @@ const schema = z.object({
     .regex(/^[A-Z]{2,5}$/, "CLI must be 2-5 uppercase letters"),
   pendingUserEmail: z.string().optional(),
   assignedNumber: z.string().optional(),
+  domain: z.string().optional(),
 });
 
 export async function POST(request: Request) {
