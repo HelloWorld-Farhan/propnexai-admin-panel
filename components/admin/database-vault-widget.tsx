@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, ShieldAlert, Lock, Unlock, Mail, Users } from "lucide-react";
 import axios from "axios";
 
+import useSWR from "swr";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Database, RefreshCw, Terminal, Activity, FileJson, Server, User, Briefcase, LayoutDashboard } from "lucide-react";
+
 export function DatabaseVaultWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<"IDLE" | "PASSWORD" | "OTP" | "UNLOCKED">("IDLE");
@@ -16,7 +20,21 @@ export function DatabaseVaultWidget() {
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [users, setUsers] = useState<any[]>([]);
+  
+  const [showExplorer, setShowExplorer] = useState(false);
+  const [activeTab, setActiveTab] = useState("users");
+
+  // Custom fetcher for POST requests
+  const fetcher = async (url: string) => {
+    const res = await axios.post(url, { vaultToken: otpToken, answer });
+    return res.data.data;
+  };
+
+  const { data: dbData, mutate, isValidating } = useSWR(
+    step === "UNLOCKED" ? "/api/admin/vault/unlock" : null,
+    fetcher,
+    { refreshInterval: 5000 } // Real-time polling every 5s
+  );
 
   const handleInit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +44,7 @@ export function DatabaseVaultWidget() {
       const res = await axios.post("/api/admin/vault/init", { password });
       setOtpToken(res.data.vaultToken);
       setStep("OTP");
-      setPassword(""); // Clear password
+      setPassword(""); 
     } catch (err: any) {
       setError(err.response?.data?.message || "Authentication failed");
     } finally {
@@ -39,8 +57,7 @@ export function DatabaseVaultWidget() {
     setError("");
     setLoading(true);
     try {
-      const res = await axios.post("/api/admin/vault/unlock", { vaultToken: otpToken, answer });
-      setUsers(res.data.users || []);
+      await mutate(); // Initial fetch
       setStep("UNLOCKED");
     } catch (err: any) {
       setError(err.response?.data?.message || "Invalid answer");
@@ -83,139 +100,165 @@ export function DatabaseVaultWidget() {
   }
 
   return (
-    <Card className="border-rose-500/50 relative overflow-hidden col-span-1 lg:col-span-3">
-      <CardHeader className="pb-4 border-b border-rose-500/20 bg-rose-500/5">
-        <CardTitle className="text-base font-semibold text-rose-500 flex items-center gap-2">
-          <ShieldAlert className="w-5 h-5" />
-          {step === "UNLOCKED" ? "Vault Unlocked" : "Restricted Vault Access"}
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => { setIsOpen(false); setStep("IDLE"); setUsers([]); }}
-            className="ml-auto text-muted-foreground hover:text-white"
-          >
-            Close Vault
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="p-0">
-        {(step === "IDLE" || step === "PASSWORD") && (
-          <div className="p-6 max-w-md mx-auto py-12 text-center">
-            <Lock className="w-12 h-12 text-rose-500 mx-auto mb-4 opacity-80" />
-            <h3 className="text-lg font-medium mb-2">Master Authentication Required</h3>
-            <p className="text-xs text-muted-foreground mb-6">
-              You are attempting to access the global user database. Please enter the master password to continue.
-            </p>
-            
-            <form onSubmit={handleInit} className="space-y-4">
-              <div className="relative">
+    <>
+      <Card className="border-rose-500/50 relative overflow-hidden bg-background">
+        <CardHeader className="pb-4 border-b border-rose-500/20 bg-rose-500/5">
+          <CardTitle className="text-base font-semibold text-rose-500 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4" />
+              {step === "UNLOCKED" ? "Vault Unlocked" : "Restricted Access"}
+            </span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => { setIsOpen(false); setStep("IDLE"); }}
+              className="w-6 h-6 text-muted-foreground hover:text-white"
+            >
+              ×
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent className="p-0">
+          {(step === "IDLE" || step === "PASSWORD") && (
+            <div className="p-4 text-center">
+              <Lock className="w-8 h-8 text-rose-500 mx-auto mb-2 opacity-80" />
+              <p className="text-[11px] text-muted-foreground mb-4">
+                Enter master password to initialize vault access protocols.
+              </p>
+              
+              <form onSubmit={handleInit} className="space-y-3">
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Master Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="bg-background/50 h-8 text-xs border-rose-500/30 pr-8"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white"
+                  >
+                    {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  </button>
+                </div>
+                {error && <p className="text-[10px] text-red-400 text-left">{error}</p>}
+                <Button type="submit" className="w-full h-8 text-xs bg-rose-600 hover:bg-rose-700" disabled={!password || loading}>
+                  {loading ? "Verifying..." : "Verify Identity"}
+                </Button>
+              </form>
+            </div>
+          )}
+
+          {step === "OTP" && (
+            <div className="p-4 text-center">
+              <Mail className="w-8 h-8 text-rose-500 mx-auto mb-2 opacity-80" />
+              <p className="text-[10px] text-muted-foreground mb-4">
+                Challenge sent to support@propnexai.com. Enter answer to unlock.
+              </p>
+              
+              <form onSubmit={handleUnlock} className="space-y-3">
                 <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Master Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-background/50 border-rose-500/30 focus-visible:ring-rose-500 pr-10"
+                  type="text"
+                  placeholder="Answer"
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  className="bg-background/50 h-8 text-center text-sm font-mono border-rose-500/30"
                   disabled={loading}
+                  autoComplete="off"
                 />
+                {error && <p className="text-[10px] text-red-400 text-left">{error}</p>}
+                <Button type="submit" className="w-full h-8 text-xs bg-rose-600 hover:bg-rose-700" disabled={!answer || loading}>
+                  {loading ? "Unlocking..." : "Unlock Vault"}
+                </Button>
+              </form>
+            </div>
+          )}
+
+          {step === "UNLOCKED" && (
+            <div className="p-4 text-center">
+              <Unlock className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
+              <p className="text-xs text-emerald-500/70 mb-4 font-medium">Vault Access Granted</p>
+              
+              <Button 
+                onClick={() => setShowExplorer(true)} 
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+              >
+                <Database className="w-4 h-4 mr-2" />
+                Launch Database Explorer
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showExplorer} onOpenChange={setShowExplorer}>
+        <DialogContent className="max-w-[90vw] w-full h-[90vh] flex flex-col p-0 border-rose-500/30 bg-[#0c0c0e]">
+          <DialogHeader className="p-4 border-b border-white/10 flex flex-row items-center justify-between">
+            <div>
+              <DialogTitle className="text-rose-500 flex items-center gap-2">
+                <Terminal className="w-5 h-5" /> Live Database Explorer
+              </DialogTitle>
+              <DialogDescription className="text-xs mt-1">
+                Raw JSON datastream from all collections. Data syncs in real-time.
+              </DialogDescription>
+            </div>
+            {isValidating && (
+              <div className="flex items-center gap-2 text-xs text-emerald-500 font-mono bg-emerald-500/10 px-3 py-1.5 rounded-full">
+                <RefreshCw className="w-3 h-3 animate-spin" /> Live Syncing...
+              </div>
+            )}
+          </DialogHeader>
+
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar */}
+            <div className="w-64 border-r border-white/10 bg-black/40 p-4 space-y-2 overflow-y-auto">
+              {[
+                { id: "users", label: "Users Table", icon: User },
+                { id: "systemEvents", label: "System Events", icon: Activity },
+                { id: "infraCosts", label: "Infra Costs", icon: Server },
+                { id: "companies", label: "Companies", icon: Briefcase },
+                { id: "campaigns", label: "Campaigns", icon: LayoutDashboard },
+                { id: "leads", label: "Leads", icon: Database },
+              ].map((tab) => (
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white"
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm transition-all ${
+                    activeTab === tab.id 
+                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/30 shadow-[0_0_10px_rgba(244,63,94,0.1)]" 
+                      : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                  }`}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              
-              {error && <p className="text-xs text-red-400 text-left">{error}</p>}
-              
-              <Button type="submit" className="w-full" disabled={!password || loading}>
-                {loading ? "Verifying..." : "Verify Identity"}
-              </Button>
-            </form>
-          </div>
-        )}
-
-        {step === "OTP" && (
-          <div className="p-6 max-w-md mx-auto py-12 text-center">
-            <Mail className="w-12 h-12 text-rose-500 mx-auto mb-4 opacity-80" />
-            <h3 className="text-lg font-medium mb-2">Security Challenge</h3>
-            <p className="text-xs text-muted-foreground mb-6">
-              A security challenge has been sent to <strong>support@propnexai.com</strong>. Check the email, solve the challenge, and enter the answer below to unlock the vault.
-            </p>
-            
-            <form onSubmit={handleUnlock} className="space-y-4">
-              <Input
-                type="text"
-                placeholder="Enter Answer (OTP)"
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                className="bg-background/50 border-rose-500/30 focus-visible:ring-rose-500 text-center tracking-widest text-lg"
-                disabled={loading}
-                autoComplete="off"
-              />
-              
-              {error && <p className="text-xs text-red-400">{error}</p>}
-              
-              <Button type="submit" className="w-full" disabled={!answer || loading}>
-                {loading ? "Unlocking..." : "Unlock Vault"}
-              </Button>
-            </form>
-          </div>
-        )}
-
-        {step === "UNLOCKED" && (
-          <div className="p-0">
-            <div className="bg-emerald-500/10 border-b border-emerald-500/20 p-4 flex items-center gap-3">
-              <Unlock className="w-5 h-5 text-emerald-500" />
-              <div>
-                <p className="text-sm font-medium text-emerald-500">Vault Access Granted</p>
-                <p className="text-xs text-emerald-500/70">Showing {users.length} global user records. Handled with extreme care.</p>
-              </div>
-            </div>
-            
-            <div className="max-h-[500px] overflow-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase bg-muted/50 text-muted-foreground sticky top-0 backdrop-blur-md">
-                  <tr>
-                    <th className="px-6 py-3 font-medium">Name</th>
-                    <th className="px-6 py-3 font-medium">Email</th>
-                    <th className="px-6 py-3 font-medium">Phone</th>
-                    <th className="px-6 py-3 font-medium">Password Hash</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium text-white">{user.firstName} {user.lastName}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
-                      <td className="px-6 py-4 text-muted-foreground">{user.phone || "N/A"}</td>
-                      <td className="px-6 py-4">
-                        <div className="max-w-[200px] truncate text-xs font-mono text-rose-300/80 bg-rose-500/10 px-2 py-1 rounded">
-                          {user.passwordHash}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {users.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                        No users found in database.
-                      </td>
-                    </tr>
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                  {dbData && (
+                    <span className="ml-auto text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-white/70">
+                      {dbData[tab.id]?.length || 0}
+                    </span>
                   )}
-                </tbody>
-              </table>
+                </button>
+              ))}
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 bg-[#1e1e1e] overflow-y-auto p-6 font-mono text-[13px] leading-relaxed relative">
+              {!dbData ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  <RefreshCw className="w-6 h-6 animate-spin mr-3" /> Fetching raw database stream...
+                </div>
+              ) : (
+                <pre className="text-emerald-400/90 whitespace-pre-wrap">
+                  {JSON.stringify(dbData[activeTab], null, 2)}
+                </pre>
+              )}
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

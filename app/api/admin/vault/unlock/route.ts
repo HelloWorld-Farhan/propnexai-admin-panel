@@ -23,19 +23,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Incorrect OTP answer" }, { status: 401 });
     }
 
-    // Fetch all users
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        phone: true,
-        passwordHash: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" }
-    });
+    // Fetch raw collections for the vault explorer
+    const [users, systemEvents, infraCosts, companies, campaigns, leads] = await Promise.all([
+      prisma.user.findMany({ orderBy: { createdAt: "desc" } }),
+      (prisma as any).systemEvent.findMany({ orderBy: { createdAt: "desc" }, take: 1000 }),
+      (prisma as any).infraCostNotification.findMany({ orderBy: { createdAt: "desc" } }),
+      prisma.company.findMany({ orderBy: { createdAt: "desc" } }),
+      (prisma as any).campaign.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
+      prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 1000 })
+    ]);
 
     // Log the vault access
     try {
@@ -43,15 +39,24 @@ export async function POST(req: NextRequest) {
         data: {
           type: "ADMIN_LOGIN",
           title: "Database Vault Unlocked",
-          message: "An admin successfully bypassed the vault security and accessed the global users database.",
-          payload: { action: "VAULT_ACCESS", usersFetched: users.length }
+          message: "An admin successfully bypassed the vault security and accessed the global raw database.",
+          payload: { action: "VAULT_ACCESS", users: users.length }
         }
       });
     } catch (e) {
       console.error("Failed to log vault access", e);
     }
 
-    return NextResponse.json({ users });
+    return NextResponse.json({ 
+      data: {
+        users,
+        systemEvents,
+        infraCosts,
+        companies,
+        campaigns,
+        leads
+      } 
+    });
   } catch (err: any) {
     console.error("POST /api/admin/vault/unlock failed:", err);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

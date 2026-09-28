@@ -45,6 +45,7 @@
     "react-textarea-autosize": "^8.5.9",
     "sonner": "^2.0.8",
     "ssh2": "^1.17.0",
+    "swr": "^2.5.1",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4",
     "ua-parser-js": "^2.0.10",
