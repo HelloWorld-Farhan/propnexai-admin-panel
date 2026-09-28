@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 type PendingApproval = {
   id: string;
   email: string;
+  domain?: string | null;
   createdAt: string;
   remindedAt?: string | null;
 };
@@ -147,6 +148,15 @@ export function ApprovalNotification() {
                         {user.remindedAt && (
                           <span className="ml-2 inline-block rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
                             Reminder Sent
+                          </span>
+                        )}
+                        {user.domain ? (
+                          <span className={`ml-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold border ${user.domain === 'propnexai.com' ? 'bg-gray-100 text-gray-700 border-gray-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+                            {user.domain}
+                          </span>
+                        ) : (
+                          <span className="ml-2 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-700 border border-gray-200">
+                            propnexai.com
                           </span>
                         )}
                       </p>
