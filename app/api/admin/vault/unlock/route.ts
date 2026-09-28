@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       try {
         await (prisma as any).systemEvent.create({
           data: {
-            type: "ADMIN_LOGIN",
+            type: "VAULT_OPEN",
             title: "Database Vault Unlocked",
             message: "An admin successfully bypassed the vault security and accessed the global raw database.",
             payload: { action: "VAULT_ACCESS", users: users.length }

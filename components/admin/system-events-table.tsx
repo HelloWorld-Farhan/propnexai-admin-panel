@@ -35,6 +35,8 @@ const EVENT_COLORS: Record<string, string> = {
   USER_LOGIN:            "bg-amber-500/20 text-amber-400 border-amber-500/40",
   USER_PASSWORD_CHANGED: "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/40",
   ADMIN_LOGIN:           "bg-rose-500/20 text-rose-400 border-rose-500/40",
+  VAULT_OPEN:            "bg-amber-400/20 text-amber-300 border-amber-400/40",
+  VAULT_CLOSE:           "bg-slate-500/20 text-slate-300 border-slate-500/40",
   COMPANY_CREATED:       "bg-lime-500/10 text-lime-400 border-lime-500/20",
   COMPANY_EDITED:        "bg-lime-500/10 text-lime-400 border-lime-500/20",
   COMPANY_DELETED:       "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20",

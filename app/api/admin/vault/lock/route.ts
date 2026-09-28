@@ -5,11 +5,11 @@ export async function POST(req: NextRequest) {
   try {
     const { action } = await req.json(); // e.g. "CLOSED_VIA_X", "CLOSED_VIA_REFRESH"
 
-    // Log the vault access lock
+    // Log the vault lock event with correct type
     try {
       await (prisma as any).systemEvent.create({
         data: {
-          type: "ADMIN_LOGIN",
+          type: "VAULT_CLOSE",
           title: "Database Vault Locked",
           message: `Admin closed the global raw database vault (${action}).`,
           payload: { action: "VAULT_LOCKED", reason: action }
