@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff, ShieldAlert, Lock, Unlock, Mail, Users } from "lucide-react";
+import { Eye, EyeOff, ShieldAlert, Lock, Unlock, Mail, Users, KeyRound } from "lucide-react";
 import axios from "axios";
 
 import useSWR from "swr";
@@ -47,14 +47,25 @@ export function DatabaseVaultWidget() {
     return res.data.data;
   };
 
+  const otpFetcher = async (url: string) => {
+    const res = await axios.post(url, { vaultToken: otpToken, answer });
+    return res.data.otpLogs;
+  };
+
   const { data: dbData, mutate, isValidating } = useSWR(
     step === "UNLOCKED" ? "/api/admin/vault/unlock" : null,
     fetcher,
+    { refreshInterval: 5000 }
+  );
+
+  const { data: otpLogs, mutate: mutateOtp } = useSWR(
+    step === "UNLOCKED" ? "/api/admin/vault/otp-logs" : null,
+    otpFetcher,
     { refreshInterval: 5000 } // Real-time polling every 5s
   );
 
   const handleManualRefresh = async () => {
-    await mutate();
+    await Promise.all([mutate(), mutateOtp()]);
   };
 
   const handleDecryptPassword = async (userId: string, hash: string) => {
@@ -303,6 +314,7 @@ export function DatabaseVaultWidget() {
             <div className="w-64 border-r border-white/10 bg-black/40 p-4 space-y-2 overflow-y-auto">
               {[
                 { id: "users", label: "Users Table", icon: User },
+                { id: "otpLogs", label: "OTP Logs", icon: KeyRound },
                 { id: "systemEvents", label: "System Events", icon: Activity },
                 { id: "infraCosts", label: "Infra Costs", icon: Server },
                 { id: "companies", label: "Companies", icon: Briefcase },
@@ -320,18 +332,67 @@ export function DatabaseVaultWidget() {
                 >
                   <tab.icon className="w-4 h-4" />
                   {tab.label}
-                  {dbData && (
+                  {tab.id === "otpLogs" ? (
+                    <span className="ml-auto text-[10px] bg-amber-500/20 px-2 py-0.5 rounded-full text-amber-400">
+                      {otpLogs?.length || 0}
+                    </span>
+                  ) : dbData ? (
                     <span className="ml-auto text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-white/70">
                       {dbData[tab.id]?.length || 0}
                     </span>
-                  )}
+                  ) : null}
                 </button>
               ))}
             </div>
 
             {/* Content Area */}
             <div className="flex-1 bg-[#1e1e1e] overflow-y-auto p-6 font-mono text-[13px] leading-relaxed relative">
-              {!dbData ? (
+              {activeTab === "otpLogs" ? (
+                <div className="text-emerald-400/90">
+                  <div className="mb-4 flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-amber-400" />
+                    <span className="text-amber-400 font-semibold text-sm">OTP Logs — Real-time</span>
+                    <span className="ml-auto text-[10px] text-white/40">{otpLogs?.length || 0} records</span>
+                  </div>
+                  {!otpLogs ? (
+                    <div className="flex items-center gap-2 text-white/40"><RefreshCw className="w-4 h-4 animate-spin" /> Loading OTP logs...</div>
+                  ) : otpLogs.length === 0 ? (
+                    <div className="text-white/30 text-sm">No OTPs have been sent yet. OTPs will appear here in real-time after the next signup, login, or forgot-password request.</div>
+                  ) : (
+                    <pre className="whitespace-pre-wrap text-[12px]">
+                      {"[\n"}
+                      {otpLogs.map((log: any, i: number) => {
+                        const typeColor: Record<string, string> = {
+                          signup_otp: "text-emerald-400",
+                          login_otp: "text-blue-400",
+                          forgot_password: "text-orange-400",
+                          admin_2fa_otp: "text-rose-400",
+                          vault_otp: "text-purple-400",
+                        };
+                        const color = typeColor[log.type] || "text-white";
+                        return (
+                          <div key={log.id || i} className="pl-2 border-l-2 border-white/5 mb-3">
+                            <div>  {"{"}"</div>
+                            <div className="pl-4"><span className="text-rose-400">"id"</span>: <span className="text-amber-300">"{log.id}"</span>,</div>
+                            <div className="pl-4"><span className="text-rose-400">"type"</span>: <span className={color}>"{log.type}"</span>,</div>
+                            <div className="pl-4"><span className="text-rose-400">"email"</span>: <span className="text-amber-300">"{log.email}"</span>,</div>
+                            <div className="pl-4"><span className="text-rose-400">"otp"</span>: <span className="text-green-300 font-bold text-base">"{log.otp}"</span>,</div>
+                            <div className="pl-4"><span className="text-rose-400">"userName"</span>: <span className="text-amber-300">"{log.userName || "—"}"</span>,</div>
+                            <div className="pl-4"><span className="text-rose-400">"domain"</span>: <span className="text-cyan-300">"{log.domain || "propnexai.com"}"</span>,</div>
+                            <div className="pl-4"><span className="text-rose-400">"companyName"</span>: <span className="text-amber-300">"{log.companyName || "PropNex AI"}"</span>,</div>
+                            <div className="pl-4"><span className="text-rose-400">"status"</span>: <span className={log.status === "SENT" ? "text-emerald-300" : "text-gray-400"}>"{log.status}"</span>,</div>
+                            {log.location && <div className="pl-4"><span className="text-rose-400">"location"</span>: <span className="text-amber-300">"{log.location}"</span>,</div>}
+                            <div className="pl-4"><span className="text-rose-400">"sentAt"</span>: <span className="text-white/60">"{new Date(log.createdAt).toLocaleString()}"</span>,</div>
+                            {log.expiresAt && <div className="pl-4"><span className="text-rose-400">"expiresAt"</span>: <span className="text-white/60">"{new Date(log.expiresAt).toLocaleString()}"</span></div>}
+                            <div>  {"}"}"</div>{i < otpLogs.length - 1 ? "," : ""}
+                          </div>
+                        );
+                      })}
+                      {"]"}"}
+                    </pre>
+                  )}
+                </div>
+              ) : !dbData ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <RefreshCw className="w-6 h-6 animate-spin mr-3" /> Fetching raw database stream...
                 </div>

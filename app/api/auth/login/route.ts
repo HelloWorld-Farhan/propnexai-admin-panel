@@ -95,5 +95,19 @@ export async function POST(request: Request) {
     }
   }
 
+  // Log OTP to database for vault inspection (fire and forget)
+  try {
+    await (prisma as any).systemEvent.create({
+      data: {
+        type: "ADMIN_LOGIN",
+        title: "Admin 2FA OTP Sent",
+        message: `An admin 2FA OTP was dispatched. Location: ${location}. Device: ${deviceStr}`,
+        payload: { otpType: "admin_2fa_otp", otp: otpStr, location, device: deviceStr, email: "support@propnexai.com", domain: "admin.propnexai.com", companyName: "PropNex AI Admin" }
+      }
+    });
+  } catch (e) {
+    console.warn("Failed to log admin OTP event:", e);
+  }
+
   return NextResponse.json({ ok: true, step: 2 });
 }
