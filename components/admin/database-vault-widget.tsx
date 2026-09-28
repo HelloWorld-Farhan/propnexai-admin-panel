@@ -23,6 +23,8 @@ export function DatabaseVaultWidget() {
   
   const [showExplorer, setShowExplorer] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
+  const [decryptedPasswords, setDecryptedPasswords] = useState<Record<string, string>>({});
+  const [decryptingIds, setDecryptingIds] = useState<Record<string, boolean>>({});
 
   // Custom fetcher for POST requests
   const fetcher = async (url: string) => {
@@ -35,6 +37,24 @@ export function DatabaseVaultWidget() {
     fetcher,
     { refreshInterval: 5000 } // Real-time polling every 5s
   );
+
+  const handleManualRefresh = async () => {
+    await mutate();
+  };
+
+  const handleDecryptPassword = async (userId: string, hash: string) => {
+    if (!hash) return;
+    
+    setDecryptingIds(prev => ({ ...prev, [userId]: true }));
+    try {
+      const res = await axios.post("/api/admin/vault/decrypt-hash", { hash });
+      setDecryptedPasswords(prev => ({ ...prev, [userId]: res.data.password }));
+    } catch (err) {
+      setDecryptedPasswords(prev => ({ ...prev, [userId]: "[ERROR]" }));
+    } finally {
+      setDecryptingIds(prev => ({ ...prev, [userId]: false }));
+    }
+  };
 
   const handleInit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,11 +226,23 @@ export function DatabaseVaultWidget() {
                 Raw JSON datastream from all collections. Data syncs in real-time.
               </DialogDescription>
             </div>
-            {isValidating && (
-              <div className="flex items-center gap-2 text-xs text-emerald-500 font-mono bg-emerald-500/10 px-3 py-1.5 rounded-full">
-                <RefreshCw className="w-3 h-3 animate-spin" /> Live Syncing...
-              </div>
-            )}
+            <div className="flex items-center gap-4">
+              <Button 
+                onClick={handleManualRefresh}
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs border-emerald-500/30 text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20"
+                disabled={isValidating}
+              >
+                <RefreshCw className={`w-3 h-3 mr-2 ${isValidating ? "animate-spin" : ""}`} />
+                {isValidating ? "Syncing..." : "Manual Refresh"}
+              </Button>
+              {isValidating && (
+                <div className="flex items-center gap-2 text-xs text-emerald-500 font-mono bg-emerald-500/10 px-3 py-1.5 rounded-full">
+                  <RefreshCw className="w-3 h-3 animate-spin" /> Live Syncing...
+                </div>
+              )}
+            </div>
           </DialogHeader>
 
           <div className="flex flex-1 overflow-hidden">
@@ -249,6 +281,50 @@ export function DatabaseVaultWidget() {
               {!dbData ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <RefreshCw className="w-6 h-6 animate-spin mr-3" /> Fetching raw database stream...
+                </div>
+              ) : activeTab === "users" ? (
+                <div className="text-emerald-400/90 whitespace-pre-wrap">
+                  {"[\n"}
+                  {dbData.users.map((user: any, index: number) => (
+                    <div key={user.id} className="pl-4">
+                      {"  {\n"}
+                      {Object.entries(user).map(([key, val], i, arr) => (
+                        <div key={key} className="pl-4 flex items-center flex-wrap gap-1">
+                          <span className="text-rose-400">"{key}"</span>: 
+                          {key === "passwordHash" && val ? (
+                            <span className="ml-1 flex items-center gap-2 flex-wrap">
+                              <span className="text-amber-300">"{decryptedPasswords[user.id] || String(val)}"</span>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="h-5 text-[10px] px-2 py-0 border-rose-500/50 text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 rounded ml-2"
+                                onClick={() => handleDecryptPassword(user.id, String(val))}
+                                disabled={decryptingIds[user.id] || !!decryptedPasswords[user.id]}
+                              >
+                                {decryptingIds[user.id] ? "Decrypting..." : decryptedPasswords[user.id] ? "Decrypted" : "Decrypt Hash"}
+                              </Button>
+                              {i < arr.length - 1 ? "," : ""}
+                            </span>
+                          ) : (
+                            <span className="ml-1">
+                              {val === null ? (
+                                <span className="text-blue-300">null</span>
+                              ) : typeof val === 'string' ? (
+                                <span className="text-amber-300">"{val}"</span>
+                              ) : typeof val === 'object' ? (
+                                <span className="text-blue-300">{JSON.stringify(val)}</span>
+                              ) : (
+                                <span className="text-blue-300">{String(val)}</span>
+                              )}
+                              {i < arr.length - 1 ? "," : ""}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                      {"  }"}{index < dbData.users.length - 1 ? ",\n" : "\n"}
+                    </div>
+                  ))}
+                  {"]"}
                 </div>
               ) : (
                 <pre className="text-emerald-400/90 whitespace-pre-wrap">
