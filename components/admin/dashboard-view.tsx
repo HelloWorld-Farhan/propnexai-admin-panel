@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
 import { SystemEventsTable } from "./system-events-table";
+import { DatabaseVaultWidget } from "./database-vault-widget";
 
 type DashboardStats = {
   totalUsers: number;
@@ -155,7 +156,7 @@ export function DashboardView({
             </div>
           </CardContent>
         </Card>
-        <StatCard title="Call success rate" value={`${stats.successRate}%`} />
+        <DatabaseVaultWidget />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
