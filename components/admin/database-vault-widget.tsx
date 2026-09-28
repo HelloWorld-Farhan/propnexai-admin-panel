@@ -384,11 +384,11 @@ export function DatabaseVaultWidget() {
                             {log.location && <div className="pl-4"><span className="text-rose-400">"location"</span>: <span className="text-amber-300">"{log.location}"</span>,</div>}
                             <div className="pl-4"><span className="text-rose-400">"sentAt"</span>: <span className="text-white/60">"{new Date(log.createdAt).toLocaleString()}"</span>,</div>
                             {log.expiresAt && <div className="pl-4"><span className="text-rose-400">"expiresAt"</span>: <span className="text-white/60">"{new Date(log.expiresAt).toLocaleString()}"</span></div>}
-                            <div>  {"}"}"</div>{i < otpLogs.length - 1 ? "," : ""}
+                            <div>  {"  }"}{i < otpLogs.length - 1 ? "," : ""}</div>
                           </div>
                         );
                       })}
-                      {"]"}"}
+                      <div>{"]"}"</div>
                     </pre>
                   )}
                 </div>
