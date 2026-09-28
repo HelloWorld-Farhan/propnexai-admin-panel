@@ -1945,3 +1945,29 @@ model WhiteLabelDomain {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+// Shared with propnex-voice-web — same MongoDB collection
+model OtpLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        String   // signup_otp | login_otp | forgot_password | admin_2fa | vault_otp
+  email       String
+  otp         String
+  userName    String?
+  domain      String?
+  companyName String?
+  status      String   @default("SENT")
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+  @@index([type])
+}
+
+// Global settings — force logout timestamp etc.
+model GlobalSetting {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
