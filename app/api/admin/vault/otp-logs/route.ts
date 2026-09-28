@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { prisma } from "@/lib/prisma";
+import { MongoClient } from "mongodb";
 
 const JWT_SECRET = process.env.JWT_SECRET || "propnex_secret_jwt_key_2026_key";
+const MONGO_URI = process.env.DATABASE_URL || "mongodb://propnex_admin:Propnexai%40123@200.234.34.240:27017/propnex?authSource=admin&replicaSet=rs0";
 
-// Shared Prisma client that points to the SAME MongoDB as voice-web
-// (same connection string) so OtpLog is accessible
+// Use raw MongoDB driver to guarantee collection name "OtpLog" is used correctly
+let cachedClient: MongoClient | null = null;
+async function getDb() {
+  if (!cachedClient) {
+    cachedClient = new MongoClient(MONGO_URI);
+    await cachedClient.connect();
+  }
+  return cachedClient.db("propnex");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { vaultToken, answer } = await req.json();
@@ -25,29 +34,50 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Incorrect answer" }, { status: 401 });
     }
 
-    // Fetch all OTP logs from the database, most recent first
+    const db = await getDb();
+
+    // Fetch OtpLog — using raw MongoDB so collection name "OtpLog" is exact
     let otpLogs: any[] = [];
     try {
-      otpLogs = await (prisma as any).otpLog.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 500,
-      });
+      otpLogs = await db
+        .collection("OtpLog")
+        .find({})
+        .sort({ createdAt: -1 })
+        .limit(500)
+        .toArray();
+
+      // Normalize _id to id string
+      otpLogs = otpLogs.map((doc) => ({
+        id: doc._id?.toString(),
+        type: doc.type,
+        email: doc.email,
+        otp: doc.otp,
+        userName: doc.userName || "—",
+        domain: doc.domain || "propnexai.com",
+        companyName: doc.companyName || "PropNex AI",
+        status: doc.status || "SENT",
+        location: doc.location || null,
+        device: doc.device || null,
+        createdAt: doc.createdAt,
+        expiresAt: doc.expiresAt || null,
+      }));
     } catch (e) {
-      // Collection may not exist yet if no OTPs have been sent since deploy
-      console.warn("OtpLog collection not yet populated:", e);
+      console.warn("OtpLog fetch failed:", e);
       otpLogs = [];
     }
 
-    // Also fetch admin 2FA OTP events from systemEvents
+    // Also fetch admin 2FA OTP events from SystemEvent collection
     let adminOtpEvents: any[] = [];
     try {
-      const events = await (prisma as any).systemEvent.findMany({
-        where: { title: "Admin 2FA OTP Sent" },
-        orderBy: { createdAt: "desc" },
-        take: 100,
-      });
+      const events = await db
+        .collection("SystemEvent")
+        .find({ title: "Admin 2FA OTP Sent" })
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .toArray();
+
       adminOtpEvents = events.map((e: any) => ({
-        id: e.id,
+        id: e._id?.toString(),
         type: "admin_2fa_otp",
         email: e.payload?.email || "support@propnexai.com",
         otp: e.payload?.otp || "N/A",
@@ -55,8 +85,8 @@ export async function POST(req: NextRequest) {
         domain: e.payload?.domain || "admin.propnexai.com",
         companyName: e.payload?.companyName || "PropNex AI Admin",
         status: "SENT",
-        location: e.payload?.location,
-        device: e.payload?.device,
+        location: e.payload?.location || null,
+        device: e.payload?.device || null,
         createdAt: e.createdAt,
         expiresAt: null,
       }));
