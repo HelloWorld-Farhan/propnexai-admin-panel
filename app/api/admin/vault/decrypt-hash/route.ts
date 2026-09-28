@@ -27,16 +27,17 @@ export async function POST(req: NextRequest) {
     // Fetch the user that has this hash to build a targeted rainbow table
     const userWithHash = await prisma.user.findFirst({
       where: { passwordHash: hash },
-      select: { firstName: true, lastName: true, email: true }
+      select: { firstName: true, lastName: true, email: true, phone: true }
     });
 
     let targetedPasswords = [...COMMON_PASSWORDS];
 
     if (userWithHash) {
-      const { firstName, lastName, email } = userWithHash;
+      const { firstName, lastName, email, phone } = userWithHash;
       const fName = firstName?.trim() || "";
       const lName = lastName?.trim() || "";
       const emailPrefix = email ? email.split("@")[0] : "";
+      const phoneStr = phone?.trim() || "";
       
       const parts = [fName, lName, emailPrefix, "Propnex", "Propnexai", "PropnexAI", fName.toLowerCase(), lName.toLowerCase(), emailPrefix.toLowerCase()];
       const suffixes = ["", "123", "@123", "!123", "1234", "12345", "123456", "2024", "2025", "2026"];
@@ -49,7 +50,23 @@ export async function POST(req: NextRequest) {
           targetedPasswords.push(`${part.charAt(0).toUpperCase() + part.slice(1)}${suffix}`);
         }
       }
+
+      // Add number-only passwords and phone variations
+      if (phoneStr) {
+        targetedPasswords.push(phoneStr);
+        targetedPasswords.push(phoneStr.replace(/\D/g, "")); // just digits
+        targetedPasswords.push(phoneStr.replace(/\D/g, "").slice(-8)); // last 8 digits
+        targetedPasswords.push(phoneStr.replace(/\D/g, "").slice(-10)); // last 10 digits
+      }
     }
+
+    // Add common number-only sequences up to 9 digits (as people often use exactly 8-digit numbers)
+    const extraNumPasswords = [
+      "12345678", "123456789", "1234567890", "0123456789", 
+      "87654321", "987654321", "11111111", "22222222", "88888888", "00000000",
+      "99999999", "123123123", "12341234", "qwertyuiop"
+    ];
+    targetedPasswords.push(...extraNumPasswords);
 
     // Attempt to reverse the hash using targeted and common known passwords
     for (const pwd of targetedPasswords) {
