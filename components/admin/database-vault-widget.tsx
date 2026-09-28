@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,10 +26,24 @@ export function DatabaseVaultWidget() {
   const [decryptedPasswords, setDecryptedPasswords] = useState<Record<string, string>>({});
   const [decryptingIds, setDecryptingIds] = useState<Record<string, boolean>>({});
   const [countdownTimers, setCountdownTimers] = useState<Record<string, number>>({});
+  const [hasLoggedInitial, setHasLoggedInitial] = useState(false);
+
+  // Use sendBeacon for reliable logging when tab is closed/refreshed
+  useEffect(() => {
+    if (step === "UNLOCKED") {
+      const handleBeforeUnload = () => {
+        const blob = new Blob([JSON.stringify({ action: "PAGE_REFRESH_OR_CLOSE" })], { type: 'application/json' });
+        navigator.sendBeacon("/api/admin/vault/lock", blob);
+      };
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }
+  }, [step]);
 
   // Custom fetcher for POST requests
   const fetcher = async (url: string) => {
-    const res = await axios.post(url, { vaultToken: otpToken, answer });
+    const res = await axios.post(url, { vaultToken: otpToken, answer, isInitial: !hasLoggedInitial });
+    if (!hasLoggedInitial) setHasLoggedInitial(true);
     return res.data.data;
   };
 
@@ -245,6 +259,7 @@ export function DatabaseVaultWidget() {
       <Dialog open={showExplorer} onOpenChange={(open) => {
         setShowExplorer(open);
         if (!open) {
+          axios.post("/api/admin/vault/lock", { action: "MODAL_CLOSED_VIA_X_OR_OUTSIDE" }).catch(() => {});
           setStep("IDLE");
           setOtpToken("");
           setPassword("");

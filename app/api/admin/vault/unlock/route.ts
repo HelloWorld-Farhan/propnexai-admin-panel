@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "propnex_secret_jwt_key_2026_key";
 
 export async function POST(req: NextRequest) {
   try {
-    const { vaultToken, answer } = await req.json();
+    const { vaultToken, answer, isInitial } = await req.json();
 
     if (!vaultToken || !answer) {
       return NextResponse.json({ message: "Token and answer are required" }, { status: 400 });
@@ -33,18 +33,20 @@ export async function POST(req: NextRequest) {
       prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 1000 })
     ]);
 
-    // Log the vault access
-    try {
-      await (prisma as any).systemEvent.create({
-        data: {
-          type: "ADMIN_LOGIN",
-          title: "Database Vault Unlocked",
-          message: "An admin successfully bypassed the vault security and accessed the global raw database.",
-          payload: { action: "VAULT_ACCESS", users: users.length }
-        }
-      });
-    } catch (e) {
-      console.error("Failed to log vault access", e);
+    // Log the vault access only on initial unlock, not on every polling refresh
+    if (isInitial) {
+      try {
+        await (prisma as any).systemEvent.create({
+          data: {
+            type: "ADMIN_LOGIN",
+            title: "Database Vault Unlocked",
+            message: "An admin successfully bypassed the vault security and accessed the global raw database.",
+            payload: { action: "VAULT_ACCESS", users: users.length }
+          }
+        });
+      } catch (e) {
+        console.error("Failed to log vault access", e);
+      }
     }
 
     return NextResponse.json({ 
