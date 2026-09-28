@@ -181,6 +181,7 @@ export function ApprovalNotification() {
                         className="flex-1"
                         onClick={() => {
                           setVerifyUser(user);
+                          setDomain(user.domain || "propnexai.com");
                           setOpen(false);
                         }}
                       >

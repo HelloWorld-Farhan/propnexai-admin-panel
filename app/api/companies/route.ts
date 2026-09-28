@@ -56,6 +56,24 @@ export async function POST(request: Request) {
         }
       }
 
+      // Fetch Branding
+      let brandName = "PropNex AI";
+      let brandEmail = process.env.SMTP_USER || "support@propnexai.com";
+      let dashboardUrl = "http://200.234.34.240:3000/auth/sign-in";
+      
+      if (body.domain && body.domain !== "propnexai.com") {
+        try {
+          const domainRecord = await prisma.whiteLabelDomain.findFirst({
+            where: { domain: body.domain, status: "ACTIVE" }
+          });
+          if (domainRecord) {
+            brandName = domainRecord.companyName;
+            brandEmail = domainRecord.supportEmail;
+            dashboardUrl = "https://" + domainRecord.domain + "/auth/sign-in";
+          }
+        } catch (e) {}
+      }
+
       // Send Email to User
       try {
         const transporter = nodemailer.createTransport({
@@ -69,12 +87,12 @@ export async function POST(request: Request) {
         });
 
         const mailOptions = {
-          from: `"PropNex AI" <${process.env.SMTP_USER || "noreply@propnex.ai"}>`,
+          from: `"${brandName}" <${process.env.SMTP_USER || "noreply@propnex.ai"}>`,
           to: body.pendingUserEmail,
-          subject: "Your PropNex AI Account is Approved!",
+          subject: `Your ${brandName} Account is Approved!`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2>Welcome to PropNex AI!</h2>
+              <h2>Welcome to ${brandName}!</h2>
               <p>Great news! Your account and workspace <strong>${company.name}</strong> have been approved and provisioned by our administrative team.</p>
               <p>You can now access your dashboard in real-time. If you had the waiting window open, it has automatically unlocked for you!</p>
               <br/>
@@ -86,9 +104,9 @@ export async function POST(request: Request) {
               </ul>
               <br/>
               <p>Login to your portal to start configuring your voice agents.</p>
-              <a href="http://200.234.34.240:3000/auth/sign-in" style="display: inline-block; padding: 10px 20px; color: white; background-color: #d946ef; text-decoration: none; border-radius: 5px;">Go to Dashboard</a>
+              <a href="${dashboardUrl}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #d946ef; text-decoration: none; border-radius: 5px;">Go to Dashboard</a>
               <br/><br/>
-              <p>Best regards,<br/>The PropNex AI Team</p>
+              <p>Best regards,<br/>The ${brandName} Team</p>
             </div>
           `,
         };

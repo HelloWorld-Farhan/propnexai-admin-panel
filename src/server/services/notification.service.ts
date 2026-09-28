@@ -68,6 +68,7 @@ export class NotificationService {
     inboundNumber?: string;
     outboundNumber?: string;
     credits: number;
+    branding?: any;
   }) {
     if (!this.gasUrl) {
       console.warn("No GOOGLE_APPS_SCRIPT_URL configured.");

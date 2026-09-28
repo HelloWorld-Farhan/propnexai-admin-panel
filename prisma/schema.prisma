@@ -439,6 +439,7 @@ model Company {
   ownerUserId         String?
   name                String
   slug                String           @unique
+  domain              String?
   status              CompanyStatus    @default(ACTIVE)
   blockedUntil        DateTime?
   tenantType          TenantType       @default(PARENT)

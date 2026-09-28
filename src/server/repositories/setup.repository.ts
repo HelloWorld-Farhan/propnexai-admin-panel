@@ -217,7 +217,7 @@ export async function addCredits(
 ) {
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { parentCompanyId: true, name: true, members: { include: { user: true } } }
+    select: { parentCompanyId: true, name: true, domain: true, members: { include: { user: true } } }
   });
   
   if (!company) throw new Error("Company not found");
@@ -286,6 +286,24 @@ export async function addCredits(
   try {
     const user = company.members?.[0]?.user;
     if (user?.email) {
+      // Fetch Branding
+      let branding = undefined;
+      if (company.domain && company.domain !== "propnexai.com") {
+        try {
+          const domainRecord = await prisma.whiteLabelDomain.findFirst({
+            where: { domain: company.domain as string, status: "ACTIVE" }
+          });
+          if (domainRecord) {
+            branding = {
+              companyName: domainRecord.companyName,
+              supportEmail: domainRecord.supportEmail,
+              supportPhone: domainRecord.supportPhone,
+              domain: domainRecord.domain
+            };
+          }
+        } catch (e) {}
+      }
+
       const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
       fetch(webhookUrl, {
         method: "POST",
@@ -295,6 +313,8 @@ export async function addCredits(
           email: user.email,
           name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
           amount,
+          companyName: company.name,
+          branding: branding
         }),
       }).catch(err => console.error("Failed to send credit added webhook:", err));
     }
@@ -314,7 +334,7 @@ export async function updateCredits(
 
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { parentCompanyId: true, name: true }
+    select: { parentCompanyId: true, name: true, domain: true }
   });
   
   if (!company) throw new Error("Company not found");
@@ -539,6 +559,24 @@ export async function updateCredits(
     if (fullCompany && fullCompany.members.length > 0) {
       const user = fullCompany.members[0].user;
       if (user && user.email) {
+        // Fetch Branding
+        let branding = undefined;
+        if (fullCompany.domain && fullCompany.domain !== "propnexai.com") {
+          try {
+            const domainRecord = await prisma.whiteLabelDomain.findFirst({
+              where: { domain: fullCompany.domain as string, status: "ACTIVE" }
+            });
+            if (domainRecord) {
+              branding = {
+                companyName: domainRecord.companyName,
+                supportEmail: domainRecord.supportEmail,
+                supportPhone: domainRecord.supportPhone,
+                domain: domainRecord.domain
+              };
+            }
+          } catch (e) {}
+        }
+
         const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
         fetch(webhookUrl, {
           method: "POST",
@@ -548,6 +586,8 @@ export async function updateCredits(
             email: user.email,
             name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
             amount: Math.abs(delta),
+            companyName: fullCompany.name,
+            branding: branding
           }),
         }).catch(err => console.error("Failed to send credit added webhook:", err));
       }

@@ -24,16 +24,35 @@ export async function POST(req: Request) {
       console.error("Failed to fetch user name:", e);
     }
 
+    // Fetch Branding from pending.domain
+    let branding = undefined;
+    if (pending.domain && pending.domain !== "propnexai.com") {
+      try {
+        const domainRecord = await prisma.whiteLabelDomain.findFirst({
+          where: { domain: pending.domain, status: "ACTIVE" }
+        });
+        if (domainRecord) {
+          branding = {
+            companyName: domainRecord.companyName,
+            supportEmail: domainRecord.supportEmail,
+            supportPhone: domainRecord.supportPhone,
+            domain: domainRecord.domain
+          };
+        }
+      } catch (e) {}
+    }
+
     // Trigger webhook for rejection
     try {
       const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
-      await fetch(webhookUrl, {
+      fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "user_rejected",
           name: fullName,
-          email: email
+          email: email,
+          branding: branding
         }),
       }).catch(err => console.error("Failed to trigger rejection webhook:", err));
     } catch (e) {}

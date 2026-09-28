@@ -50,6 +50,24 @@ export async function POST(request: Request) {
     if (company && company.members.length > 0) {
       const user = company.members[0].user;
       if (user && user.email) {
+        // Fetch Branding
+        let branding = undefined;
+        if (company.domain && company.domain !== "propnexai.com") {
+          try {
+            const domainRecord = await prisma.whiteLabelDomain.findFirst({
+              where: { domain: company.domain, status: "ACTIVE" }
+            });
+            if (domainRecord) {
+              branding = {
+                companyName: domainRecord.companyName,
+                supportEmail: domainRecord.supportEmail,
+                supportPhone: domainRecord.supportPhone,
+                domain: domainRecord.domain
+              };
+            }
+          } catch (e) {}
+        }
+
         // Send Webhook to Google Apps Script
         const webhookUrl = "https://script.google.com/macros/s/AKfycbz2zj_l7vcmiPZKuYqEVdso0apyW3aDJZZWTVTJ1jRrQr8PLGZIH_TzRpTLFskphIwgDQ/exec";
         fetch(webhookUrl, {
@@ -60,6 +78,8 @@ export async function POST(request: Request) {
             email: user.email,
             name: user.firstName ? `${user.firstName} ${user.lastName}`.trim() : user.email.split("@")[0],
             assignedNumber: number.number,
+            branding: branding,
+            companyName: company.name
           }),
         }).catch(err => console.error("Failed to send number assignment webhook:", err));
         

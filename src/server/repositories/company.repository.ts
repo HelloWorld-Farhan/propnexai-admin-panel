@@ -32,6 +32,7 @@ export async function createCompanyForAdmin(input: {
         cli,
         companyCode,
         ownerUserId: null,
+        domain: input.domain || null,
         settings: input.domain ? { signupDomain: input.domain } : {},
       },
     });
@@ -554,14 +555,32 @@ export async function verifySubCompany(
     if (user && user.email) {
       const { notificationService } = require("@/src/server/services/notification.service");
       const ownerName = user.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : "User";
-      
+      // Fetch Branding
+      let branding = undefined;
+      if (fullCompany.domain && fullCompany.domain !== "propnexai.com") {
+        try {
+          const domainRecord = await prisma.whiteLabelDomain.findFirst({
+            where: { domain: fullCompany.domain as string, status: "ACTIVE" }
+          });
+          if (domainRecord) {
+            branding = {
+              companyName: domainRecord.companyName,
+              supportEmail: domainRecord.supportEmail,
+              supportPhone: domainRecord.supportPhone,
+              domain: domainRecord.domain
+            };
+          }
+        } catch (e) {}
+      }
+
       notificationService.sendSubCompanyVerifiedEmail({
         subCompanyName: fullCompany.name,
         userName: ownerName,
         email: user.email,
         inboundNumber,
         outboundNumber,
-        credits: fullCompany.creditBalance?.creditsRemaining || 0
+        credits: fullCompany.creditBalance?.creditsRemaining || 0,
+        branding: branding
       }).catch((err: any) => console.error("Webhook trigger failed:", err));
     }
   } catch (e) {
