@@ -242,9 +242,20 @@ export function DatabaseVaultWidget() {
         </CardContent>
       </Card>
 
-      <Dialog open={showExplorer} onOpenChange={setShowExplorer}>
+      <Dialog open={showExplorer} onOpenChange={(open) => {
+        setShowExplorer(open);
+        if (!open) {
+          setStep("IDLE");
+          setOtpToken("");
+          setPassword("");
+          setAnswer("");
+          setIsOpen(false);
+          setDecryptedPasswords({});
+          setCountdownTimers({});
+        }
+      }}>
         <DialogContent className="max-w-[90vw] w-full h-[90vh] flex flex-col p-0 border-rose-500/30 bg-[#0c0c0e]">
-          <DialogHeader className="p-4 border-b border-white/10 flex flex-row items-center justify-between">
+          <DialogHeader className="p-4 pr-14 border-b border-white/10 flex flex-row items-center justify-between">
             <div>
               <DialogTitle className="text-rose-500 flex items-center gap-2">
                 <Terminal className="w-5 h-5" /> Live Database Explorer
