@@ -25,6 +25,7 @@ export function DatabaseVaultWidget() {
   const [activeTab, setActiveTab] = useState("users");
   const [decryptedPasswords, setDecryptedPasswords] = useState<Record<string, string>>({});
   const [decryptingIds, setDecryptingIds] = useState<Record<string, boolean>>({});
+  const [countdownTimers, setCountdownTimers] = useState<Record<string, number>>({});
 
   // Custom fetcher for POST requests
   const fetcher = async (url: string) => {
@@ -49,8 +50,34 @@ export function DatabaseVaultWidget() {
     try {
       const res = await axios.post("/api/admin/vault/decrypt-hash", { hash });
       setDecryptedPasswords(prev => ({ ...prev, [userId]: res.data.password }));
+      setCountdownTimers(prev => ({ ...prev, [userId]: 10 }));
+      
+      const interval = setInterval(() => {
+        setCountdownTimers(prev => {
+          const current = prev[userId];
+          if (current <= 1) {
+            clearInterval(interval);
+            setDecryptedPasswords(p => {
+              const newP = { ...p };
+              delete newP[userId];
+              return newP;
+            });
+            const newTimers = { ...prev };
+            delete newTimers[userId];
+            return newTimers;
+          }
+          return { ...prev, [userId]: current - 1 };
+        });
+      }, 1000);
     } catch (err) {
       setDecryptedPasswords(prev => ({ ...prev, [userId]: "[ERROR]" }));
+      setTimeout(() => {
+        setDecryptedPasswords(p => {
+          const newP = { ...p };
+          delete newP[userId];
+          return newP;
+        });
+      }, 3000);
     } finally {
       setDecryptingIds(prev => ({ ...prev, [userId]: false }));
     }
@@ -303,6 +330,9 @@ export function DatabaseVaultWidget() {
                               >
                                 {decryptingIds[user.id] ? "Decrypting..." : decryptedPasswords[user.id] ? "Decrypted" : "Decrypt Hash"}
                               </Button>
+                              {countdownTimers[user.id] !== undefined && (
+                                <span className="text-rose-400 text-[10px] ml-2 font-mono">({countdownTimers[user.id]}s)</span>
+                              )}
                               {i < arr.length - 1 ? "," : ""}
                             </span>
                           ) : (
