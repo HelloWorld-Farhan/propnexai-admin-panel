@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Copy, Globe, Building, Mail, Phone, Link as LinkIcon, Image as ImageIcon, User } from "lucide-react";
+import { Loader2, ArrowLeft, Copy, Globe, Building, Mail, Phone, Link as LinkIcon, Image as ImageIcon, User, Download } from "lucide-react";
 import { toast } from "sonner";
 
 export default function WhiteLabelPreviewPage() {
@@ -61,26 +61,39 @@ export default function WhiteLabelPreviewPage() {
   const userName = (config as any).userName || "Unknown";
 
   const FieldRow = ({ label, value, icon: Icon, isImage = false }: { label: string, value: string, icon: any, isImage?: boolean }) => (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/20 border border-border rounded-lg gap-4">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-muted rounded-md"><Icon className="w-5 h-5 text-muted-foreground" /></div>
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-muted/20 border border-border rounded-lg gap-4 transition-all hover:bg-muted/30">
+      <div className="flex items-center gap-3 flex-1">
+        <div className="p-2 bg-muted/50 rounded-md"><Icon className="w-5 h-5 text-muted-foreground" /></div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 flex-1 w-full">
+          <p className="text-sm font-medium text-muted-foreground min-w-[140px]">{label}</p>
           {isImage ? (
             value ? (
-              <div className="mt-2 h-16 w-32 border border-border rounded flex items-center justify-center bg-black/20 p-2">
-                <img src={value} alt={label} className="max-h-full max-w-full object-contain" />
+              <div className="mt-2 sm:mt-0 h-16 w-32 border border-border/50 rounded-md flex items-center justify-center bg-black/40 p-2 shadow-inner">
+                <img src={value} alt={label} className="max-h-full max-w-full object-contain drop-shadow-md" />
               </div>
-            ) : <p className="text-sm font-semibold">Not provided</p>
+            ) : <p className="text-sm font-semibold text-muted-foreground italic mt-1 sm:mt-0">Not provided</p>
           ) : (
-            <p className="text-base font-semibold mt-0.5">{value || "Not provided"}</p>
+            <p className="text-sm font-semibold mt-1 sm:mt-0 break-all">{value || <span className="text-muted-foreground italic">Not provided</span>}</p>
           )}
         </div>
       </div>
       {value && (
-        <Button variant="outline" size="sm" onClick={() => handleCopy(value, label)} className="shrink-0 group">
-          <Copy className="w-4 h-4 mr-2 group-hover:text-blue-500" /> Copy
-        </Button>
+        <div className="shrink-0">
+          {isImage ? (
+            <Button variant="outline" size="sm" onClick={() => {
+              const a = document.createElement("a");
+              a.href = value;
+              a.download = `${label.replace(/\s+/g, "_").toLowerCase()}.png`;
+              a.click();
+            }} className="group border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-500 text-cyan-400">
+              <Download className="w-4 h-4 mr-2" /> Download
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => handleCopy(value, label)} className="group border-border hover:bg-muted">
+              <Copy className="w-4 h-4 mr-2 group-hover:text-blue-500" /> Copy
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

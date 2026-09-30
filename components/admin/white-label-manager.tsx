@@ -449,9 +449,11 @@ export default function WhiteLabelManager() {
                               <div className="flex justify-end gap-2">
                                 {!isPlaceholder && (
                                   <>
-                                    <Button variant="ghost" size="sm" onClick={() => handleMarkDone(d)} title="Send Confirmation Email" className="hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors">
-                                      <Send className="h-4 w-4 text-emerald-400" /> <span className="ml-1">Approve & Email</span>
-                                    </Button>
+                                    {d.status !== "ACTIVE" && (
+                                      <Button variant="ghost" size="sm" onClick={() => handleMarkDone(d)} title="Send Confirmation Email" className="hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors">
+                                        <Send className="h-4 w-4 text-emerald-400" /> <span className="ml-1">Approve & Email</span>
+                                      </Button>
+                                    )}
                                     <Button variant="ghost" size="sm" onClick={() => window.location.href = `/white-label/preview/${d.id}`} title="Preview Details" className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
                                       <Eye className="h-4 w-4 text-blue-400" /> <span className="ml-1">Preview</span>
                                     </Button>
