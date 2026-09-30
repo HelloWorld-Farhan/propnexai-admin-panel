@@ -481,6 +481,36 @@ export default function WhiteLabelManager() {
             <DialogTitle>{isEditing ? "Edit Domain" : "Add Website in Domain"}</DialogTitle>
             <DialogDescription>Configure the white-label settings for this specific domain.</DialogDescription>
           </DialogHeader>
+
+          {!isEditing && formSubmissions.filter(d => d.status === "PENDING" && d.logoUrl).length > 0 && (
+            <div className="bg-muted/50 border border-border rounded-lg p-4 mt-2">
+              <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <Globe className="h-4 w-4 text-cyan-400" /> Pending Form Submissions
+              </h4>
+              <p className="text-xs text-muted-foreground mb-3">Click on a domain below to auto-fill all its details into this form instantly.</p>
+              <div className="flex flex-wrap gap-2">
+                {formSubmissions.filter(d => d.status === "PENDING" && d.logoUrl).map(d => (
+                  <Button 
+                    key={d.id} 
+                    variant="outline" 
+                    size="sm"
+                    className="border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-500 text-cyan-400 transition-all"
+                    onClick={() => {
+                      setCurrentDomain({ ...d });
+                      if (d.pagesConfig) {
+                        try { setPagesConfig(JSON.parse(d.pagesConfig)); } catch {}
+                      }
+                      setEnableInstagram(!!d.instagramUrl);
+                      setEnableLinkedIn(!!d.linkedinUrl);
+                    }}
+                  >
+                    {d.domain}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-4">
             
             {/* Column 1: Core Info */}
