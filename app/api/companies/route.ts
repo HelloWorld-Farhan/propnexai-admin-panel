@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       // Fetch Branding
       let brandName = "PropNex AI";
       let brandEmail = process.env.SMTP_USER || "support@propnexai.com";
-      let dashboardUrl = "http://200.234.34.240:3000/auth/sign-in";
+      let dashboardUrl = "http://YOUR_SERVER_IP:3000/auth/sign-in";
       
       if (body.domain && body.domain !== "propnexai.com") {
         try {

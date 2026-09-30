@@ -1,4 +1,4 @@
-const LOCAL_DEFAULT = "http://200.234.34.240:3001";
+const LOCAL_DEFAULT = "http://YOUR_SERVER_IP:3001";
 
 export function getMainServerBaseUrl(): string {
   const configured = process.env.MAIN_SERVER_URL?.trim();

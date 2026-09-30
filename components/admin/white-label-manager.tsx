@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Domain = {
   id: string;
@@ -267,12 +268,12 @@ export default function WhiteLabelManager() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Whitelabel Domains</CardTitle>
-            <CardDescription>Manage customized branding for specific domains.</CardDescription>
-          </div>
+      <Tabs defaultValue="domains" className="w-full">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
+          <TabsList>
+            <TabsTrigger value="domains">Whitelabel Domains</TabsTrigger>
+            <TabsTrigger value="submissions">User Details (Forms)</TabsTrigger>
+          </TabsList>
           <div className="flex items-center gap-4">
             <Input
               placeholder="Search domain or company..."
@@ -284,7 +285,16 @@ export default function WhiteLabelManager() {
               <Plus className="mr-2 h-4 w-4" /> Add Website
             </Button>
           </div>
-        </CardHeader>
+        </div>
+
+        <TabsContent value="domains">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Whitelabel Domains</CardTitle>
+                <CardDescription>Manage customized branding for specific domains.</CardDescription>
+              </div>
+            </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
@@ -335,8 +345,72 @@ export default function WhiteLabelManager() {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="submissions">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Details (Form Submissions)</CardTitle>
+              <CardDescription>Review the branding details submitted by users through the public setup form.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+              ) : (
+                <div className="rounded-md border border-border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="p-4 text-left font-medium">Domain / Company</th>
+                        <th className="p-4 text-left font-medium">Support Contact</th>
+                        <th className="p-4 text-left font-medium">Status</th>
+                        <th className="p-4 text-right font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredDomains.length === 0 ? (
+                        <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No submissions found.</td></tr>
+                      ) : (
+                        filteredDomains.map((d) => (
+                          <tr key={d.id} className="border-b border-border hover:bg-muted/30">
+                            <td className="p-4">
+                              <div className="font-medium flex items-center gap-2">
+                                <Globe className="h-4 w-4 text-muted-foreground" />
+                                {d.domain}
+                              </div>
+                              <div className="text-muted-foreground mt-1 text-xs">{d.companyName}</div>
+                            </td>
+                            <td className="p-4">
+                              <div>{d.supportEmail}</div>
+                              <div className="text-muted-foreground text-xs">{d.supportPhone || "-"}</div>
+                            </td>
+                            <td className="p-4">
+                              <Badge variant="outline" className={d.status === "PENDING" ? "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20" : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"}>
+                                {d.status}
+                              </Badge>
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(d)} title="Review Details" className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
+                                  <Eye className="h-4 w-4 text-blue-400" /> Review
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => setDomainToDelete(d.id)} title="Delete" className="hover:bg-red-500/10 hover:text-red-500 transition-colors">
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Horizontal Perfect Large Add Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -531,7 +605,7 @@ export default function WhiteLabelManager() {
                   placeholder="Enter password..."
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      if (passwordInput === "Propnexai@123") {
+                      if (passwordInput === "YOUR_PASSWORD") {
                         if (pendingAction === "DELETE") executeDelete();
                         else startDeploymentAnimation();
                       } else setDeploymentError("Incorrect password");
@@ -546,7 +620,7 @@ export default function WhiteLabelManager() {
                     setPendingAction(null);
                   }}>Cancel</Button>
                   <Button variant={pendingAction === "DELETE" ? "destructive" : "default"} onClick={() => {
-                    if (passwordInput === "Propnexai@123") {
+                    if (passwordInput === "YOUR_PASSWORD") {
                       if (pendingAction === "DELETE") executeDelete();
                       else startDeploymentAnimation();
                     } else {

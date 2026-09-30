@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import WhiteLabelManager from "@/components/admin/white-label-manager";
-import { AlertCircle, FileText, Send } from "lucide-react";
+import { AlertCircle, FileText, Link as LinkIcon } from "lucide-react";
+import SendWhiteLabelEmailButton from "@/components/admin/send-whitelabel-email";
+import CopyFormLinkButton from "@/components/admin/copy-form-link-button";
 
 export const metadata: Metadata = {
   title: "White Labeling | PropNex Admin",
@@ -15,15 +17,20 @@ export default function WhiteLabelPage() {
           <h2 className="text-3xl font-bold tracking-tight">White Labeling</h2>
           <p className="text-muted-foreground mt-1">Configure and manage custom domains for clients.</p>
         </div>
-        <div className="flex items-center gap-4 bg-muted/30 p-3 rounded-lg border border-border">
-          <div className="text-right">
-            <span className="font-semibold text-blue-400 flex items-center justify-end gap-1 text-sm"><Send className="h-3 w-3" /> Send to Domain Owner</span>
-            <span className="text-xs text-muted-foreground">Client needs this for DNS</span>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-4 bg-muted/30 p-3 rounded-lg border border-border">
+            <div className="text-right">
+              <span className="text-xs text-muted-foreground block mb-1">Client needs this for DNS</span>
+              <SendWhiteLabelEmailButton />
+            </div>
+            <a href="https://drive.google.com/file/d/14bqt_FBH0IcHGjEOrVAwJQdHrA-rfPhb/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-secondary text-secondary-foreground shadow hover:bg-secondary/80 h-9 px-4 py-2 gap-2 whitespace-nowrap">
+              <FileText className="h-4 w-4" />
+              PDF Guide
+            </a>
           </div>
-          <a href="https://drive.google.com/file/d/14bqt_FBH0IcHGjEOrVAwJQdHrA-rfPhb/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-blue-600 text-white shadow hover:bg-blue-600/90 h-9 px-4 py-2 gap-2 whitespace-nowrap">
-            <FileText className="h-4 w-4" />
-            PDF Guide
-          </a>
+          <div className="flex justify-end">
+            <CopyFormLinkButton />
+          </div>
         </div>
       </div>
 

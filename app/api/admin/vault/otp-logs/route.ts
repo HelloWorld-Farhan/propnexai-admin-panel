@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { MongoClient } from "mongodb";
 
 const JWT_SECRET = process.env.JWT_SECRET || "propnex_secret_jwt_key_2026_key";
-const MONGO_URI = process.env.DATABASE_URL || "mongodb://propnex_admin:Propnexai%40123@200.234.34.240:27017/propnex?authSource=admin&replicaSet=rs0";
+const MONGO_URI = process.env.DATABASE_URL || "mongodb://propnex_admin:Propnexai%40123@YOUR_SERVER_IP:27017/propnex?authSource=admin&replicaSet=rs0";
 
 // Use raw MongoDB driver to guarantee collection name "OtpLog" is used correctly
 let cachedClient: MongoClient | null = null;
