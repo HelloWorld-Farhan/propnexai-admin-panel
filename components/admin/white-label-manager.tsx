@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Globe, CheckCircle2, Edit, Trash2, Eye, X, AlertCircle, Upload, User } from "lucide-react";
+import { Loader2, Plus, Globe, CheckCircle2, Edit, Trash2, Eye, X, AlertCircle, Upload, User, Send } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -134,10 +134,10 @@ export default function WhiteLabelManager() {
         body: JSON.stringify({ status: "ACTIVE" }),
       });
       if (res.ok) {
-        toast.success("Domain marked as Done and confirmation email sent!");
+        toast.success(`Success! Confirmation email dispatched to ${d.supportEmail}`);
         fetchDomains();
       } else {
-        toast.error("Failed to mark as done.");
+        toast.error("Failed to approve and send email.");
       }
     } catch (e) {
       toast.error("An error occurred");
@@ -438,8 +438,8 @@ export default function WhiteLabelManager() {
                             </td>
                             <td className="p-4 text-right">
                               <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => handleMarkDone(d)} title="Mark as Completed" className="hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors">
-                                  <CheckCircle2 className="h-4 w-4 text-emerald-400" /> <span className="ml-1">Done</span>
+                                <Button variant="ghost" size="sm" onClick={() => handleMarkDone(d)} title="Send Confirmation Email" className="hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors">
+                                  <Send className="h-4 w-4 text-emerald-400" /> <span className="ml-1">Approve & Email</span>
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => window.location.href = `/white-label/preview/${d.id}`} title="Preview Details" className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
                                   <Eye className="h-4 w-4 text-blue-400" /> <span className="ml-1">Preview</span>
