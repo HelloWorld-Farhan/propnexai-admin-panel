@@ -108,6 +108,24 @@ export default function WhiteLabelManager() {
     setIsModalOpen(true);
   };
 
+  const handleMarkDone = async (d: Domain) => {
+    try {
+      const res = await fetch(`/api/white-label/${d.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ACTIVE" }),
+      });
+      if (res.ok) {
+        toast.success("Domain marked as Done and confirmation email sent!");
+        fetchDomains();
+      } else {
+        toast.error("Failed to mark as done.");
+      }
+    } catch (e) {
+      toast.error("An error occurred");
+    }
+  };
+
   const validateUrl = (url?: string) => {
     if (!url) return true;
     try {
@@ -393,8 +411,11 @@ export default function WhiteLabelManager() {
                             </td>
                             <td className="p-4 text-right">
                               <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleMarkDone(d)} title="Mark as Completed" className="hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors">
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-400" /> <span className="ml-1">Done</span>
+                                </Button>
                                 <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(d)} title="Review Details" className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
-                                  <Eye className="h-4 w-4 text-blue-400" /> Review
+                                  <Eye className="h-4 w-4 text-blue-400" /> <span className="ml-1">Review</span>
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => setDomainToDelete(d.id)} title="Delete" className="hover:bg-red-500/10 hover:text-red-500 transition-colors">
                                   <Trash2 className="h-4 w-4 text-red-500" />

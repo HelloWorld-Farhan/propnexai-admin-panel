@@ -59,6 +59,27 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       },
     });
 
+    if (status === "ACTIVE" && existing.status !== "ACTIVE") {
+      const webhookUrl = process.env.GAS_WEBHOOK_URL;
+      if (webhookUrl) {
+        try {
+          await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "white_label_completed",
+              email: supportEmail || existing.supportEmail,
+              name: companyName || existing.companyName,
+              domain: domain || existing.domain,
+              companyName: companyName || existing.companyName
+            })
+          });
+        } catch (err) {
+          console.error("Failed to trigger GAS webhook for completion:", err);
+        }
+      }
+    }
+
     return NextResponse.json(updatedDomain);
   } catch (error: any) {
     console.error("PUT white-label error:", error);
