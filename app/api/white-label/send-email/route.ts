@@ -56,11 +56,11 @@ export async function POST(req: Request) {
               <p>We are excited to help you set up your white-label platform with PropNex AI.</p>
               <p>There are two simple steps to complete your setup:</p>
               <ol style="color: #a1a1aa; padding-left: 20px;">
-                <li style="margin-bottom: 10px;">Configure your DNS settings according to our guide.</li>
-                <li>Submit your branding assets and details through our secure setup form.</li>
+                <li style="margin-bottom: 10px;"><strong>Configure your DNS (See PDF):</strong> This PDF guide contains the exact CNAME record you need to add to your domain registrar (e.g., GoDaddy, Hostinger) to connect your domain to our servers.</li>
+                <li><strong>Submit your details:</strong> After configuring your DNS, submit your branding assets (Logo, Favicon) through our secure setup form below.</li>
               </ol>
               <div class="button-container">
-                <a href="https://drive.google.com/file/d/14bqt_FBH0IcHGjEOrVAwJQdHrA-rfPhb/view?usp=sharing" class="button button-secondary">View DNS Guide (PDF)</a>
+                <a href="https://drive.google.com/file/d/1d7T85dRtt-ll0qKtNPoKF8EXWRt5Yzsf/view?usp=sharing" class="button button-secondary">View DNS Guide (PDF)</a>
                 <a href="https://www.propnexai.com/white-label/setup" class="button">Complete Setup Form</a>
               </div>
             </div>

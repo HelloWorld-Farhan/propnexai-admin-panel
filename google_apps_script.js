@@ -372,7 +372,7 @@ function doPost(e) {
                 <li>Submit your branding assets and details through our secure setup form.</li>
               </ol>
               <div class="button-container">
-                <a href="https://drive.google.com/file/d/14bqt_FBH0IcHGjEOrVAwJQdHrA-rfPhb/view?usp=sharing" class="button button-secondary">View DNS Guide (PDF)</a>
+                <a href="https://drive.google.com/file/d/1d7T85dRtt-ll0qKtNPoKF8EXWRt5Yzsf/view?usp=sharing" class="button button-secondary">View DNS Guide (PDF)</a>
                 <a href="https://www.propnexai.com/white-label/setup" class="button">Complete Setup Form</a>
               </div>
             </div>
