@@ -74,7 +74,8 @@ export async function POST(req: NextRequest) {
       data: {
         type: SystemEventType.DOMAIN_ADDED,
         companyId: null,
-        title: "Domain Added",
+        title: "White Label Domain Created",
+        message: `Admin manually created a new white label domain for ${companyName} (${domain}).`,
       },
     });
 

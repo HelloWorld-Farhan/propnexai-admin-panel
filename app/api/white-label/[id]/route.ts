@@ -63,12 +63,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       },
     });
 
+    const isStatusActiveNow = status === "ACTIVE" && existing.status !== "ACTIVE";
+    const isFormSubmission = existing.pagesConfig && typeof existing.pagesConfig === 'string' && existing.pagesConfig.includes('"submittedViaForm":true');
+
     await prisma.systemEvent.create({
       data: {
-        type: SystemEventType.DOMAIN_EDITED,
+        type: isStatusActiveNow ? SystemEventType.DOMAIN_EDITED : SystemEventType.DOMAIN_EDITED,
         companyId: null,
-        title: "Domain Edited",
-        message: `Admin updated white-label details for ${domain || existing.domain}.`,
+        title: isStatusActiveNow ? "White Label Setup Completed" : "White Label Details Edited",
+        message: isStatusActiveNow 
+          ? `Admin marked the white label setup as DONE and sent the completion email for ${domain || existing.domain}.` 
+          : `Admin updated white-label details for ${domain || existing.domain}.`,
       },
     });
 
@@ -113,12 +118,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     await prisma.whiteLabelDomain.delete({ where: { id } });
 
+    const isFormSubmission = existing.pagesConfig && typeof existing.pagesConfig === 'string' && existing.pagesConfig.includes('"submittedViaForm":true');
+
     await prisma.systemEvent.create({
       data: {
         type: SystemEventType.DOMAIN_DELETED,
         companyId: null,
-        title: "Domain Deleted",
-        message: `Admin deleted the white-label form/domain for ${existing.domain}.`,
+        title: isFormSubmission ? "White Label Form Deleted" : "White Label Domain Deleted",
+        message: `Admin deleted the ${isFormSubmission ? 'white-label user submission' : 'white-label domain'} for ${existing.domain}.`,
       },
     });
 
