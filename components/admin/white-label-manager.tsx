@@ -502,6 +502,7 @@ export default function WhiteLabelManager() {
                       }
                       setEnableInstagram(!!d.instagramUrl);
                       setEnableLinkedIn(!!d.linkedinUrl);
+                      setIsEditing(true);
                     }}
                   >
                     {d.domain}

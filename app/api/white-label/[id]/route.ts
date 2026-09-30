@@ -78,7 +78,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     if (status === "ACTIVE" && existing.status !== "ACTIVE") {
-      const webhookUrl = process.env.GAS_WEBHOOK_URL;
+      const webhookUrl = process.env.GAS_WEBHOOK_URL || process.env.APPS_SCRIPT_WEBHOOK_URL;
       if (webhookUrl) {
         try {
           await fetch(webhookUrl, {
