@@ -3,6 +3,19 @@ import { requireAdminSession } from "@/lib/auth/server-session";
 import { prisma } from "@/lib/prisma";
 import { SystemEventType } from "@prisma/client";
 
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    await requireAdminSession();
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
+    const domain = await prisma.whiteLabelDomain.findUnique({ where: { id } });
+    if (!domain) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(domain);
+  } catch (error: any) {
+    return NextResponse.json({ error: "Failed to fetch domain" }, { status: 500 });
+  }
+}
+
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdminSession();

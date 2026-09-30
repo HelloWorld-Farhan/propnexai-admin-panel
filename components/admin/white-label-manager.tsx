@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Globe, CheckCircle2, Edit, Trash2, Eye, X, AlertCircle, Upload } from "lucide-react";
+import { Loader2, Plus, Globe, CheckCircle2, Edit, Trash2, Eye, X, AlertCircle, Upload, User } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -67,6 +67,24 @@ export default function WhiteLabelManager() {
     (d.domain && d.domain.toLowerCase().includes(searchQuery.toLowerCase())) || 
     (d.companyName && d.companyName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const manualDomains = filteredDomains.filter(d => {
+    try {
+      const config = JSON.parse(d.pagesConfig || "{}");
+      return !config.submittedViaForm;
+    } catch {
+      return true;
+    }
+  });
+
+  const formSubmissions = filteredDomains.filter(d => {
+    try {
+      const config = JSON.parse(d.pagesConfig || "{}");
+      return config.submittedViaForm;
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     fetchDomains();
@@ -328,10 +346,10 @@ export default function WhiteLabelManager() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDomains.length === 0 ? (
+                  {manualDomains.length === 0 ? (
                     <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No domains found.</td></tr>
                   ) : (
-                    filteredDomains.map((d) => (
+                    manualDomains.map((d) => (
                       <tr key={d.id} className="border-b border-border hover:bg-muted/30">
                         <td className="p-4 font-medium flex items-center gap-2">
                           <Globe className="h-4 w-4 text-muted-foreground" />
@@ -388,12 +406,21 @@ export default function WhiteLabelManager() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredDomains.length === 0 ? (
+                      {formSubmissions.length === 0 ? (
                         <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No submissions found.</td></tr>
                       ) : (
-                        filteredDomains.map((d) => (
+                        formSubmissions.map((d) => {
+                          let config = {};
+                          try { config = JSON.parse(d.pagesConfig || "{}"); } catch(e) {}
+                          const userName = (config as any).userName || "Unknown";
+
+                          return (
                           <tr key={d.id} className="border-b border-border hover:bg-muted/30">
                             <td className="p-4">
+                              <div className="font-semibold text-white mb-1 flex items-center gap-2">
+                                <User className="h-4 w-4 text-emerald-500" />
+                                {userName}
+                              </div>
                               <div className="font-medium flex items-center gap-2">
                                 <Globe className="h-4 w-4 text-muted-foreground" />
                                 {d.domain}
@@ -401,7 +428,7 @@ export default function WhiteLabelManager() {
                               <div className="text-muted-foreground mt-1 text-xs">{d.companyName}</div>
                             </td>
                             <td className="p-4">
-                              <div>{d.supportEmail}</div>
+                              <div className="font-medium">{d.supportEmail}</div>
                               <div className="text-muted-foreground text-xs">{d.supportPhone || "-"}</div>
                             </td>
                             <td className="p-4">
@@ -414,8 +441,8 @@ export default function WhiteLabelManager() {
                                 <Button variant="ghost" size="sm" onClick={() => handleMarkDone(d)} title="Mark as Completed" className="hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors">
                                   <CheckCircle2 className="h-4 w-4 text-emerald-400" /> <span className="ml-1">Done</span>
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(d)} title="Review Details" className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
-                                  <Eye className="h-4 w-4 text-blue-400" /> <span className="ml-1">Review</span>
+                                <Button variant="ghost" size="sm" onClick={() => window.location.href = `/white-label/preview/${d.id}`} title="Preview Details" className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
+                                  <Eye className="h-4 w-4 text-blue-400" /> <span className="ml-1">Preview</span>
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => setDomainToDelete(d.id)} title="Delete" className="hover:bg-red-500/10 hover:text-red-500 transition-colors">
                                   <Trash2 className="h-4 w-4 text-red-500" />
@@ -423,7 +450,7 @@ export default function WhiteLabelManager() {
                               </div>
                             </td>
                           </tr>
-                        ))
+                        )})
                       )}
                     </tbody>
                   </table>
