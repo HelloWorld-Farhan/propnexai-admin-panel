@@ -99,6 +99,25 @@ export async function POST(req: Request) {
       // Need to import prisma to log events. Wait, prisma is not imported in this file.
       // I will add the import at the top in another chunk if needed. Let me do that.
       const { prisma } = require("@/lib/prisma");
+      
+      // Create a placeholder record so the admin can track this invite
+      // We use a dummy domain because domain is unique. When they submit, we'll update it.
+      const dummyDomain = `pending-${Date.now()}-${Math.random().toString(36).substring(7)}.com`;
+      await prisma.whiteLabelDomain.create({
+        data: {
+          domain: dummyDomain,
+          companyName: "Pending Setup",
+          tabTitle: "Pending Setup",
+          supportEmail: email,
+          status: "PENDING",
+          pagesConfig: JSON.stringify({
+            submittedViaForm: true,
+            userName: username,
+            isInvitePlaceholder: true
+          })
+        }
+      });
+
       await prisma.systemEvent.create({
         data: {
           type: "FORM_INFO",
@@ -107,7 +126,7 @@ export async function POST(req: Request) {
         }
       });
     } catch (e) {
-      console.error("Failed to log system event", e);
+      console.error("Failed to log system event or create placeholder", e);
     }
 
     return NextResponse.json({ success: true });

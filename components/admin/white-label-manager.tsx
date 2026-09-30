@@ -413,6 +413,8 @@ export default function WhiteLabelManager() {
                           let config = {};
                           try { config = JSON.parse(d.pagesConfig || "{}"); } catch(e) {}
                           const userName = (config as any).userName || "Unknown";
+                          const userEmail = (config as any).userEmail || d.supportEmail;
+                          const isPlaceholder = (config as any).isInvitePlaceholder;
 
                           return (
                           <tr key={d.id} className="border-b border-border hover:bg-muted/30">
@@ -423,13 +425,20 @@ export default function WhiteLabelManager() {
                               </div>
                               <div className="font-medium flex items-center gap-2">
                                 <Globe className="h-4 w-4 text-muted-foreground" />
-                                {d.domain}
+                                {isPlaceholder ? <span className="text-muted-foreground italic">Waiting for submission...</span> : d.domain}
                               </div>
-                              <div className="text-muted-foreground mt-1 text-xs">{d.companyName}</div>
+                              <div className="text-muted-foreground mt-1 text-xs">
+                                {isPlaceholder ? "Invite Sent" : d.companyName}
+                              </div>
                             </td>
                             <td className="p-4">
-                              <div className="font-medium">{d.supportEmail}</div>
-                              <div className="text-muted-foreground text-xs">{d.supportPhone || "-"}</div>
+                              <div className="font-medium">{userEmail}</div>
+                              {!isPlaceholder && d.supportPhone && (
+                                <div className="text-muted-foreground text-xs">Phone: {d.supportPhone}</div>
+                              )}
+                              {!isPlaceholder && d.supportEmail !== userEmail && (
+                                <div className="text-muted-foreground text-xs">Support: {d.supportEmail}</div>
+                              )}
                             </td>
                             <td className="p-4">
                               <Badge variant="outline" className={d.status === "PENDING" ? "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20" : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"}>
@@ -438,12 +447,16 @@ export default function WhiteLabelManager() {
                             </td>
                             <td className="p-4 text-right">
                               <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => handleMarkDone(d)} title="Send Confirmation Email" className="hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors">
-                                  <Send className="h-4 w-4 text-emerald-400" /> <span className="ml-1">Approve & Email</span>
-                                </Button>
-                                <Button variant="ghost" size="sm" onClick={() => window.location.href = `/white-label/preview/${d.id}`} title="Preview Details" className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
-                                  <Eye className="h-4 w-4 text-blue-400" /> <span className="ml-1">Preview</span>
-                                </Button>
+                                {!isPlaceholder && (
+                                  <>
+                                    <Button variant="ghost" size="sm" onClick={() => handleMarkDone(d)} title="Send Confirmation Email" className="hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors">
+                                      <Send className="h-4 w-4 text-emerald-400" /> <span className="ml-1">Approve & Email</span>
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => window.location.href = `/white-label/preview/${d.id}`} title="Preview Details" className="hover:bg-blue-500/10 hover:text-blue-500 transition-colors">
+                                      <Eye className="h-4 w-4 text-blue-400" /> <span className="ml-1">Preview</span>
+                                    </Button>
+                                  </>
+                                )}
                                 <Button variant="ghost" size="sm" onClick={() => setDomainToDelete(d.id)} title="Delete" className="hover:bg-red-500/10 hover:text-red-500 transition-colors">
                                   <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
