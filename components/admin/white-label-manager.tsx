@@ -484,14 +484,14 @@ export default function WhiteLabelManager() {
             <DialogDescription>Configure the white-label settings for this specific domain.</DialogDescription>
           </DialogHeader>
 
-          {!isEditing && formSubmissions.filter(d => d.status === "PENDING" && d.logoUrl).length > 0 && (
+          {!isEditing && formSubmissions.filter(d => d.status === "PENDING").length > 0 && (
             <div className="bg-muted/50 border border-border rounded-lg p-4 mt-2">
               <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                 <Globe className="h-4 w-4 text-cyan-400" /> Pending Form Submissions
               </h4>
               <p className="text-xs text-muted-foreground mb-3">Click on a domain below to auto-fill all its details into this form instantly.</p>
               <div className="flex flex-wrap gap-2">
-                {formSubmissions.filter(d => d.status === "PENDING" && d.logoUrl).map(d => (
+                {formSubmissions.filter(d => d.status === "PENDING").map(d => (
                   <Button 
                     key={d.id} 
                     variant="outline" 
