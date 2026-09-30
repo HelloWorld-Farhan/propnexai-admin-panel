@@ -60,11 +60,27 @@ export function DataTable<TData, TValue>({
         ? (row, _columnId, filterValue) => {
             const needle = String(filterValue).toLowerCase();
             if (!needle) return true;
-            return filterKeys.some((key) =>
-              String(row.getValue(key) ?? "")
+            return filterKeys.some((key) => {
+              let val: any;
+              try {
+                val = row.getValue(key);
+              } catch (e) {
+                // Ignore if not a column accessor
+              }
+              if (val === undefined) {
+                val = (row.original as any)[key];
+                if (val === undefined && key.includes('.')) {
+                  const parts = key.split('.');
+                  val = row.original as any;
+                  for (const part of parts) {
+                    if (val) val = val[part];
+                  }
+                }
+              }
+              return String(val ?? "")
                 .toLowerCase()
-                .includes(needle),
-            );
+                .includes(needle);
+            });
           }
         : undefined,
   });

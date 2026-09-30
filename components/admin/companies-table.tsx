@@ -282,8 +282,8 @@ export function CompaniesTable({
       <DataTable
         columns={columns}
         data={companies}
-        searchKeys={["name", "slug", "pocEmail", "contractId", "cli", "companyCode"]}
-        searchPlaceholder="Search by name, slug, contract ID, or owner email (if claimed)..."
+        searchKeys={["name", "slug", "pocEmail", "contractId", "cli", "companyCode", "settings.signupDomain"]}
+        searchPlaceholder="Search by name, slug, contract ID, domain, or owner email (if claimed)..."
         onRowClick={(row) => router.push(`/companies/${row.id}`)}
       />
     </div>

@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const { password } = await req.json();
 
-    if (password !== "YOUR_PASSWORD") {
+    if (password !== "Propnexai@123") {
       return NextResponse.json({ message: "Invalid master password" }, { status: 401 });
     }
 

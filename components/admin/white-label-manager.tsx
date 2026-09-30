@@ -345,6 +345,7 @@ export default function WhiteLabelManager() {
               </table>
             </div>
           )}
+          </CardContent>
           </Card>
         </TabsContent>
 
@@ -605,7 +606,7 @@ export default function WhiteLabelManager() {
                   placeholder="Enter password..."
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      if (passwordInput === "YOUR_PASSWORD") {
+                      if (passwordInput === "Propnexai@123") {
                         if (pendingAction === "DELETE") executeDelete();
                         else startDeploymentAnimation();
                       } else setDeploymentError("Incorrect password");
@@ -620,7 +621,7 @@ export default function WhiteLabelManager() {
                     setPendingAction(null);
                   }}>Cancel</Button>
                   <Button variant={pendingAction === "DELETE" ? "destructive" : "default"} onClick={() => {
-                    if (passwordInput === "YOUR_PASSWORD") {
+                    if (passwordInput === "Propnexai@123") {
                       if (pendingAction === "DELETE") executeDelete();
                       else startDeploymentAnimation();
                     } else {

@@ -1,9 +1,9 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Audio Proxy — bypasses CORS for Google Drive audio files.
+ * Audio Proxy � bypasses CORS for Google Drive audio files.
  * Browser cannot load drive.google.com in <audio> tags directly.
  * This proxy fetches on the server (no CORS) and streams back to client.
  * Usage: /api/audio-proxy?url=<encoded_drive_url>

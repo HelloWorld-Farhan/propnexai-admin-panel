@@ -55,6 +55,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         type: SystemEventType.DOMAIN_EDITED,
         companyId: null,
         title: "Domain Edited",
+        message: `Admin updated white-label details for ${domain || existing.domain}.`,
       },
     });
 
@@ -83,6 +84,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         type: SystemEventType.DOMAIN_DELETED,
         companyId: null,
         title: "Domain Deleted",
+        message: `Admin deleted the white-label form/domain for ${existing.domain}.`,
       },
     });
 

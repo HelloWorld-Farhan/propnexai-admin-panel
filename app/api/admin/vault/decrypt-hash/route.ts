@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 
 // Common test passwords used in the system for rainbow-table decryption
 const COMMON_PASSWORDS = [
-  "YOUR_PASSWORD",
-  "YOUR_PASSWORD",
+  "Propnexai@123",
+  "Propnexai@123",
   "Admin@123",
   "admin123",
   "password",

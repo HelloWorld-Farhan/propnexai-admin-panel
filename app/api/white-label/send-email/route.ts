@@ -95,6 +95,21 @@ export async function POST(req: Request) {
       }
     }
 
+    try {
+      // Need to import prisma to log events. Wait, prisma is not imported in this file.
+      // I will add the import at the top in another chunk if needed. Let me do that.
+      const { prisma } = require("@/lib/prisma");
+      await prisma.systemEvent.create({
+        data: {
+          type: "FORM_INFO",
+          title: "White Label Form Sent",
+          message: `Admin sent setup instructions to ${username} (${email}).`,
+        }
+      });
+    } catch (e) {
+      console.error("Failed to log system event", e);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Send email error:", error);
